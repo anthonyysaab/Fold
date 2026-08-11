@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.arena-credentials
+.arena-poker-state
+*.tar.gz
+bundle.zip
+build/
+.venv/
