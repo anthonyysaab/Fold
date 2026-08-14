@@ -1,0 +1,90 @@
+﻿season 9: 39218 pending receipt pairs across 34095 replays
+   derived 500/34095 replays; rows 683; 100.3 replays/s
+   derived 1000/34095 replays; rows 1387; 88.9 replays/s
+   derived 1500/34095 replays; rows 2076; 77.9 replays/s
+   derived 2000/34095 replays; rows 2801; 72.5 replays/s
+   derived 2500/34095 replays; rows 3583; 68.9 replays/s
+   derived 3000/34095 replays; rows 4501; 65.6 replays/s
+   derived 3500/34095 replays; rows 5441; 62.9 replays/s
+   derived 4000/34095 replays; rows 6271; 61.5 replays/s
+   derived 4500/34095 replays; rows 7205; 59.9 replays/s
+   derived 5000/34095 replays; rows 8112; 58.7 replays/s
+   derived 5500/34095 replays; rows 9051; 57.7 replays/s
+   derived 6000/34095 replays; rows 9934; 57.1 replays/s
+   derived 6500/34095 replays; rows 10826; 56.6 replays/s
+   derived 7000/34095 replays; rows 11709; 56.1 replays/s
+   derived 7500/34095 replays; rows 12678; 55.5 replays/s
+   derived 8000/34095 replays; rows 13608; 55.2 replays/s
+   derived 8500/34095 replays; rows 14556; 54.8 replays/s
+   derived 9000/34095 replays; rows 15488; 54.5 replays/s
+   derived 9500/34095 replays; rows 16397; 54.3 replays/s
+   derived 10000/34095 replays; rows 17335; 54.0 replays/s
+   derived 10500/34095 replays; rows 18205; 53.9 replays/s
+   derived 11000/34095 replays; rows 19162; 53.7 replays/s
+   derived 11500/34095 replays; rows 20094; 53.5 replays/s
+   derived 12000/34095 replays; rows 21013; 53.3 replays/s
+   derived 12500/34095 replays; rows 21998; 53.1 replays/s
+   derived 13000/34095 replays; rows 22859; 53.0 replays/s
+   derived 13500/34095 replays; rows 23756; 52.9 replays/s
+   derived 14000/34095 replays; rows 24665; 52.8 replays/s
+   derived 14500/34095 replays; rows 25611; 52.7 replays/s
+   derived 15000/34095 replays; rows 26543; 52.6 replays/s
+   derived 15500/34095 replays; rows 27463; 52.5 replays/s
+   derived 16000/34095 replays; rows 28402; 52.4 replays/s
+   derived 16500/34095 replays; rows 29348; 52.3 replays/s
+   derived 17000/34095 replays; rows 30262; 52.2 replays/s
+   derived 17500/34095 replays; rows 31215; 52.2 replays/s
+   derived 18000/34095 replays; rows 32164; 52.1 replays/s
+   derived 18500/34095 replays; rows 33083; 52.1 replays/s
+   derived 19000/34095 replays; rows 33967; 52.1 replays/s
+   derived 19500/34095 replays; rows 34916; 52.0 replays/s
+   derived 20000/34095 replays; rows 35912; 51.9 replays/s
+   derived 20500/34095 replays; rows 36839; 51.8 replays/s
+   derived 21000/34095 replays; rows 37763; 51.8 replays/s
+   derived 21500/34095 replays; rows 38700; 51.7 replays/s
+   derived 22000/34095 replays; rows 39635; 51.6 replays/s
+   derived 22500/34095 replays; rows 40580; 51.6 replays/s
+   derived 23000/34095 replays; rows 41491; 51.6 replays/s
+   derived 23500/34095 replays; rows 42425; 51.5 replays/s
+   derived 24000/34095 replays; rows 43350; 51.5 replays/s
+   derived 24500/34095 replays; rows 44270; 51.5 replays/s
+   derived 25000/34095 replays; rows 45137; 51.5 replays/s
+   derived 25500/34095 replays; rows 46068; 51.5 replays/s
+   derived 26000/34095 replays; rows 46930; 51.5 replays/s
+   derived 26500/34095 replays; rows 47837; 51.5 replays/s
+   derived 27000/34095 replays; rows 48706; 51.5 replays/s
+   derived 27500/34095 replays; rows 49594; 51.5 replays/s
+   derived 28000/34095 replays; rows 50394; 51.6 replays/s
+   derived 28500/34095 replays; rows 51325; 51.6 replays/s
+   derived 29000/34095 replays; rows 52219; 51.6 replays/s
+   derived 29500/34095 replays; rows 53156; 51.6 replays/s
+   derived 30000/34095 replays; rows 54072; 51.6 replays/s
+   derived 30500/34095 replays; rows 54942; 51.6 replays/s
+   derived 31000/34095 replays; rows 55822; 51.6 replays/s
+   derived 31500/34095 replays; rows 56690; 51.6 replays/s
+   derived 32000/34095 replays; rows 57556; 51.6 replays/s
+   derived 32500/34095 replays; rows 58430; 51.6 replays/s
+   derived 33000/34095 replays; rows 59276; 51.7 replays/s
+   derived 33500/34095 replays; rows 60152; 51.7 replays/s
+   derived 34000/34095 replays; rows 61036; 51.7 replays/s
+   derived 34095/34095 replays; rows 61151; 51.7 replays/s
+[
+  {
+    "collection": "20260812T082657Z_poker-playground_s9_top15",
+    "season": 9,
+    "agent_scope": "manifest",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [],
+    "derive": {
+      "pending_pairs": 39218,
+      "pending_tables": 34095,
+      "rows": 61151,
+      "eligible_rows": 60053,
+      "timeout_rows": 1098,
+      "skipped": 0,
+      "represented_agents": 15,
+      "seconds": 658.9
+    }
+  }
+]
+wrote artifacts\training-runs\foreign-backfill-derive-s9.json

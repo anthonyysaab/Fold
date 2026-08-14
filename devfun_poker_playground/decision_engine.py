@@ -1,0 +1,1172 @@
+"""Turn policy proposals into safe, legal poker actions.
+
+:class:`DecisionEngine` holds the safety rails that were originally methods of
+the earlier policy: legal-action mapping, bounded raise sizing, equity
+fallbacks for short-handed tables, and the sub-two-second deadline path. A
+backend can supply a proposal family and override the documented policy-tuning
+hooks. The shared engine keeps legal-action mapping and hard safety gates in one
+place.
+
+The per-decision risk temperature also shapes normal play through
+:class:`TemperatureShaping`: cold readings (strong, cheap, late, short-handed)
+loosen the aggression floor, call margins, and sizing within fixed bounds, and
+hot readings tighten them. Hard safety gates never shift, and the reading still
+never enters an Arena payload.
+"""
+
+from __future__ import annotations
+
+import hashlib
+from collections.abc import Collection, Mapping
+from dataclasses import asdict, dataclass, replace as dataclass_replace
+from typing import Any
+
+from bluff import BluffAdvice, BluffSettings, DEFAULT_BLUFF_SETTINGS, evaluate_bluff
+from lead_position import measure_lead_position
+from risk_temperature import RiskTemperature, measure_risk_temperature
+
+from devfun_poker_playground.hand_strength import board_improvement, estimate_equity
+from devfun_poker_playground.learning_contract import build_learning_features
+from devfun_poker_playground.opponent_model import AggressionTracker
+from devfun_poker_playground.policy_features import LABELS
+from devfun_poker_playground.game_state import (
+    _active_seats,
+    _AGGRESSIVE_ACTIONS,
+    active_opponent_count,
+    ArenaSnapshotError,
+    _cards,
+    effective_stack_chips,
+    _hero_and_seats,
+    _integer,
+    _mapping,
+    _position,
+    _sequence,
+    features_from_table,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ArenaAction:
+    action: str
+    amount: int | None
+    message: str
+    reasoning: str | None = None
+
+    def to_payload(self) -> dict[str, str | int]:
+        payload: dict[str, str | int] = {
+            "action": self.action,
+            "message": self.message,
+        }
+        if self.amount is not None:
+            payload["amount"] = self.amount
+        if self.reasoning is not None:
+            payload["reasoning"] = self.reasoning
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionResult:
+    """Arena action plus private diagnostics for logging and future training."""
+
+    action: ArenaAction
+    family: str
+    equity: float | None
+    situation_temperature: RiskTemperature | None
+    learning_features: tuple[float, ...] | None = None
+    behavior_probabilities: tuple[float, float, float] | None = None
+    proposed_risk_fraction: float | None = None
+    deadline_fallback: bool = False
+    temperature_boldness: float | None = None
+    opponent_range_width: float | None = None
+    opponent_evidence_confidence: float = 0.0
+    lead_position: float | None = None
+    bluff_kind: str | None = None
+    hyper_aggression: bool = False
+
+    def to_payload(self) -> dict[str, str | int]:
+        return self.action.to_payload()
+
+
+@dataclass(frozen=True, slots=True)
+class TemperatureShaping:
+    """Bounded response of normal play to the situational risk temperature.
+
+    :meth:`boldness` maps a 0-100 reading onto ``[-1.0, +1.0]``: readings
+    colder than ``setpoint`` push toward ``+1`` (strong, cheap, late, or
+    short-handed situations play looser) and hotter readings push toward
+    ``-1`` (weak, expensive, early, or crowded situations play tighter).
+    The three shift fields bound how far the normal-play knobs may move:
+
+    * ``aggression_floor_shift`` -- equity the aggression floor gains or
+      loses at full boldness.
+    * ``call_margin_shift`` -- extra-equity call margin shaved or added at
+      full boldness.
+    * ``sizing_span`` -- relative change of the half-pot target size at
+      full boldness.
+
+    Hard safety gates -- board-contribution floors, the re-raise war floor,
+    the sub-0.72-equity risk cap, server legality, and the deadline path --
+    never shift.
+
+    Every field is a future learned parameter: an approved artifact may ship
+    its own shaping values, and the per-decision reading plus its factors are
+    already model inputs (``learning_contract.EXTRA_FEATURE_NAMES``).
+    """
+
+    setpoint: float = 45.0
+    span: float = 35.0
+    aggression_floor_shift: float = 0.078  # was 0.06, softened 30%
+    call_margin_shift: float = 0.039  # was 0.03, softened 30%
+    sizing_span: float = 0.39  # was 0.30, softened 30%
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.setpoint <= 100.0:
+            raise ValueError("setpoint must be between 0 and 100")
+        if not 5.0 <= self.span <= 100.0:
+            raise ValueError("span must be between 5 and 100")
+        if not 0.0 <= self.aggression_floor_shift <= 0.15:
+            raise ValueError("aggression_floor_shift must be between 0 and 0.15")
+        if not 0.0 <= self.call_margin_shift <= 0.10:
+            raise ValueError("call_margin_shift must be between 0 and 0.10")
+        if not 0.0 <= self.sizing_span <= 0.50:
+            raise ValueError("sizing_span must be between 0 and 0.5")
+
+    def boldness(self, temperature: float) -> float:
+        """Signed, clamped distance below the setpoint, in span units."""
+
+        return max(-1.0, min(1.0, (self.setpoint - temperature) / self.span))
+
+    def to_mapping(self) -> dict[str, object]:
+        """JSON-ready form for a future learned-artifact manifest."""
+
+        return asdict(self)
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, object]) -> "TemperatureShaping":
+        """Rebuild validated shaping from artifact JSON; unknown keys fail."""
+
+        return cls(**dict(mapping))
+
+
+DEFAULT_TEMPERATURE_SHAPING = TemperatureShaping()
+NEUTRAL_TEMPERATURE_SHAPING = TemperatureShaping(
+    aggression_floor_shift=0.0, call_margin_shift=0.0, sizing_span=0.0
+)
+
+
+# Extra equity demanded over raw pot odds to continue against a bet, by
+# street. Replaces the old flat -0.03 loosening that made almost any pair a
+# call against any bet size.
+_CALL_MARGINS = {"preflop": 0.0, "flop": 0.02, "turn": 0.05, "river": 0.08}
+
+# How much of the aggressor's range to simulate against on discounted board
+# tiers. This conditions the equity estimate; it is estimation, not a gate,
+# so it lives outside SafetyGates.
+_BOARD_DISCOUNT_RANGE_TIGHTEN = {"kicker": 0.60, "thin": 0.75}
+
+# Owner-fixed anti-modeling noise (2026-08-12): on a salted per-decision
+# dice roll, one decision plays hyper-aggressively -- the aggression floor
+# drops, sizing targets the full pot, and the bluff mixer's roll is forced
+# open. Deliberately HARDCODED rather than a learnable parameter, so
+# EV-maximizing training can never erode the unpredictability floor; and
+# deliberately inside every hard safety gate, so the noise can neither
+# stack off through the risk cap nor bluff a paired board. Hyper decisions
+# are flagged in diagnostics and excluded from training labels.
+HYPER_AGGRESSION_CHANCE = 0.05
+_HYPER_FLOOR_DROP = 0.12
+_HYPER_POT_FRACTION = 1.0
+
+
+@dataclass(frozen=True, slots=True)
+class SafetyGates:
+    """Every bounded numeric safety net of the engine, as one parameter set.
+
+    The board-contribution gates (v3) come from three rated-match stack-offs
+    where the five-card hand was mostly the board's: trips-plus-kicker and
+    hollow two pair on paired boards kept calling into ranges stuffed with
+    boats. Discounted tiers demand a bigger margin, stop stacking off, and
+    stop barreling; ``fresh`` hands are untouched.
+
+    Defaults are the 2026-08-12 owner decision to soften every net by 30%
+    from its original value: added margins scale by 0.70, risk allowances
+    and gate triggers by 1.30, and equity floors keep 70% of their excess
+    over coin-flip equity (``0.50 + 0.70 * (floor - 0.50)``), so no floor
+    drops below break-even. ``UNSOFTENED_SAFETY_GATES`` preserves the
+    originals for comparison runs.
+
+    Server legality, the deadline path, the check-fold-call failure order,
+    and owner-gated money stops are not tuning bounds and are not here.
+
+    Every field is a future learned parameter: an approved artifact may
+    ship its own gate values through :meth:`from_mapping`, and the
+    validation ranges below define the legal search space for training.
+    """
+
+    # Extra call margin demanded on discounted board tiers.
+    board_margin_kicker: float = 0.084  # was 0.12
+    board_margin_thin: float = 0.07  # was 0.10
+    # (stack-fraction trigger, equity floor) stack-off gates per tier.
+    board_stackoff_kicker: tuple[float, float] = (0.234, 0.675)  # was (0.18, 0.75)
+    board_stackoff_thin: tuple[float, float] = (0.39, 0.71)  # was (0.30, 0.80)
+    # Equity needed to keep betting a hand that barely improves the board.
+    board_aggression_floor_kicker: float = 0.724  # was 0.82
+    board_aggression_floor_thin: float = 0.696  # was 0.78
+    # Equity at which the re-raise war floor and the sizing risk cap release.
+    near_nut_floor: float = 0.654  # was 0.72
+    # Largest stack fraction a sub-near-nut bet or raise may put at risk.
+    risk_cap_stack_fraction: float = 0.455  # was 0.35
+    # Generic (stack-fraction trigger, equity floor) call gates.
+    call_stack_gates: tuple[tuple[float, float], ...] = (
+        (0.78, 0.626),  # was (0.60, 0.68)
+        (0.455, 0.584),  # was (0.35, 0.62)
+    )
+    # A fold-family hand may still call at this equity above pot odds.
+    rescue_call_floor: float = 0.57  # was 0.60
+    rescue_call_margin: float = 0.105  # was 0.15
+
+    def __post_init__(self) -> None:
+        for name in ("board_stackoff_kicker", "board_stackoff_thin"):
+            trigger, floor = getattr(self, name)
+            object.__setattr__(self, name, (float(trigger), float(floor)))
+        object.__setattr__(
+            self,
+            "call_stack_gates",
+            tuple(
+                (float(trigger), float(floor))
+                for trigger, floor in self.call_stack_gates
+            ),
+        )
+        for name in ("board_margin_kicker", "board_margin_thin", "rescue_call_margin"):
+            if not 0.0 <= float(getattr(self, name)) <= 0.30:
+                raise ValueError(f"{name} must be between 0 and 0.3")
+        for name in (
+            "board_aggression_floor_kicker",
+            "board_aggression_floor_thin",
+            "near_nut_floor",
+            "rescue_call_floor",
+        ):
+            if not 0.50 <= float(getattr(self, name)) <= 1.0:
+                raise ValueError(f"{name} must be between 0.5 and 1")
+        if not 0.01 <= self.risk_cap_stack_fraction <= 1.0:
+            raise ValueError("risk_cap_stack_fraction must be between 0.01 and 1")
+        gates = (
+            self.board_stackoff_kicker,
+            self.board_stackoff_thin,
+            *self.call_stack_gates,
+        )
+        for trigger, floor in gates:
+            if not 0.01 <= trigger <= 1.0:
+                raise ValueError("stack-gate triggers must be between 0.01 and 1")
+            if not 0.50 <= floor <= 1.0:
+                raise ValueError("stack-gate equity floors must be between 0.5 and 1")
+
+    def board_margin(self, tier: str) -> float:
+        return {
+            "kicker": self.board_margin_kicker,
+            "thin": self.board_margin_thin,
+        }.get(tier, 0.0)
+
+    def board_stack_gate(self, tier: str) -> tuple[float, float] | None:
+        return {
+            "kicker": self.board_stackoff_kicker,
+            "thin": self.board_stackoff_thin,
+        }.get(tier)
+
+    def board_aggression_floor(self, tier: str) -> float | None:
+        return {
+            "kicker": self.board_aggression_floor_kicker,
+            "thin": self.board_aggression_floor_thin,
+        }.get(tier)
+
+    def to_mapping(self) -> dict[str, object]:
+        """JSON-ready form for a future learned-artifact manifest."""
+
+        data = asdict(self)
+        data["board_stackoff_kicker"] = list(self.board_stackoff_kicker)
+        data["board_stackoff_thin"] = list(self.board_stackoff_thin)
+        data["call_stack_gates"] = [list(gate) for gate in self.call_stack_gates]
+        return data
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, object]) -> "SafetyGates":
+        """Rebuild validated gates from artifact JSON; unknown keys fail."""
+
+        data = dict(mapping)
+        for name in ("board_stackoff_kicker", "board_stackoff_thin"):
+            if name in data:
+                trigger, floor = data[name]
+                data[name] = (float(trigger), float(floor))
+        if "call_stack_gates" in data:
+            data["call_stack_gates"] = tuple(
+                (float(trigger), float(floor))
+                for trigger, floor in data["call_stack_gates"]
+            )
+        return cls(**data)
+
+
+DEFAULT_SAFETY_GATES = SafetyGates()
+UNSOFTENED_SAFETY_GATES = SafetyGates(
+    board_margin_kicker=0.12,
+    board_margin_thin=0.10,
+    board_stackoff_kicker=(0.18, 0.75),
+    board_stackoff_thin=(0.30, 0.80),
+    board_aggression_floor_kicker=0.82,
+    board_aggression_floor_thin=0.78,
+    near_nut_floor=0.72,
+    risk_cap_stack_fraction=0.35,
+    call_stack_gates=((0.60, 0.68), (0.35, 0.62)),
+    rescue_call_floor=0.60,
+    rescue_call_margin=0.15,
+)
+
+
+def safest_passive_action(available: Collection[str]) -> str | None:
+    """Return the least costly legal fallback, if one exists."""
+
+    return next(
+        (action for action in ("check", "fold", "call") if action in available), None
+    )
+
+
+class DecisionEngine:
+    """Family proposals plus deterministic Arena safety rails."""
+
+    # Subclasses may declare their own default gate set (the aggressive
+    # policy does); an explicit ``safety_gates`` argument always wins.
+    default_safety_gates: SafetyGates = DEFAULT_SAFETY_GATES
+
+    def __init__(
+        self,
+        *,
+        equity_trials: int = 100,
+        seed: int = 7,
+        temperature_shaping: TemperatureShaping | None = None,
+        safety_gates: SafetyGates | None = None,
+        opponent_tracker: AggressionTracker | None = None,
+        bluff_settings: BluffSettings | None = None,
+        hyper_aggression_chance: float | None = None,
+    ) -> None:
+        if equity_trials < 0:
+            raise ValueError("equity_trials cannot be negative")
+        self.equity_trials = equity_trials
+        self.seed = seed
+        self.temperature_shaping = temperature_shaping or DEFAULT_TEMPERATURE_SHAPING
+        self.safety_gates = safety_gates or self.default_safety_gates
+        self.opponent_tracker = opponent_tracker or AggressionTracker()
+        self.bluff_settings = bluff_settings or DEFAULT_BLUFF_SETTINGS
+        # The production chance is the module constant; the override exists
+        # for deterministic tests and for measuring the noise's price, and
+        # is deliberately absent from the learnable artifact parameters.
+        if hyper_aggression_chance is None:
+            hyper_aggression_chance = HYPER_AGGRESSION_CHANCE
+        if not 0.0 <= hyper_aggression_chance <= 1.0:
+            raise ValueError("hyper_aggression_chance must be between 0 and 1")
+        self.hyper_aggression_chance = hyper_aggression_chance
+        self._hyper_bluff_settings = dataclass_replace(
+            self.bluff_settings,
+            steal_frequency=1.0,
+            continuation_frequency=1.0,
+            semi_bluff_frequency=1.0,
+            barrel_frequency=1.0,
+            probe_frequency=1.0,
+            raise_bluff_frequency=1.0,
+            river_frequency=1.0,
+        )
+        self._hyper_active = False
+
+    def _family(self, features: tuple[float, ...]) -> str:
+        raise NotImplementedError("policy backends must implement _family")
+
+    def _equity(
+        self, table: Mapping[str, Any], top_fraction: float = 1.0
+    ) -> float | None:
+        if self.equity_trials == 0:
+            return None
+        hero, _ = _hero_and_seats(table)
+        hole_cards = _cards(hero.get("holeCards"), "holeCards", 2)
+        hole = (hole_cards[0], hole_cards[1])
+        board = _cards(table.get("boardCards"), "boardCards")
+        opponents = active_opponent_count(table)
+        table_id = str(table.get("tableId") or table.get("id") or "")
+        digest = hashlib.sha256(f"{self.seed}:{table_id}".encode()).digest()
+        trial_seed = int.from_bytes(digest[:8], "big")
+        return estimate_equity(
+            hole,
+            board,
+            opponents,
+            trials=self.equity_trials,
+            seed=trial_seed,
+            top_fraction=top_fraction,
+        )
+
+    @staticmethod
+    def _street(table: Mapping[str, Any]) -> str:
+        return str(table.get("street") or "").casefold()
+
+    def _situation_temperature(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        equity: float,
+    ) -> RiskTemperature:
+        hero, _ = _hero_and_seats(table)
+        stack = _integer(hero.get("stackChips"), "hero stackChips", minimum=1)
+        call_chips = _integer(allowed.get("callChips", 0), "callChips")
+        return measure_risk_temperature(
+            hand_strength=100.0 * equity,
+            purse=stack,
+            bet=call_chips,
+            street=self._street(table),
+            players=1 + active_opponent_count(table),
+        )
+
+    def _boldness(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        equity: float | None,
+    ) -> float:
+        """This decision's temperature response; neutral without an equity read."""
+
+        if equity is None:
+            return 0.0
+        reading = self._situation_temperature(table, allowed, equity)
+        return self.temperature_shaping.boldness(reading.temperature)
+
+    def _hyper_roll(self, table: Mapping[str, Any]) -> bool:
+        """Salted per-decision dice roll for the anti-modeling noise.
+
+        Deterministic given the snapshot, indistinguishable from chance to
+        anyone without the seed -- the same construction as the bluff
+        mixer's roll.
+        """
+
+        if self.hyper_aggression_chance <= 0.0:
+            return False
+        key = (
+            f"hyper:{self.seed}:{table.get('tableId') or table.get('id') or ''}"
+            f":{table.get('handId') or ''}:{self._street(table)}"
+            f":{table.get('potChips')}:{table.get('selfSeatNumber')}"
+        )
+        digest = hashlib.sha256(key.encode()).digest()
+        roll = int.from_bytes(digest[:8], "big") / 2.0**64
+        return roll < self.hyper_aggression_chance
+
+    def _lead_position(self, table: Mapping[str, Any]) -> float | None:
+        """The hero's -100..+100 standing, or None when it cannot be read."""
+
+        hero, seats = _hero_and_seats(table)
+        opponents = [seat for seat in _active_seats(seats) if seat is not hero]
+
+        def _owned(seat: Mapping[str, Any]) -> int:
+            stack = _integer(seat.get("stackChips"), "stackChips")
+            committed = _integer(seat.get("currentBetChips"), "currentBetChips")
+            return max(1, stack + committed)
+
+        try:
+            reading = measure_lead_position(
+                hero_stack=_owned(hero),
+                opponent_stacks=tuple(_owned(seat) for seat in opponents),
+                position=_position(table, seats, hero),
+            )
+        except ValueError:
+            return None
+        return reading.lead
+
+    def _consider_bluff(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+        equity: float | None,
+        lead: float | None,
+    ) -> BluffAdvice | None:
+        """Ask the bluff advisor when a passive spot could be attacked.
+
+        Engine-side hard gates come first: bluffs need an equity read, a
+        legal bet or raise, a board the hero genuinely improves (paired
+        boards play for everyone, so representing them has no fold equity),
+        and no live raising war. The advisor's own discipline, pricing, and
+        mixed-strategy roll decide the rest; sizing is clamped by the same
+        legality and risk caps as any aggressive action.
+        """
+
+        if equity is None:
+            return None
+        if "bet" not in available and "raise" not in available:
+            return None
+        if self._board_tier(table) != "fresh":
+            return None
+        to_call = _integer(allowed.get("callChips", 0), "callChips")
+        street = self._street(table)
+        if to_call > 0 and self._aggressive_events(table, hero=True, street=street) > 0:
+            return None
+        pot = _integer(table.get("potChips"), "potChips")
+        if pot < 1:
+            return None
+        hero, seats = _hero_and_seats(table)
+        hole_cards = _cards(hero.get("holeCards"), "holeCards", 2)
+        board = _cards(table.get("boardCards"), "boardCards")
+        try:
+            return evaluate_bluff(
+                hole_cards=(hole_cards[0], hole_cards[1]),
+                board_cards=board,
+                street=street,
+                pot=pot,
+                to_call=to_call,
+                stack=max(1, effective_stack_chips(table)),
+                opponents=min(5, max(1, active_opponent_count(table))),
+                hero_aggressions=self._aggressive_events(table, hero=True),
+                opponent_aggressions=self._aggressive_events(table, hero=False),
+                in_position=_position(table, seats, hero) > 0.5,
+                lead_position=lead,
+                opponent_wildness=self.opponent_tracker.max_active_wildness(table),
+                mix_key=str(table.get("tableId") or table.get("id") or ""),
+                settings=(
+                    self._hyper_bluff_settings
+                    if self._hyper_active
+                    else self.bluff_settings
+                ),
+            )
+        except ValueError:
+            # A malformed bluff situation never blocks the main line.
+            return None
+
+    def _learning_features(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        base_features: tuple[float, ...],
+        equity: float,
+        temperature: RiskTemperature,
+    ) -> tuple[float, ...]:
+        hero, _ = _hero_and_seats(table)
+        contribution = _integer(hero.get("currentBetChips"), "hero currentBetChips")
+        call_chips = _integer(allowed.get("callChips", 0), "callChips")
+        aggressive_minimums = []
+        for range_name in ("betRange", "raiseRange"):
+            amount_range = allowed.get(range_name)
+            if amount_range is not None:
+                aggressive_minimums.append(
+                    _integer(
+                        _mapping(amount_range, range_name).get("min"),
+                        f"{range_name}.min",
+                    )
+                )
+        if not aggressive_minimums and allowed.get("allInToAmount") is not None:
+            aggressive_minimums.append(
+                _integer(allowed.get("allInToAmount"), "allInToAmount")
+            )
+        minimum_to = min(aggressive_minimums, default=contribution)
+        effective_stack = max(1, effective_stack_chips(table))
+        lead = self._lead_position(table)
+        opponent_wildness, opponent_stickiness, _ = (
+            self.opponent_tracker.pressure_actor_profile(table)
+        )
+        return build_learning_features(
+            base_features,
+            hand_strength=equity,
+            board_tier=self._board_tier(table),
+            risk_temperature=temperature.temperature / 100.0,
+            risk_factors=temperature.factor_risk,
+            call_effective_stack_fraction=min(1.0, call_chips / effective_stack),
+            min_aggressive_effective_stack_fraction=min(
+                1.0, max(0, minimum_to - contribution) / effective_stack
+            ),
+            hero_aggression_count=self._aggressive_events(table, hero=True),
+            opponent_aggression_count=self._aggressive_events(table, hero=False),
+            opponent_range_width=self._call_top_fraction(table, allowed),
+            opponent_max_wildness=opponent_wildness,
+            opponent_max_stickiness=opponent_stickiness,
+            lead_position_unit=(0.5 if lead is None else (lead + 100.0) / 200.0),
+        )
+
+    @staticmethod
+    def _board_tier(table: Mapping[str, Any]) -> str:
+        """Board-contribution tier of the hero holding (see board_improvement)."""
+
+        hero, _ = _hero_and_seats(table)
+        hole_cards = _cards(hero.get("holeCards"), "holeCards", 2)
+        board = _cards(table.get("boardCards"), "boardCards")
+        return board_improvement((hole_cards[0], hole_cards[1]), board)
+
+    @staticmethod
+    def _hero_seat_number(table: Mapping[str, Any]) -> int:
+        return _integer(table.get("selfSeatNumber"), "selfSeatNumber", minimum=1)
+
+    @classmethod
+    def _aggressive_events(
+        cls, table: Mapping[str, Any], *, hero: bool, street: str | None = None
+    ) -> int:
+        """Count aggressive actions by hero (or by opponents) in recentEvents."""
+
+        hero_seat = cls._hero_seat_number(table)
+        count = 0
+        for raw_event in _sequence(table.get("recentEvents") or [], "recentEvents"):
+            event = _mapping(raw_event, "recentEvent")
+            if (
+                street is not None
+                and str(event.get("street") or "").casefold() != street
+            ):
+                continue
+            summary_value = event.get("summary")
+            if summary_value is None:
+                continue
+            summary = _mapping(summary_value, "recentEvent.summary")
+            action = str(summary.get("action") or "").casefold()
+            if action not in _AGGRESSIVE_ACTIONS:
+                continue
+            seat_number = summary.get("seatNumber")
+            is_hero = isinstance(seat_number, int) and seat_number == hero_seat
+            if is_hero == hero:
+                count += 1
+        return count
+
+    def _call_top_fraction(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any]
+    ) -> float:
+        """How much of the opponent's range to consider when facing a bet.
+
+        The more they have raised this hand, and the bigger the bet in
+        front of us, the more their range is weighted toward strong made
+        hands, so the smaller the fraction of holdings we simulate against.
+        No aggression means no conditioning (1.0 = uniformly random).
+
+        The tracker floor below is escalation-decayed per attacker
+        (``opponent_model._ESCALATION_DECAY``, anchored on the 2026-08-13
+        bust hand where the flat 0.4237 floor overrode four raises of
+        escalation and cost 756 BB); the final [0.20, 1.0] clamp is
+        applied after that decayed floor, so 0.20 stays the hard minimum.
+        """
+
+        to_call = _integer(allowed.get("callChips", 0), "callChips")
+        if to_call <= 0:
+            return 1.0
+        opponent_raises = self._aggressive_events(table, hero=False)
+        if opponent_raises == 0:
+            return 1.0
+        fraction = 0.75 * (0.8 ** (opponent_raises - 1))
+        pot = _integer(table.get("potChips"), "potChips")
+        bet_fraction = to_call / max(pot - to_call, 1)
+        if bet_fraction > 1.0:
+            fraction *= 0.6
+        elif bet_fraction > 0.6:
+            fraction *= 0.8
+        # A bet into a hand that barely improves the board is aimed at the
+        # board itself: weight the aggressor even further toward hands that
+        # beat it.
+        fraction *= _BOARD_DISCOUNT_RANGE_TIGHTEN.get(self._board_tier(table), 1.0)
+        # A range cannot be narrower than how often its owner plays it fast:
+        # the observed aggression frequency floors the conditioning, so a
+        # permanent shover converges toward a random range instead of being
+        # credited with strength forever. The floor itself decays with the
+        # attacker's aggressive-action count this hand, so within-hand
+        # escalation is credited even from a tracked maniac.
+        fraction = max(fraction, self.opponent_tracker.range_floor_for_table(table))
+        return min(1.0, max(0.20, fraction))
+
+    def _call_clears_margin(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        equity: float | None,
+    ) -> bool:
+        """Whether calling is justified: pot odds + street margin + stack gate."""
+
+        if equity is None:
+            return True
+        tier = self._board_tier(table)
+        margin = self._call_margin(table)
+        # Cold situations shave the normal margin, hot ones add to it; the
+        # board-discount margin below is a hard gate and never shifts.
+        margin -= self.temperature_shaping.call_margin_shift * self._boldness(
+            table, allowed, equity
+        )
+        margin += self.safety_gates.board_margin(tier)
+        price = self._pot_odds(table, allowed) + margin
+        if equity < price:
+            return False
+        # Cheap calls into tracked hyper-aggression are shove invitations:
+        # the entry bar blends toward the softest stack-gate floor so limps
+        # only happen with hands that can stand the pressure.
+        wildness = self.opponent_tracker.max_active_wildness(table)
+        if wildness > 0.0:
+            gate_floors = [floor for _, floor in self._call_stack_gates()]
+            if gate_floors and equity < wildness * min(gate_floors):
+                return False
+        hero, _ = _hero_and_seats(table)
+        stack = _integer(hero.get("stackChips"), "hero stackChips")
+        to_call = _integer(allowed.get("callChips", 0), "callChips")
+        # The temperature's defensive margin also assumes bets mean
+        # strength, so the wild-opponent blend targets the plain price.
+        neutral_price = (
+            self._pot_odds(table, allowed)
+            + self._call_margin(table)
+            + self.safety_gates.board_margin(tier)
+        )
+        for stack_fraction, equity_floor in self._call_stack_gates():
+            if to_call >= stack_fraction * stack:
+                # The gate's premise is that big bets mean strength. Tracked
+                # wildness dissolves that premise proportionally, sliding the
+                # requirement from the gate floor back to the plain price.
+                required = (1.0 - wildness) * equity_floor + wildness * neutral_price
+                if equity < required:
+                    return False
+        gate = self.safety_gates.board_stack_gate(tier)
+        if gate is not None:
+            stack_fraction, floor = gate
+            if to_call >= stack_fraction * stack and equity < floor:
+                return False
+        return True
+
+    def _call_margin(self, table: Mapping[str, Any]) -> float:
+        return _CALL_MARGINS.get(self._street(table), 0.08)
+
+    def _call_stack_gates(self) -> tuple[tuple[float, float], ...]:
+        return self.safety_gates.call_stack_gates
+
+    def _aggression_floor(self, table: Mapping[str, Any], opponent_count: int) -> float:
+        floor = min(0.72, 0.52 + 0.05 * max(0, opponent_count - 1))
+        if self._street(table) == "preflop":
+            floor += 0.04
+        return floor
+
+    # Set transiently by decide_forced; consulted once where the family
+    # proposal lands so a counterfactual branch runs the identical serve
+    # path -- bluff conversion, engine sizing, and every safety clamp.
+    _forced_proposal: tuple[str, float | None] | None = None
+
+    def decide(
+        self,
+        table: Mapping[str, Any],
+        deadline_s: float = 10.0,
+        research_context: Mapping[str, Any] | None = None,
+    ) -> dict[str, str | int]:
+        return self.decide_with_diagnostics(
+            table,
+            deadline_s=deadline_s,
+            research_context=research_context,
+        ).to_payload()
+
+    def decide_forced(
+        self,
+        table: Mapping[str, Any],
+        *,
+        family: str,
+        pot_fraction: float | None = None,
+        deadline_s: float = 10.0,
+    ) -> dict[str, str | int]:
+        """Decide with the family proposal pinned to ``family``.
+
+        Counterfactual value branches call this so Q(state, branch)
+        measures the action this policy would actually submit: a pinned
+        passive family may still be upgraded by the bluff module exactly
+        as at serve, and a pinned aggressive family is sized by the engine
+        at ``pot_fraction`` under the normal clamps. The pin applies to
+        one decision and is always cleared.
+        """
+
+        self._forced_proposal = (str(family), pot_fraction)
+        try:
+            return self.decide(table, deadline_s=deadline_s)
+        finally:
+            self._forced_proposal = None
+
+    @staticmethod
+    def _family_available(family: str, available: set[str]) -> bool:
+        if family == "fold":
+            return "fold" in available
+        if family == "check_call":
+            return "check" in available or "call" in available
+        return "bet" in available or "raise" in available
+
+    def decide_with_diagnostics(
+        self,
+        table: Mapping[str, Any],
+        deadline_s: float = 10.0,
+        research_context: Mapping[str, Any] | None = None,
+    ) -> DecisionResult:
+        context = research_context or {}
+        cached_position = context.get("position")
+        if cached_position is not None:
+            try:
+                cached_position = float(cached_position)
+            except (TypeError, ValueError) as exc:
+                raise ArenaSnapshotError(
+                    "research_context.position must be a number"
+                ) from exc
+        features = features_from_table(table, position=cached_position)
+        allowed = _mapping(table.get("allowedActions"), "allowedActions")
+        available = {
+            str(value)
+            for value in _sequence(allowed.get("availableActions"), "availableActions")
+        }
+        # Record this hand's observed actions before deciding, so opponent
+        # aggression frequencies stay current even on deadline fallbacks.
+        self.opponent_tracker.observe(table)
+        self._hyper_active = self._hyper_roll(table)
+        if deadline_s < 2.0:
+            action = self._deadline_action(table, allowed, available)
+            return DecisionResult(
+                action=self._render(action, table, allowed, equity=None),
+                family="deadline",
+                equity=None,
+                situation_temperature=None,
+                deadline_fallback=True,
+            )
+
+        # Facing aggression, estimate equity against the strong part of the
+        # opponent's range instead of a uniformly random hand.
+        top_fraction = self._call_top_fraction(table, allowed)
+        equity = self._equity(table, top_fraction=top_fraction)
+        temperature = (
+            self._situation_temperature(table, allowed, equity)
+            if equity is not None
+            else None
+        )
+        learning_features = (
+            self._learning_features(table, allowed, features, equity, temperature)
+            if equity is not None and temperature is not None
+            else None
+        )
+        family = (
+            self._equity_family(table, allowed, available, equity, features=features)
+            if equity is not None
+            else self._family(features)
+        )
+        forced = self._forced_proposal
+        forced_pot_fraction: float | None = None
+        if forced is not None and self._family_available(forced[0], available):
+            family, forced_pot_fraction = forced
+        if family == "aggress":
+            action = None
+            if forced_pot_fraction is not None:
+                for name in ("raise", "bet"):
+                    if name in available:
+                        action = self._sized_action(
+                            name,
+                            table,
+                            allowed,
+                            equity,
+                            pot_fraction=forced_pot_fraction,
+                        )
+                        if action is not None:
+                            break
+            if action is None:
+                action = self._aggressive_action(table, allowed, available, equity)
+        elif family == "check_call":
+            action = self._passive_action(table, allowed, available, equity)
+        else:
+            action = self._fold_action(table, allowed, available, equity)
+
+        # A passive spot may still be attacked as a priced, mixed bluff. The
+        # submitted family becomes aggress so telemetry labels match the
+        # action; the bluff kind is recorded as private diagnostics.
+        lead = self._lead_position(table)
+        bluff_kind: str | None = None
+        if family != "aggress":
+            advice = self._consider_bluff(table, allowed, available, equity, lead)
+            if advice is not None and advice.bluff and advice.action in available:
+                sized = self._sized_action(
+                    advice.action,
+                    table,
+                    allowed,
+                    equity,
+                    pot_fraction=advice.pot_fraction,
+                )
+                if sized is not None:
+                    action = sized
+                    family = "aggress"
+                    bluff_kind = advice.kind
+        return DecisionResult(
+            action=self._render(action, table, allowed, equity),
+            family=family,
+            equity=equity,
+            situation_temperature=temperature,
+            learning_features=learning_features,
+            behavior_probabilities=tuple(float(label == family) for label in LABELS),
+            proposed_risk_fraction=getattr(self, "_proposed_risk_fraction", None),
+            temperature_boldness=(
+                self.temperature_shaping.boldness(temperature.temperature)
+                if temperature is not None
+                else None
+            ),
+            opponent_range_width=top_fraction if equity is not None else None,
+            opponent_evidence_confidence=(
+                self.opponent_tracker.pressure_actor_profile(table)[2]
+            ),
+            lead_position=lead,
+            bluff_kind=bluff_kind,
+            hyper_aggression=self._hyper_active,
+        )
+
+    def _equity_family(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+        equity: float,
+        features: tuple[float, ...] | None = None,
+    ) -> str:
+        del features  # Equity thresholds decide here; model backends may use them.
+        opponent_count = max(1, active_opponent_count(table))
+        aggression_floor = self._aggression_floor(table, opponent_count)
+        # Temperature shaping moves the policy-owned floor a bounded amount:
+        # cold lowers the bar to aggress, hot raises it.
+        aggression_floor -= (
+            self.temperature_shaping.aggression_floor_shift
+            * self._boldness(table, allowed, equity)
+        )
+        # Against tracked hyper-aggression a raise buys no folds, so it is
+        # dominated except for pure value: the floor blends continuously
+        # toward the war floor and marginal hands defend by calling
+        # instead. Simulation found the open-then-fold leak this closes
+        # (-134 bb/100 vs a permanent shover before, near breakeven after;
+        # a looser shove-price entry floor re-tested worse at -15 bb/100).
+        wildness = self.opponent_tracker.max_active_wildness(table)
+        if wildness > 0.0:
+            aggression_floor = (
+                1.0 - wildness
+            ) * aggression_floor + wildness * self.safety_gates.near_nut_floor
+        if self._hyper_active:
+            aggression_floor -= _HYPER_FLOOR_DROP
+        aggression_floor = min(0.95, max(0.05, aggression_floor))
+        if (
+            any(action in available for action in ("bet", "raise"))
+            and equity >= aggression_floor
+        ):
+            return "aggress"
+        if "check" in available:
+            return "check_call"
+        if "call" in available and self._call_clears_margin(table, allowed, equity):
+            return "check_call"
+        return "fold"
+
+    def _fold_action(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+        equity: float | None,
+    ) -> tuple[str, int | None]:
+        if "check" in available:
+            return "check", None
+        pot_odds = self._pot_odds(table, allowed)
+        if (
+            "call" in available
+            and equity is not None
+            and equity
+            >= max(
+                self.safety_gates.rescue_call_floor,
+                pot_odds + self.safety_gates.rescue_call_margin,
+            )
+            and self._call_clears_margin(table, allowed, equity)
+        ):
+            return "call", None
+        if "fold" in available:
+            return "fold", None
+        return self._passive_action(table, allowed, available, equity)
+
+    def _passive_action(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+        equity: float | None,
+    ) -> tuple[str, int | None]:
+        if "check" in available:
+            return "check", None
+        if "call" in available and self._call_clears_margin(table, allowed, equity):
+            return "call", None
+        if "fold" in available:
+            return "fold", None
+        if "call" in available:
+            return "call", None
+        return self._first_legal_aggression(table, allowed, available)
+
+    def _aggressive_action(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+        equity: float | None,
+    ) -> tuple[str, int | None]:
+        hero, _ = _hero_and_seats(table)
+        safety_floor = 0.0
+        street = self._street(table)
+        to_call = _integer(allowed.get("callChips", 0), "callChips")
+        if to_call > 0 and self._aggressive_events(table, hero=True, street=street) > 0:
+            # We already raised this street and got raised back: continuing
+            # the war needs a near-nut hand, not a marginal edge vs random.
+            safety_floor = self.safety_gates.near_nut_floor
+        if equity is not None:
+            # Betting the board's own hand only ever levers out worse board
+            # play; hands that beat it never fold. Near-nuts may still bet.
+            tier_floor = self.safety_gates.board_aggression_floor(
+                self._board_tier(table)
+            )
+            if tier_floor is not None:
+                safety_floor = max(safety_floor, tier_floor)
+        if equity is not None and equity < safety_floor:
+            return self._passive_action(table, allowed, available, equity)
+
+        if "bet" in available:
+            sized = self._sized_action("bet", table, allowed, equity)
+            if sized is not None:
+                return sized
+        if "raise" in available:
+            sized = self._sized_action("raise", table, allowed, equity)
+            if sized is not None:
+                return sized
+        # The warm-start model never controls an optional all-in in v0.
+        return self._passive_action(table, allowed, available, equity)
+
+    def _sized_action(
+        self,
+        action: str,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        equity: float | None,
+        pot_fraction: float | None = None,
+    ) -> tuple[str, int] | None:
+        hero, _ = _hero_and_seats(table)
+        pot = _integer(table.get("potChips"), "potChips")
+        big_blind = _integer(table.get("bigBlindChips"), "bigBlindChips", minimum=1)
+        stack = _integer(hero.get("stackChips"), "hero stackChips")
+        contribution = _integer(hero.get("currentBetChips"), "hero currentBetChips")
+        call_chips = _integer(allowed.get("callChips", 0), "callChips")
+
+        range_name = "betRange" if action == "bet" else "raiseRange"
+        amount_range = _mapping(allowed.get(range_name), range_name)
+        minimum = _integer(amount_range.get("min"), f"{range_name}.min")
+        maximum = _integer(amount_range.get("max"), f"{range_name}.max")
+        call_to_amount = allowed.get("callToAmount")
+        if action == "bet" or (call_to_amount is None and call_chips == 0):
+            # Arena nulls callToAmount whenever nothing is left to call, so
+            # a raise from a check spot starts at hero's already-matched
+            # street commitment, exactly like a bet.
+            base = contribution
+        else:
+            base = _integer(call_to_amount, "callToAmount")
+        # The half-pot target breathes with the temperature: bigger when
+        # cold, smaller when hot. A caller (the bluff path) may bring its
+        # own pot fraction instead, and a hyper-aggression decision targets
+        # the full pot. The risk cap below never shifts.
+        if pot_fraction is None:
+            if self._hyper_active:
+                pot_fraction = _HYPER_POT_FRACTION
+            else:
+                pot_fraction = 0.5 * (
+                    1.0
+                    + self.temperature_shaping.sizing_span
+                    * self._boldness(table, allowed, equity)
+                )
+        desired = base + max(big_blind, round(pot_fraction * (pot + call_chips)))
+
+        if equity is None or equity < self.safety_gates.near_nut_floor:
+            risk_cap = contribution + max(
+                big_blind,
+                round(self.safety_gates.risk_cap_stack_fraction * stack),
+            )
+            maximum = min(maximum, risk_cap)
+        if maximum < minimum:
+            return None
+        return action, min(max(desired, minimum), maximum)
+
+    def _first_legal_aggression(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+    ) -> tuple[str, int | None]:
+        for action in ("bet", "raise"):
+            if action in available:
+                sized = self._sized_action(action, table, allowed, equity=None)
+                if sized is not None:
+                    return sized
+        if "all-in" in available:
+            return "all-in", _integer(allowed.get("allInToAmount"), "allInToAmount")
+        raise ArenaSnapshotError("no legal fallback action")
+
+    def _deadline_action(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+    ) -> tuple[str, int | None]:
+        passive = safest_passive_action(available)
+        if passive is not None:
+            return passive, None
+        return self._first_legal_aggression(table, allowed, available)
+
+    @staticmethod
+    def _pot_odds(table: Mapping[str, Any], allowed: Mapping[str, Any]) -> float:
+        pot = _integer(table.get("potChips"), "potChips")
+        call_chips = _integer(allowed.get("callChips", 0), "callChips")
+        return 0.0 if call_chips == 0 else call_chips / max(pot + call_chips, 1)
+
+    def _render(
+        self,
+        action: tuple[str, int | None],
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        equity: float | None,
+    ) -> ArenaAction:
+        del equity  # Keep private-card estimates out of public table chat.
+        action_name, amount = action
+        templates = {
+            "fold": (
+                "the price and line make this a clean release",
+                "this branch is too expensive to continue",
+            ),
+            "check": (
+                "keeping the pot controlled on this texture",
+                "taking the free card and preserving flexibility",
+            ),
+            "call": (
+                "the price leaves enough room to continue",
+                "continuing without inflating the pot",
+            ),
+            "bet": (
+                "a measured size pressures the weaker range",
+                "using a controlled size to deny cheap realization",
+            ),
+            "raise": (
+                "applying pressure while keeping stack risk bounded",
+                "this line supports a measured pressure raise",
+            ),
+            "all-in": (
+                "stack geometry makes full commitment cleaner than a partial size",
+                "the remaining stack works better as one decision",
+            ),
+        }
+        table_id = str(table.get("tableId") or table.get("id") or "")
+        digest = hashlib.sha256(f"{table_id}:{action_name}".encode()).digest()
+        choices = templates[action_name]
+        message = choices[digest[0] % len(choices)]
+
+        reasoning: str | None = None
+        if bool(allowed.get("reasoningRequired")):
+            pot_odds = round(100 * self._pot_odds(table, allowed))
+            fields = [f'ke: "pot odds {pot_odds}%"', 'pp: "risk-controlled line"']
+            if action_name in _AGGRESSIVE_ACTIONS:
+                fields.append('sr: "bounded pot pressure"')
+            reasoning = "{" + ", ".join(fields) + "}"
+        return ArenaAction(action_name, amount, message, reasoning)
+
+
+__all__ = [
+    "ArenaAction",
+    "DecisionEngine",
+    "DecisionResult",
+    "DEFAULT_SAFETY_GATES",
+    "DEFAULT_TEMPERATURE_SHAPING",
+    "NEUTRAL_TEMPERATURE_SHAPING",
+    "safest_passive_action",
+    "SafetyGates",
+    "TemperatureShaping",
+    "UNSOFTENED_SAFETY_GATES",
+]
+
+# Re-exported for policy construction convenience.
+__all__ += ["BluffSettings", "DEFAULT_BLUFF_SETTINGS"]

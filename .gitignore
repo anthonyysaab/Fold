@@ -1,8 +1,16 @@
 __pycache__/
 *.pyc
+.pytest_cache/
 .arena-credentials
-.arena-poker-state
+.arena-training.jsonl
+runs/
+foreign play data/
 *.tar.gz
 bundle.zip
 build/
 .venv/
+.ruff_cache/
+.handoff/
+.antislop/
+.claude/
+artifacts/corpora/

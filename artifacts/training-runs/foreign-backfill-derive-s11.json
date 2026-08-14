@@ -1,0 +1,25 @@
+[
+  {
+    "collection": "20260812T083023Z_poker-playground_s11_top15",
+    "season": 11,
+    "agent_scope": "archive",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [
+      "cmq0hnj3j1xb4k9a5n7lpdmjf",
+      "cmq5pku241mezqcv2yqd419sg",
+      "cmq9ltlhz1qmraml1ceenzadn",
+      "cmrjgwxgf3fuh3drrizg2jayk",
+      "cmrjtria74hpxwa5dbo5e691w"
+    ],
+    "derive": {
+      "pending_pairs": 16955,
+      "pending_tables": 16292,
+      "rows": 23000,
+      "eligible_rows": 22893,
+      "timeout_rows": 107,
+      "skipped": 0,
+      "represented_agents": 5,
+      "seconds": 246.0
+    }
+  }
+]

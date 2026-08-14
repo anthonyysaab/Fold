@@ -53,10 +53,10 @@ def main() -> int:
         print(f"status={status} hands={hands}/{data.get('targetHands')}")
         if status in TERMINAL:
             print("TERMINAL:", json.dumps(data))
-            return 0
+            return 0 if status == "Succeeded" else 1
         time.sleep(10)
     print("TIMED_OUT_POLLING:", json.dumps(data))
-    return 0
+    return 2
 
 
 if __name__ == "__main__":

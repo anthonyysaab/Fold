@@ -1,0 +1,19 @@
+[
+  {
+    "collection": "20260812T082657Z_poker-playground_s9_top15",
+    "season": 9,
+    "agent_scope": "manifest",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [],
+    "derive": {
+      "pending_pairs": 39218,
+      "pending_tables": 34095,
+      "rows": 61151,
+      "eligible_rows": 60053,
+      "timeout_rows": 1098,
+      "skipped": 0,
+      "represented_agents": 15,
+      "seconds": 658.9
+    }
+  }
+]

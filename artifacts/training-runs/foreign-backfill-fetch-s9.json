@@ -1,0 +1,15 @@
+[
+  {
+    "collection": "20260812T082657Z_poker-playground_s9_top15",
+    "season": 9,
+    "agent_scope": "manifest",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [],
+    "fetch": {
+      "requested": 32909,
+      "fetched": 32909,
+      "still_missing": 0,
+      "seconds": 5406.3
+    }
+  }
+]

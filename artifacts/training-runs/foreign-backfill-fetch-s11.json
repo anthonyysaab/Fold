@@ -1,0 +1,21 @@
+[
+  {
+    "collection": "20260812T083023Z_poker-playground_s11_top15",
+    "season": 11,
+    "agent_scope": "archive",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [
+      "cmq0hnj3j1xb4k9a5n7lpdmjf",
+      "cmq5pku241mezqcv2yqd419sg",
+      "cmq9ltlhz1qmraml1ceenzadn",
+      "cmrjgwxgf3fuh3drrizg2jayk",
+      "cmrjtria74hpxwa5dbo5e691w"
+    ],
+    "fetch": {
+      "requested": 9912,
+      "fetched": 9912,
+      "still_missing": 0,
+      "seconds": 1552.9
+    }
+  }
+]

@@ -1,0 +1,24 @@
+﻿training device: cuda (Quadro RTX 3000)
+state policy: heuristic-aggressive-v5
+loaded 1169 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.csv
+loaded 60053 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.delta.csv
+loaded 65367 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082859Z_poker-playground_s10_top15\top15_decisions.csv
+loaded 40161 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.csv
+loaded 22893 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.delta.csv
+loaded 1203 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083204Z_poker-playground_s12_top15\top15_decisions.csv
+loaded 68693 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083313Z_poker-playground_s13_top15\top15_decisions.csv
+foreign teacher examples: 259539
+five-max lineup: 44027 examples over 12000 hands in 184 carry-over sessions (hero +211.0 bb/100, busted 62x)
+heads-up vs shover: 56758 examples over 12000 hands in 1838 carry-over sessions (hero +167.4 bb/100, busted 751x)
+heads-up vs station: 71208 examples over 12000 hands in 1148 carry-over sessions (hero +318.1 bb/100, busted 255x)
+heads-up vs nit: 10464 examples over 4000 hands in 49 carry-over sessions (hero +73.1 bb/100, busted 0x)
+sparring: 42885 examples over 8000 hands in 260 sessions (hero +12.8 bb/100)
+counterfactual reward examples: 125139; behavior-only examples: 359742
+examples: 484881
+train_loss: 0.360568
+validation_loss: 0.357336
+validation_best_action_accuracy: 0.476571
+validation_mean_regret_pct: 15.755848
+validation_action_value_mae_pct: 17.440040
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v2-0016.manifest.json
+state: candidate (promotion requires the evaluation gate)

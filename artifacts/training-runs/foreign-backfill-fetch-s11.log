@@ -1,0 +1,124 @@
+﻿season 11: 40113 inventoried, 30201 on disk, 9912 to fetch
+unique tables: 40113; cached: 30201; missing: 9912
+fetched missing replays: 100/9912
+fetched missing replays: 200/9912
+fetched missing replays: 300/9912
+fetched missing replays: 400/9912
+fetched missing replays: 500/9912
+fetched missing replays: 600/9912
+fetched missing replays: 700/9912
+fetched missing replays: 800/9912
+fetched missing replays: 900/9912
+fetched missing replays: 1000/9912
+fetched missing replays: 1100/9912
+fetched missing replays: 1200/9912
+fetched missing replays: 1300/9912
+fetched missing replays: 1400/9912
+fetched missing replays: 1500/9912
+fetched missing replays: 1600/9912
+fetched missing replays: 1700/9912
+fetched missing replays: 1800/9912
+fetched missing replays: 1900/9912
+fetched missing replays: 2000/9912
+fetched missing replays: 2100/9912
+fetched missing replays: 2200/9912
+fetched missing replays: 2300/9912
+fetched missing replays: 2400/9912
+fetched missing replays: 2500/9912
+fetched missing replays: 2600/9912
+fetched missing replays: 2700/9912
+fetched missing replays: 2800/9912
+fetched missing replays: 2900/9912
+fetched missing replays: 3000/9912
+fetched missing replays: 3100/9912
+fetched missing replays: 3200/9912
+fetched missing replays: 3300/9912
+fetched missing replays: 3400/9912
+fetched missing replays: 3500/9912
+fetched missing replays: 3600/9912
+fetched missing replays: 3700/9912
+fetched missing replays: 3800/9912
+fetched missing replays: 3900/9912
+fetched missing replays: 4000/9912
+fetched missing replays: 4100/9912
+fetched missing replays: 4200/9912
+fetched missing replays: 4300/9912
+fetched missing replays: 4400/9912
+fetched missing replays: 4500/9912
+fetched missing replays: 4600/9912
+fetched missing replays: 4700/9912
+fetched missing replays: 4800/9912
+fetched missing replays: 4900/9912
+fetched missing replays: 5000/9912
+fetched missing replays: 5100/9912
+fetched missing replays: 5200/9912
+fetched missing replays: 5300/9912
+fetched missing replays: 5400/9912
+fetched missing replays: 5500/9912
+fetched missing replays: 5600/9912
+fetched missing replays: 5700/9912
+fetched missing replays: 5800/9912
+fetched missing replays: 5900/9912
+fetched missing replays: 6000/9912
+fetched missing replays: 6100/9912
+fetched missing replays: 6200/9912
+fetched missing replays: 6300/9912
+fetched missing replays: 6400/9912
+fetched missing replays: 6500/9912
+fetched missing replays: 6600/9912
+fetched missing replays: 6700/9912
+fetched missing replays: 6800/9912
+fetched missing replays: 6900/9912
+fetched missing replays: 7000/9912
+fetched missing replays: 7100/9912
+fetched missing replays: 7200/9912
+fetched missing replays: 7300/9912
+fetched missing replays: 7400/9912
+fetched missing replays: 7500/9912
+fetched missing replays: 7600/9912
+fetched missing replays: 7700/9912
+fetched missing replays: 7800/9912
+fetched missing replays: 7900/9912
+fetched missing replays: 8000/9912
+fetched missing replays: 8100/9912
+fetched missing replays: 8200/9912
+fetched missing replays: 8300/9912
+fetched missing replays: 8400/9912
+fetched missing replays: 8500/9912
+fetched missing replays: 8600/9912
+fetched missing replays: 8700/9912
+fetched missing replays: 8800/9912
+fetched missing replays: 8900/9912
+fetched missing replays: 9000/9912
+fetched missing replays: 9100/9912
+fetched missing replays: 9200/9912
+fetched missing replays: 9300/9912
+fetched missing replays: 9400/9912
+fetched missing replays: 9500/9912
+fetched missing replays: 9600/9912
+fetched missing replays: 9700/9912
+fetched missing replays: 9800/9912
+fetched missing replays: 9900/9912
+fetched missing replays: 9912/9912
+[
+  {
+    "collection": "20260812T083023Z_poker-playground_s11_top15",
+    "season": 11,
+    "agent_scope": "archive",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [
+      "cmq0hnj3j1xb4k9a5n7lpdmjf",
+      "cmq5pku241mezqcv2yqd419sg",
+      "cmq9ltlhz1qmraml1ceenzadn",
+      "cmrjgwxgf3fuh3drrizg2jayk",
+      "cmrjtria74hpxwa5dbo5e691w"
+    ],
+    "fetch": {
+      "requested": 9912,
+      "fetched": 9912,
+      "still_missing": 0,
+      "seconds": 1552.9
+    }
+  }
+]
+wrote artifacts\training-runs\foreign-backfill-fetch-s11.json

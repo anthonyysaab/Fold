@@ -36,6 +36,8 @@ def main() -> int:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     file_path = Path(sys.argv[1])
+    if not file_path.is_file():
+        raise SystemExit(f"submission file not found: {file_path}")
     competition = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_COMPETITION
     filename = "bundle.zip" if file_path.suffix == ".zip" else "strategy.py"
     content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"

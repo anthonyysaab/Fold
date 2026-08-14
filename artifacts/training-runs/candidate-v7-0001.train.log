@@ -1,0 +1,11 @@
+﻿training device: cuda (Quadro RTX 3000)
+state policy: heuristic-aggressive-v6
+loaded 1169 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.csv
+loaded 60053 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.delta.csv
+loaded 65367 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082859Z_poker-playground_s10_top15\top15_decisions.csv
+loaded 40161 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.csv
+loaded 22893 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.delta.csv
+loaded 1203 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083204Z_poker-playground_s12_top15\top15_decisions.csv
+loaded 68693 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083313Z_poker-playground_s13_top15\top15_decisions.csv
+foreign teacher examples: 259539
+harvesting 5 legs across 5 worker processes

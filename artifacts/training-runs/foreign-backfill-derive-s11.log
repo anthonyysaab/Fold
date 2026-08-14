@@ -1,0 +1,60 @@
+﻿season 11: 16955 pending receipt pairs across 16292 replays
+   derived 500/16292 replays; rows 651; 93.8 replays/s
+   derived 1000/16292 replays; rows 1293; 93.0 replays/s
+   derived 1500/16292 replays; rows 2003; 90.9 replays/s
+   derived 2000/16292 replays; rows 2835; 87.6 replays/s
+   derived 2500/16292 replays; rows 3564; 88.3 replays/s
+   derived 3000/16292 replays; rows 4253; 84.4 replays/s
+   derived 3500/16292 replays; rows 4888; 81.6 replays/s
+   derived 4000/16292 replays; rows 5557; 79.1 replays/s
+   derived 4500/16292 replays; rows 6263; 77.2 replays/s
+   derived 5000/16292 replays; rows 6957; 75.6 replays/s
+   derived 5500/16292 replays; rows 7623; 74.7 replays/s
+   derived 6000/16292 replays; rows 8313; 73.9 replays/s
+   derived 6500/16292 replays; rows 9012; 73.0 replays/s
+   derived 7000/16292 replays; rows 9700; 72.2 replays/s
+   derived 7500/16292 replays; rows 10364; 71.8 replays/s
+   derived 8000/16292 replays; rows 10994; 71.6 replays/s
+   derived 8500/16292 replays; rows 11593; 71.5 replays/s
+   derived 9000/16292 replays; rows 12325; 70.9 replays/s
+   derived 9500/16292 replays; rows 13111; 69.9 replays/s
+   derived 10000/16292 replays; rows 13862; 69.3 replays/s
+   derived 10500/16292 replays; rows 14608; 68.8 replays/s
+   derived 11000/16292 replays; rows 15318; 68.4 replays/s
+   derived 11500/16292 replays; rows 16023; 68.1 replays/s
+   derived 12000/16292 replays; rows 16789; 67.6 replays/s
+   derived 12500/16292 replays; rows 17494; 67.4 replays/s
+   derived 13000/16292 replays; rows 18185; 67.2 replays/s
+   derived 13500/16292 replays; rows 18937; 66.9 replays/s
+   derived 14000/16292 replays; rows 19650; 66.8 replays/s
+   derived 14500/16292 replays; rows 20378; 66.6 replays/s
+   derived 15000/16292 replays; rows 21118; 66.4 replays/s
+   derived 15500/16292 replays; rows 21804; 66.2 replays/s
+   derived 16000/16292 replays; rows 22560; 66.0 replays/s
+   derived 16292/16292 replays; rows 23000; 66.2 replays/s
+[
+  {
+    "collection": "20260812T083023Z_poker-playground_s11_top15",
+    "season": 11,
+    "agent_scope": "archive",
+    "agents_in_scope": 15,
+    "agents_added_from_archive": [
+      "cmq0hnj3j1xb4k9a5n7lpdmjf",
+      "cmq5pku241mezqcv2yqd419sg",
+      "cmq9ltlhz1qmraml1ceenzadn",
+      "cmrjgwxgf3fuh3drrizg2jayk",
+      "cmrjtria74hpxwa5dbo5e691w"
+    ],
+    "derive": {
+      "pending_pairs": 16955,
+      "pending_tables": 16292,
+      "rows": 23000,
+      "eligible_rows": 22893,
+      "timeout_rows": 107,
+      "skipped": 0,
+      "represented_agents": 5,
+      "seconds": 246.0
+    }
+  }
+]
+wrote artifacts\training-runs\foreign-backfill-derive-s11.json

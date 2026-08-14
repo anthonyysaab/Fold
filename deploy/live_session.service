@@ -1,0 +1,32 @@
+# systemd unit for continuous Arena live play on a Linux server or Raspberry Pi.
+#
+# Install:
+#   1. Copy the project folder to the box (foreign play data/ and .venv/ are
+#      not needed) and put .arena-credentials in the project root.
+#   2. Adjust the two paths below, then:
+#        sudo cp deploy/live_session.service /etc/systemd/system/
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now live_session
+#   3. Watch it:  journalctl -u live_session -f
+#
+# `systemctl stop` sends SIGTERM, which live_session.py maps onto its clean
+# shutdown path, so the table is released before the process exits. Restart=no
+# on purpose: the supervisor already restarts its own sessions, and its hard
+# stops (entry fee, busted bankroll) are owner decisions a service manager
+# must not retry past.
+
+[Unit]
+Description=Arena poker continuous live play (Fold-ver-4)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/fold-ver-4
+ExecStart=/usr/bin/python3 /home/pi/fold-ver-4/live_session.py
+Restart=no
+# The runner is stdout-only; keep lines unbuffered so journalctl is live.
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

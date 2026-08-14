@@ -1,0 +1,100 @@
+{
+  "batteries": {
+    "candidate-v2-0014": {
+      "five-max-lineup": {
+        "bb_per_100": 65.05,
+        "hands_per_seed": 1000,
+        "seeds": [
+          70.1,
+          60.0
+        ]
+      },
+      "vs-median": {
+        "bb_per_100": 215.2,
+        "hands_per_seed": 1000,
+        "seeds": [
+          207.45,
+          222.95
+        ]
+      },
+      "vs-nit": {
+        "bb_per_100": 103.35,
+        "hands_per_seed": 1000,
+        "seeds": [
+          94.8,
+          111.9
+        ]
+      },
+      "vs-shover": {
+        "bb_per_100": 32.43,
+        "hands_per_seed": 1500,
+        "seeds": [
+          25.8,
+          39.07
+        ]
+      },
+      "vs-station": {
+        "bb_per_100": 20.79,
+        "hands_per_seed": 1000,
+        "seeds": [
+          -53.38,
+          94.96
+        ]
+      }
+    },
+    "heuristic-v5": {
+      "five-max-lineup": {
+        "bb_per_100": 169.97,
+        "hands_per_seed": 1000,
+        "seeds": [
+          156.98,
+          182.96
+        ]
+      },
+      "vs-median": {
+        "bb_per_100": 142.32,
+        "hands_per_seed": 1000,
+        "seeds": [
+          150.34,
+          134.3
+        ]
+      },
+      "vs-nit": {
+        "bb_per_100": 75.99,
+        "hands_per_seed": 1000,
+        "seeds": [
+          76.14,
+          75.84
+        ]
+      },
+      "vs-shover": {
+        "bb_per_100": 125.51,
+        "hands_per_seed": 1500,
+        "seeds": [
+          111.31,
+          139.71
+        ]
+      },
+      "vs-station": {
+        "bb_per_100": 326.6,
+        "hands_per_seed": 1000,
+        "seeds": [
+          335.2,
+          318.0
+        ]
+      }
+    }
+  },
+  "duels": {
+    "heuristic-v5 vs candidate-v2-0014": {
+      "hands_per_seed": 2000,
+      "heuristic-v5_bb_per_100": -9.33,
+      "seeds": [
+        -21.65,
+        3.0
+      ]
+    }
+  },
+  "stacks": "carry-over-sessions",
+  "starting_stack": 6000
+}

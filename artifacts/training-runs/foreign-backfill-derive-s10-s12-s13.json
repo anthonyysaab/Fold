@@ -1,0 +1,32 @@
+[
+  {
+    "collection": "20260812T082859Z_poker-playground_s10_top15",
+    "season": 10,
+    "derive": {
+      "pending_pairs": 1268,
+      "pending_tables": 1268,
+      "rows": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "collection": "20260812T083204Z_poker-playground_s12_top15",
+    "season": 12,
+    "derive": {
+      "pending_pairs": 52,
+      "pending_tables": 52,
+      "rows": 0,
+      "skipped": 0
+    }
+  },
+  {
+    "collection": "20260812T083313Z_poker-playground_s13_top15",
+    "season": 13,
+    "derive": {
+      "pending_pairs": 1310,
+      "pending_tables": 1310,
+      "rows": 0,
+      "skipped": 0
+    }
+  }
+]

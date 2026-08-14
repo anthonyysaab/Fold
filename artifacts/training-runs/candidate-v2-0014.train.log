@@ -1,0 +1,15 @@
+training device: cuda (Quadro RTX 3000)
+five-max lineup: 5675 examples over 3000 hands in 72 carry-over sessions (hero +23.6 bb/100, busted 55x)
+heads-up vs shover: 9075 examples over 3000 hands in 430 carry-over sessions (hero +26.0 bb/100, busted 208x)
+heads-up vs station: 14977 examples over 3000 hands in 408 carry-over sessions (hero +8.0 bb/100, busted 202x)
+heads-up vs nit: 2328 examples over 1000 hands in 18 carry-over sessions (hero +106.4 bb/100, busted 0x)
+sparring: 8043 examples over 2000 hands in 74 sessions (hero +25.8 bb/100)
+mixed in 5239 foreign teacher examples from foreign play data\last 5 seasons top 15\combined_top15_decisions_s9-s13.csv
+counterfactual reward examples: 24093; behavior-only examples: 21244
+examples: 45337
+train_loss: 0.442328
+validation_loss: 0.445627
+validation_action_accuracy: 0.333333
+validation_value_mae_pct: 19.655019
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v2-0014.manifest.json
+state: candidate (promotion requires the evaluation gate)
