@@ -1,0 +1,310 @@
+{
+  "generated_at": "2026-08-17T02:48:20",
+  "kind": "phase-b-corpus-summary",
+  "legs": [
+    {
+      "branch_rows": 3218,
+      "decisions_emitted": 1033,
+      "decisions_selected": 1105,
+      "emitted_branch_counts": {
+        "1": 72,
+        "2": 161,
+        "3": 592,
+        "4": 280
+      },
+      "hands": 1600,
+      "hero_bb_per_100": 130.489,
+      "hero_decisions": 2157,
+      "name": "five-max-p3-a",
+      "opponents": [
+        "p3-median",
+        "p3-passive",
+        "p3-aggressive",
+        "median-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.008735374258695304,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 12369,
+        "fallbacks": 109,
+        "seats_resampled": 12478,
+        "swaps_applied": 6436,
+        "tries": 22705
+      },
+      "seed": 71,
+      "sessions": 15,
+      "single_branch_groups": 72,
+      "wall_seconds": 1324.7
+    },
+    {
+      "branch_rows": 2913,
+      "decisions_emitted": 937,
+      "decisions_selected": 1016,
+      "emitted_branch_counts": {
+        "1": 79,
+        "2": 173,
+        "3": 489,
+        "4": 275
+      },
+      "hands": 1600,
+      "hero_bb_per_100": 36.11,
+      "hero_decisions": 1924,
+      "name": "five-max-p3-b",
+      "opponents": [
+        "p3-median",
+        "p3-passive",
+        "p3-aggressive",
+        "station-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.014004272489912177,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 8308,
+        "fallbacks": 118,
+        "seats_resampled": 8426,
+        "swaps_applied": 5826,
+        "tries": 17874
+      },
+      "seed": 111,
+      "sessions": 19,
+      "single_branch_groups": 79,
+      "wall_seconds": 1235.0
+    },
+    {
+      "branch_rows": 2414,
+      "decisions_emitted": 758,
+      "decisions_selected": 790,
+      "emitted_branch_counts": {
+        "1": 32,
+        "2": 159,
+        "3": 300,
+        "4": 299
+      },
+      "hands": 1200,
+      "hero_bb_per_100": 53.375,
+      "hero_decisions": 1415,
+      "name": "hu-p3-median",
+      "opponents": [
+        "p3-median"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.004349627174813587,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 4807,
+        "fallbacks": 21,
+        "seats_resampled": 4828,
+        "swaps_applied": 4828,
+        "tries": 8072
+      },
+      "seed": 112,
+      "sessions": 13,
+      "single_branch_groups": 32,
+      "wall_seconds": 988.4
+    },
+    {
+      "branch_rows": 2386,
+      "decisions_emitted": 759,
+      "decisions_selected": 801,
+      "emitted_branch_counts": {
+        "1": 42,
+        "2": 175,
+        "3": 300,
+        "4": 284
+      },
+      "hands": 1200,
+      "hero_bb_per_100": 85.125,
+      "hero_decisions": 1489,
+      "name": "hu-p3-aggressive",
+      "opponents": [
+        "p3-aggressive"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.004400670578373848,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 4751,
+        "fallbacks": 21,
+        "seats_resampled": 4772,
+        "swaps_applied": 4772,
+        "tries": 7553
+      },
+      "seed": 113,
+      "sessions": 20,
+      "single_branch_groups": 42,
+      "wall_seconds": 998.3
+    },
+    {
+      "branch_rows": 2689,
+      "decisions_emitted": 869,
+      "decisions_selected": 941,
+      "emitted_branch_counts": {
+        "1": 72,
+        "2": 161,
+        "3": 465,
+        "4": 243
+      },
+      "hands": 1400,
+      "hero_bb_per_100": 38.966,
+      "hero_decisions": 2036,
+      "name": "mixed-p3-texture",
+      "opponents": [
+        "p3-median",
+        "textured-bot",
+        "station-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.01120507399577167,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 4677,
+        "fallbacks": 53,
+        "seats_resampled": 4730,
+        "swaps_applied": 4730,
+        "tries": 8786
+      },
+      "seed": 114,
+      "sessions": 23,
+      "single_branch_groups": 72,
+      "wall_seconds": 1212.9
+    },
+    {
+      "branch_rows": 2474,
+      "decisions_emitted": 833,
+      "decisions_selected": 902,
+      "emitted_branch_counts": {
+        "1": 69,
+        "2": 214,
+        "3": 430,
+        "4": 189
+      },
+      "hands": 1400,
+      "hero_bb_per_100": 104.141,
+      "hero_decisions": 1926,
+      "name": "mixed-p3-wild",
+      "opponents": [
+        "p3-passive",
+        "wild-bot",
+        "tight-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.010628019323671498,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 4096,
+        "fallbacks": 44,
+        "seats_resampled": 4140,
+        "swaps_applied": 4140,
+        "tries": 7870
+      },
+      "seed": 115,
+      "sessions": 18,
+      "single_branch_groups": 69,
+      "wall_seconds": 1134.1
+    }
+  ],
+  "plan": {
+    "candidate": "artifacts\\candidates\\candidate-v8-0001.manifest.json",
+    "corpus": "C:\\Users\\user\\Fold-ver-4 (multiway)\\artifacts\\phase_b\\candidate-v8-0002.phase-b.jsonl.gz",
+    "counterfactual_rollouts": 2,
+    "legs": [
+      {
+        "hands": 1600,
+        "name": "five-max-p3-a",
+        "opponents": [
+          "p3-median",
+          "p3-passive",
+          "p3-aggressive",
+          "median-bot"
+        ]
+      },
+      {
+        "hands": 1600,
+        "name": "five-max-p3-b",
+        "opponents": [
+          "p3-median",
+          "p3-passive",
+          "p3-aggressive",
+          "station-bot"
+        ]
+      },
+      {
+        "hands": 1200,
+        "name": "hu-p3-median",
+        "opponents": [
+          "p3-median"
+        ]
+      },
+      {
+        "hands": 1200,
+        "name": "hu-p3-aggressive",
+        "opponents": [
+          "p3-aggressive"
+        ]
+      },
+      {
+        "hands": 1400,
+        "name": "mixed-p3-texture",
+        "opponents": [
+          "p3-median",
+          "textured-bot",
+          "station-bot"
+        ]
+      },
+      {
+        "hands": 1400,
+        "name": "mixed-p3-wild",
+        "opponents": [
+          "p3-passive",
+          "wild-bot",
+          "tight-bot"
+        ]
+      }
+    ],
+    "p3_accept_threshold": 0.35,
+    "p3_resample_tries": 40,
+    "seed": 71,
+    "summary": "C:\\Users\\user\\Fold-ver-4 (multiway)\\artifacts\\phase_b\\candidate-v8-0002.phase-b.summary.json",
+    "total_hands": 8400
+  },
+  "salt_rule": "hero cards and revealed board fixed; future board resampled per rollout; card-blind holes resampled freely; P3 holes resampled per rollout by rejection against the seat's own prefix (threshold 0.35, tries 40), uniform fallback counted",
+  "validation": {
+    "branch_label_counts": {
+      "aggress_large": 4147,
+      "aggress_small": 5180,
+      "check_call": 5189,
+      "fold": 1578
+    },
+    "branch_rows": 16094,
+    "branch_rows_per_leg": {
+      "five-max-p3-a": 3218,
+      "five-max-p3-b": 2913,
+      "hu-p3-aggressive": 2386,
+      "hu-p3-median": 2414,
+      "mixed-p3-texture": 2689,
+      "mixed-p3-wild": 2474
+    },
+    "branch_rows_per_street": {
+      "flop": 2490,
+      "preflop": 12813,
+      "river": 311,
+      "turn": 480
+    },
+    "decisions": 5189,
+    "emitted_branch_sizes": {
+      "2": 1043,
+      "3": 2576,
+      "4": 1570
+    },
+    "p3_fallback_rate": 0.00929547417077259,
+    "p3_resample_totals": {
+      "accepted": 39008,
+      "fallbacks": 366,
+      "seats_resampled": 39374,
+      "tries": 72860
+    }
+  },
+  "wall_seconds": 1327.2
+}

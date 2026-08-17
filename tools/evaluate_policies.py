@@ -21,7 +21,10 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 from collections.abc import Callable, Sequence
+from concurrent.futures import ProcessPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 
 from devfun_poker_playground.learned_policy import load_policy
@@ -32,14 +35,27 @@ from devfun_poker_playground.table_simulator import (
     run_sessions,
     ScriptedAgent,
     TableSimulator,
+    TexturedAgent,
 )
 
 # (battery name, archetype builder, heads-up hands at scale 1.0)
+#
+# vs-textured is the held-out leg: a TexturedAgent whose fold rate prices the
+# wager and the board (precondition P3, phase one). No candidate has ever
+# trained against it, and unlike the four legs above it punishes oversized
+# aggression, so it is the falsification test NEXT.md item 3 asks for. Keep it
+# OUT of the harvest legs while it is doing that job, or it stops being
+# held-out (phase two moves it into the harvest, knowingly).
 _BATTERIES: tuple[tuple[str, Callable[[int], ScriptedAgent], int], ...] = (
     ("vs-median", lambda seed: ScriptedAgent("median", 0.226, 0.5, 0.0, seed), 1_000),
     ("vs-nit", lambda seed: ScriptedAgent("nit", 0.05, 0.85, 0.0, seed), 1_000),
     ("vs-station", lambda seed: ScriptedAgent("station", 0.15, 0.05, 0.0, seed), 1_000),
     ("vs-shover", lambda seed: ScriptedAgent("shover", 0.0, 0.0, 1.0, seed), 1_500),
+    (
+        "vs-textured",
+        lambda seed: TexturedAgent("textured", 0.226, 0.5, 0.0, seed),
+        1_000,
+    ),
 )
 
 
@@ -71,7 +87,13 @@ def ruin_stats(results: Sequence[MatchResult], agent_id: str) -> dict:
     reset stack cannot bust.
     """
 
-    hands = sum(result.hands for result in results)
+    # Hands this agent was actually seated for. A busted agent stops being
+    # dealt in while the table plays on, so the table-wide count would divide
+    # its busts by hands it never played and understate ruin.
+    hands = sum(
+        (getattr(result, "hands_by_agent", None) or {}).get(agent_id, result.hands)
+        for result in results
+    )
     sessions = sum(result.sessions for result in results)
     busts = sum(result.busts.get(agent_id, 0) for result in results)
     chips = sum(result.chip_deltas.get(agent_id, 0) for result in results)
@@ -97,6 +119,113 @@ def _lineup(seed: int) -> list[tuple[str, ScriptedAgent]]:
         ("wild-bot", ScriptedAgent("wild-bot", 0.35, 0.30, 0.02, seed + 2)),
         ("station-bot", ScriptedAgent("station-bot", 0.15, 0.05, 0.0, seed + 3)),
     ]
+
+
+@dataclass(frozen=True)
+class _PolicySpec:
+    """A policy described by value, so a worker process can rebuild it.
+
+    Matches are dispatched across processes; policy factories are closures
+    and cannot be pickled, while a manifest path and its load options can.
+    """
+
+    label: str
+    kind: str
+    equity_trials: int
+    manifest: str | None = None
+    use_learned_sizing: bool | None = None
+    hybrid_min_advantage: float | None = None
+    hybrid_max_abs_z: float = 5.0
+
+    def build(self) -> object:
+        if self.kind == "heuristic":
+            return build_policy(aggressive=True, equity_trials=self.equity_trials)
+        options: dict = {"equity_trials": self.equity_trials}
+        if self.use_learned_sizing is not None:
+            options["use_learned_sizing"] = self.use_learned_sizing
+        if self.hybrid_min_advantage is not None:
+            options["hybrid_min_value_advantage"] = self.hybrid_min_advantage
+            options["hybrid_max_abs_z"] = self.hybrid_max_abs_z
+        return load_policy(self.manifest, **options)
+
+
+@dataclass(frozen=True)
+class _BatteryTask:
+    """One battery match: a policy against one seeded opponent set."""
+
+    policy: _PolicySpec
+    battery: str
+    opponent_seed: int
+    hands: int
+    seed: int
+    stack: int
+    reset_stacks: bool
+
+    def opponents(self) -> list[tuple[str, object]]:
+        if self.battery == "five-max-lineup":
+            return _lineup(self.opponent_seed)
+        builder = next(build for name, build, _ in _BATTERIES if name == self.battery)
+        return [(self.battery, builder(self.opponent_seed))]
+
+    def run(self) -> MatchResult:
+        return _match(
+            self.policy.build,
+            self.opponents(),
+            self.hands,
+            self.seed,
+            self.stack,
+            self.reset_stacks,
+        )
+
+
+@dataclass(frozen=True)
+class _DuelTask:
+    """One duel orientation: `first` takes seat 0 and its button advantage."""
+
+    first: _PolicySpec
+    second: _PolicySpec
+    hands: int
+    seed: int
+    stack: int
+    reset_stacks: bool
+
+    def run(self) -> MatchResult:
+        return _duel_match(
+            (self.first.label, self.first.build),
+            (self.second.label, self.second.build),
+            self.hands,
+            self.seed,
+            self.stack,
+            self.reset_stacks,
+        )
+
+
+def _run_task(task: _BatteryTask | _DuelTask) -> MatchResult:
+    """Module-level entry point so tasks survive pickling to a worker."""
+
+    return task.run()
+
+
+def _run_tasks(
+    tasks: Sequence[_BatteryTask | _DuelTask], workers: int
+) -> list[MatchResult]:
+    """Run matches, preserving order. Every task carries its own seed, so
+    results do not depend on whether they ran concurrently."""
+
+    if workers == 1 or len(tasks) <= 1:
+        return [task.run() for task in tasks]
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(_run_task, tasks))
+
+
+def _gauntlet_workers(requested: int, tasks: int) -> int:
+    """Resolve the worker count; 0 means fill the cores within reason."""
+
+    if requested == 1 or tasks <= 1:
+        return 1
+    if requested > 1:
+        return min(requested, tasks)
+    return max(1, min(tasks, (os.cpu_count() or 2) - 1))
 
 
 def _match(
@@ -129,6 +258,55 @@ def _battery_entry(hands: int, results: Sequence[MatchResult]) -> dict:
     }
 
 
+def battery_tasks(
+    policy: _PolicySpec,
+    *,
+    seeds: tuple[int, ...],
+    scale: float,
+    stack: int,
+    reset_stacks: bool,
+) -> list[tuple[str, int, _BatteryTask]]:
+    """Every battery match for one policy, tagged by battery and hand count."""
+
+    tasks: list[tuple[str, int, _BatteryTask]] = []
+    for battery, _, base_hands in _BATTERIES:
+        hands = max(50, round(base_hands * scale))
+        for index, _ in enumerate(seeds):
+            tasks.append(
+                (
+                    battery,
+                    hands,
+                    _BatteryTask(
+                        policy=policy,
+                        battery=battery,
+                        opponent_seed=13 + index,
+                        hands=hands,
+                        seed=100 + index,
+                        stack=stack,
+                        reset_stacks=reset_stacks,
+                    ),
+                )
+            )
+    hands = max(50, round(1_000 * scale))
+    for index, _ in enumerate(seeds):
+        tasks.append(
+            (
+                "five-max-lineup",
+                hands,
+                _BatteryTask(
+                    policy=policy,
+                    battery="five-max-lineup",
+                    opponent_seed=23 + index,
+                    hands=hands,
+                    seed=200 + index,
+                    stack=stack,
+                    reset_stacks=reset_stacks,
+                ),
+            )
+        )
+    return tasks
+
+
 def evaluate_policy(
     name: str,
     factory: Callable[[], object],
@@ -138,6 +316,9 @@ def evaluate_policy(
     stack: int,
     reset_stacks: bool,
 ) -> dict:
+    """Sequential single-policy battery sweep, kept for direct callers."""
+
+    del name
     report: dict = {}
     for battery, archetype, base_hands in _BATTERIES:
         hands = max(50, round(base_hands * scale))
@@ -247,6 +428,58 @@ def duel(
     return data
 
 
+def duel_tasks(
+    first: _PolicySpec,
+    second: _PolicySpec,
+    *,
+    seeds: tuple[int, ...],
+    scale: float,
+    stack: int,
+    reset_stacks: bool,
+) -> list[_DuelTask]:
+    """Both seat orientations for every duel seed, forward then swapped."""
+
+    hands = max(50, round(2_000 * scale))
+    tasks: list[_DuelTask] = []
+    for index, _ in enumerate(seeds):
+        seed = 300 + index
+        tasks.append(_DuelTask(first, second, hands, seed, stack, reset_stacks))
+        tasks.append(_DuelTask(second, first, hands, seed, stack, reset_stacks))
+    return tasks
+
+
+def duel_entry(
+    name_a: str,
+    name_b: str,
+    hands: int,
+    results: Sequence[MatchResult],
+) -> dict:
+    """Assemble a duel report from forward/swapped results in task order."""
+
+    a_first = [result.bb_per_100(name_a) for result in results[0::2]]
+    b_first = [result.bb_per_100(name_a) for result in results[1::2]]
+    seat_means = [
+        round((first + second) / 2, 2)
+        for first, second in zip(a_first, b_first, strict=True)
+    ]
+    data = {
+        "hands_per_seed": hands,
+        f"{name_a}_bb_per_100": round(sum(seat_means) / len(seat_means), 2),
+        "seeds": seat_means,
+        "orientations": {
+            "a_first": [round(value, 2) for value in a_first],
+            "b_first": [round(value, 2) for value in b_first],
+        },
+        "ruin": {
+            name_a: ruin_stats(results, name_a),
+            name_b: ruin_stats(results, name_b),
+        },
+    }
+    if len(seat_means) >= 2:
+        data["paired"] = paired_stats(seat_means)
+    return data
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -305,47 +538,58 @@ def main(argv: list[str] | None = None) -> int:
         "--output",
         help="also write the JSON report to this path as UTF-8 without BOM",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help=(
+            "processes for the independent matches: 0 (default) fills the "
+            "cores, 1 runs them one after another. Every match is separately "
+            "seeded, so the report is identical either way"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    policies: list[tuple[str, Callable[[], object]]] = []
+    policies: list[_PolicySpec] = []
     if args.include_heuristic:
-
-        def heuristic_factory() -> object:
-            return build_policy(aggressive=True, equity_trials=args.equity_trials)
-
+        label = _policy_label(
+            build_policy(aggressive=True, equity_trials=args.equity_trials),
+            "heuristic-v5",
+        )
         policies.append(
-            (_policy_label(heuristic_factory(), "heuristic-v5"), heuristic_factory)
+            _PolicySpec(label=label, kind="heuristic", equity_trials=args.equity_trials)
         )
     for manifest in args.candidate:
         loaded = load_policy(manifest, equity_trials=args.equity_trials)
         version = _policy_label(loaded, manifest)
-
-        def factory(path: str = manifest) -> object:
-            return load_policy(path, equity_trials=args.equity_trials)
-
-        policies.append((version, factory))
+        policies.append(
+            _PolicySpec(
+                label=version,
+                kind="candidate",
+                equity_trials=args.equity_trials,
+                manifest=manifest,
+            )
+        )
         if args.ablate_sizing:
             policies.append(
-                (
-                    f"{version}-heuristic-sizing",
-                    lambda path=manifest: load_policy(
-                        path,
-                        equity_trials=args.equity_trials,
-                        use_learned_sizing=False,
-                    ),
+                _PolicySpec(
+                    label=f"{version}-heuristic-sizing",
+                    kind="candidate",
+                    equity_trials=args.equity_trials,
+                    manifest=manifest,
+                    use_learned_sizing=False,
                 )
             )
         if args.hybrid_min_advantage is not None:
             policies.append(
-                (
-                    f"{version}-hybrid",
-                    lambda path=manifest: load_policy(
-                        path,
-                        equity_trials=args.equity_trials,
-                        use_learned_sizing=False,
-                        hybrid_min_value_advantage=args.hybrid_min_advantage,
-                        hybrid_max_abs_z=args.hybrid_max_abs_z,
-                    ),
+                _PolicySpec(
+                    label=f"{version}-hybrid",
+                    kind="candidate",
+                    equity_trials=args.equity_trials,
+                    manifest=manifest,
+                    use_learned_sizing=False,
+                    hybrid_min_advantage=args.hybrid_min_advantage,
+                    hybrid_max_abs_z=args.hybrid_max_abs_z,
                 )
             )
     if not policies:
@@ -355,7 +599,7 @@ def main(argv: list[str] | None = None) -> int:
     duel_seeds = tuple(
         range(args.duel_seeds if args.duel_seeds is not None else args.seeds)
     )
-    baseline = policies[0][0]
+    baseline = policies[0].label
     report: dict = {
         "batteries": {},
         "duels": {},
@@ -365,18 +609,66 @@ def main(argv: list[str] | None = None) -> int:
         "battery_seed_count": len(seeds),
         "duel_seed_count": len(duel_seeds),
     }
-    for name, factory in policies:
-        report["batteries"][name] = evaluate_policy(
-            name,
-            factory,
+
+    # Build every match up front. They are separately seeded and mutually
+    # independent, so one pool runs the whole gauntlet and the results are
+    # reassembled in task order -- identical output, a fraction of the
+    # wall clock.
+    battery_plan: list[tuple[str, str, int, _BatteryTask]] = []
+    for policy in policies:
+        for battery, hands, task in battery_tasks(
+            policy,
             seeds=seeds,
             scale=args.scale,
             stack=args.starting_stack,
             reset_stacks=args.reset_stacks,
+        ):
+            battery_plan.append((policy.label, battery, hands, task))
+    duel_plan: list[tuple[str, str, int, list[_DuelTask]]] = []
+    for index_a in range(len(policies)):
+        for index_b in range(index_a + 1, len(policies)):
+            first, second = policies[index_a], policies[index_b]
+            tasks = duel_tasks(
+                first,
+                second,
+                seeds=duel_seeds,
+                scale=args.scale,
+                stack=args.starting_stack,
+                reset_stacks=args.reset_stacks,
+            )
+            duel_plan.append((first.label, second.label, tasks[0].hands, tasks))
+
+    all_tasks: list[_BatteryTask | _DuelTask] = [item[3] for item in battery_plan]
+    for _, _, _, tasks in duel_plan:
+        all_tasks.extend(tasks)
+    workers = _gauntlet_workers(args.workers, len(all_tasks))
+    if workers > 1:
+        print(
+            f"running {len(all_tasks)} matches across {workers} worker processes",
+            flush=True,
         )
+    outcomes = _run_tasks(all_tasks, workers)
+
+    cursor = 0
+    grouped: dict[tuple[str, str], tuple[int, list[MatchResult]]] = {}
+    for label, battery, hands, _ in battery_plan:
+        entry = grouped.setdefault((label, battery), (hands, []))
+        entry[1].append(outcomes[cursor])
+        cursor += 1
+    for (label, battery), (hands, results) in grouped.items():
+        report["batteries"].setdefault(label, {})[battery] = _battery_entry(
+            hands, results
+        )
+    for name_a, name_b, hands, tasks in duel_plan:
+        results = outcomes[cursor : cursor + len(tasks)]
+        cursor += len(tasks)
+        report["duels"][f"{name_a} vs {name_b}"] = duel_entry(
+            name_a, name_b, hands, results
+        )
+
     if len(seeds) >= 2:
-        for name, _ in policies[1:]:
-            for battery, data in report["batteries"][name].items():
+        for policy in policies[1:]:
+            for battery, data in report["batteries"][policy.label].items():
                 reference = report["batteries"][baseline][battery]["seeds"]
                 data["paired"] = {
                     "baseline": baseline,
@@ -387,20 +679,6 @@ def main(argv: list[str] | None = None) -> int:
                         ]
                     ),
                 }
-    for index_a in range(len(policies)):
-        for index_b in range(index_a + 1, len(policies)):
-            name_a, factory_a = policies[index_a]
-            name_b, factory_b = policies[index_b]
-            report["duels"][f"{name_a} vs {name_b}"] = duel(
-                name_a,
-                factory_a,
-                name_b,
-                factory_b,
-                seeds=duel_seeds,
-                scale=args.scale,
-                stack=args.starting_stack,
-                reset_stacks=args.reset_stacks,
-            )
 
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))

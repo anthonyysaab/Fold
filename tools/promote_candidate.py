@@ -82,7 +82,10 @@ def promote(
         pointer_path,
         {
             "model_version": approved["model_version"],
-            "manifest_file": str(approved_path.relative_to(artifacts_dir)),
+            # POSIX separators always: the pointer is promoted on Windows but
+            # read by the Linux host that serves live play, where a backslash
+            # is an ordinary filename character rather than a separator.
+            "manifest_file": approved_path.relative_to(artifacts_dir).as_posix(),
             "weights_sha256": approved["weights_sha256"],
             "approved_at": approved["promotion"]["approved_at"],
             "previous": previous,
@@ -100,6 +103,12 @@ def rollback(artifacts_dir: Path) -> Path:
     if not previous:
         raise SystemExit("approved pointer has no previous version recorded")
     previous["previous"] = None
+    # The stored generation was copied verbatim and may predate POSIX
+    # separators, so a rollback could otherwise resurrect a pointer the Linux
+    # host cannot resolve.
+    stored = previous.get("manifest_file")
+    if isinstance(stored, str):
+        previous["manifest_file"] = stored.replace("\\", "/")
     _write_atomic(pointer_path, previous)
     return pointer_path
 

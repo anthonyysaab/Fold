@@ -1,0 +1,2120 @@
+﻿archiving this run under C:\Users\user\Fold-ver-4 (multiway)\runs\2026-08-14T192344Z
+continuous live play; Ctrl+C to stop cleanly. session length 21600s, policy learned:candidate-v7-0001c (approved artifact; --aggressive or --standard to override)
+
+=== session 1 on [Poker] Playground S14 (chips 2573, uptime 0.0h) ===
+policy=learned:candidate-v7-0001c competition=cmsrglcro33ttvijti3slinjh seconds=21600 telemetry=C:\Users\user\Fold-ver-4 (multiway)\.arena-training.jsonl
+joined: {"kind": "queued", "lobby": {"position": 82, "total": 82, "joinedAt": 1786735425867}, "participant": {"competitionId": "cmsrglcro33ttvijti3slinjh", "agentId": "cmsnsh9er1ato12wxq5knep9d", "initialChip
+  telemetry settled 1 hand(s)
+  act[1] Preflop raise 4 -> ok temp=60.7/hot bold=-0.45 rng=1.00
+  act[2] Flop bet 6 -> ok temp=33.9/warm bold=+0.32 rng=1.00
+  act[3] Turn bet 12 -> ok temp=35.2/warm bold=+0.28 rng=1.00
+  act[4] River bet 24 -> ok temp=33.5/warm bold=+0.33 rng=1.00
+  act[5] Preflop raise 4 -> ok temp=40.4/warm bold=+0.13 rng=1.00
+  telemetry settled 1 hand(s)
+  act[6] Preflop raise 4 -> ok temp=62.5/hot bold=-0.50 rng=1.00
+  telemetry settled 1 hand(s)
+  act[7] Preflop fold -> ok temp=50.1/hot bold=-0.15 rng=0.48
+  act[8] Preflop fold -> ok temp=63.5/hot bold=-0.53 rng=0.45
+  telemetry settled 1 hand(s)
+  refreshed learned policy -> candidate-v7-0001c
+  act[9] Preflop raise 11 -> ok temp=40.6/warm bold=+0.13 rng=0.60
+  telemetry settled 1 hand(s)
+  act[10] Flop bet 16 -> ok temp=36.4/warm bold=+0.25 rng=1.00
+  act[11] Turn bet 40 -> ok temp=19.6/cold bold=+0.73 rng=1.00
+  act[12] Turn raise 471 -> ok temp=13.1/cold bold=+0.91 rng=0.60
+  act[13] Turn raise 2499 -> ok temp=19.9/cold bold=+0.72 rng=0.48 hyper
+  act[14] Preflop raise 4 -> ok temp=50.2/hot bold=-0.15 rng=1.00
+  telemetry settled 1 hand(s)
+  act[15] Preflop call -> ok temp=45.3/warm bold=-0.01 rng=0.75
+  act[16] Flop raise 70 -> ok temp=47.5/warm bold=-0.07 rng=0.60
+  act[17] Preflop raise 4 -> ok temp=23.0/cold bold=+0.63 rng=1.00
+  telemetry settled 2 hand(s)
+  act[18] Preflop raise 4 -> ok temp=57.1/hot bold=-0.35 rng=1.00
+  act[19] Preflop fold -> ok temp=37.1/warm bold=+0.23 rng=0.75
+  telemetry settled 1 hand(s)
+  act[20] Preflop raise 4 -> ok temp=60.9/hot bold=-0.45 rng=1.00
+  act[21] Preflop raise 11 -> ok temp=55.2/hot bold=-0.29 rng=0.45
+  telemetry settled 1 hand(s)
+  act[22] Preflop raise 16 -> ok temp=39.1/warm bold=+0.17 rng=0.75
+  telemetry settled 1 hand(s)
+  act[23] Preflop raise 4 -> ok temp=52.7/hot bold=-0.22 rng=1.00
+  telemetry settled 1 hand(s)
+  act[24] Flop check -> ok temp=33.3/warm bold=+0.33 rng=1.00
+  act[25] Turn check -> ok temp=32.7/warm bold=+0.35 rng=1.00
+  act[26] River bet 9 -> ok temp=6.5/cold bold=+1.00 rng=1.00
+  telemetry settled 1 hand(s)
+  act[27] Preflop raise 17 -> ok temp=48.4/warm bold=-0.10 rng=0.60
+  act[28] Preflop raise 11 -> ok temp=65.3/hot bold=-0.58 rng=0.45
+  telemetry settled 1 hand(s)
+  act[29] Preflop fold -> ok temp=48.9/warm bold=-0.11 rng=0.38
+  act[30] Preflop raise 11 -> ok temp=39.9/warm bold=+0.15 rng=0.75
+  telemetry settled 1 hand(s)
+  act[31] Flop bet 12 -> ok temp=22.4/cold bold=+0.65 rng=1.00
+  act[32] Preflop raise 15 -> ok temp=40.8/warm bold=+0.12 rng=0.60
+  telemetry settled 1 hand(s)
+  act[33] Flop bet 30 -> ok temp=23.6/cold bold=+0.61 rng=1.00
+  act[34] Preflop raise 4 -> ok temp=57.5/hot bold=-0.36 rng=1.00
+  telemetry settled 1 hand(s)
+  act[35] Preflop raise 9 -> ok temp=39.8/warm bold=+0.15 rng=0.60
+  telemetry settled 1 hand(s)
+  act[36] Flop bet 10 -> ok temp=17.8/cold bold=+0.78 rng=1.00
+  act[37] Flop raise 146 -> ok temp=21.4/cold bold=+0.67 rng=0.48
+  act[38] Flop raise 1112 -> ok temp=24.1/cold bold=+0.60 rng=0.38
+  act[39] Flop call -> ok temp=23.3/cold bold=+0.62 rng=0.38
+  telemetry settled 1 hand(s)
+  act[40] Preflop raise 18 -> ok temp=48.9/warm bold=-0.11 rng=0.45
+  act[41] Flop bet 20 -> ok temp=21.1/cold bold=+0.68 rng=1.00
+  act[42] Preflop fold -> ok temp=64.6/hot bold=-0.56 rng=1.00
+  telemetry settled 1 hand(s)
+  act[43] Preflop fold -> ok temp=56.5/hot bold=-0.33 rng=0.45
+  telemetry settled 1 hand(s)
+  act[44] Preflop raise 4 -> ok temp=57.4/hot bold=-0.35 rng=1.00
+  telemetry settled 1 hand(s)
+  act[45] Preflop call -> ok temp=30.2/warm bold=+0.42 rng=0.60
+  act[46] Flop raise 51 -> ok temp=32.6/warm bold=+0.35 rng=0.48
+  act[47] Preflop raise 4 -> ok temp=56.9/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[48] Flop bet 6 -> ok temp=35.4/warm bold=+0.27 rng=1.00
+  act[49] Preflop call -> ok temp=40.8/warm bold=+0.12 rng=0.75
+  act[50] Flop bet 6 -> ok temp=26.8/warm bold=+0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[51] Preflop check -> ok temp=40.7/warm bold=+0.12 rng=1.00
+  act[52] Flop bet 2 -> ok temp=44.3/warm bold=+0.02 rng=1.00
+  telemetry settled 1 hand(s)
+  act[53] Preflop raise 4 -> ok temp=57.0/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[54] Flop raise 18 -> ok temp=31.3/warm bold=+0.39 rng=0.75
+  act[55] Turn raise 102 -> ok temp=7.8/cold bold=+1.00 rng=0.60
+  act[56] River raise 624 -> ok temp=7.6/cold bold=+1.00 rng=0.48 hyper
+  act[57] Preflop raise 4 -> ok temp=60.1/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[58] Preflop raise 4 -> ok temp=63.1/hot bold=-0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[59] Flop fold -> ok temp=49.3/warm bold=-0.12 rng=0.36
+  act[60] Preflop fold -> ok temp=51.1/hot bold=-0.17 rng=0.45
+  telemetry settled 1 hand(s)
+  act[61] Preflop raise 57 -> ok temp=46.5/warm bold=-0.04 rng=0.36
+  telemetry settled 1 hand(s)
+  act[62] Flop bet 66 -> ok temp=28.4/warm bold=+0.47 rng=1.00
+  act[63] Preflop raise 59 -> ok temp=59.8/hot bold=-0.42 rng=0.36
+  telemetry settled 1 hand(s)
+  act[64] Flop fold -> ok temp=42.0/warm bold=+0.09 rng=0.48 hyper
+  act[65] Preflop raise 52 -> ok temp=55.5/hot bold=-0.30 rng=0.36
+  telemetry settled 1 hand(s)
+  act[66] Flop bet 79 -> ok temp=37.1/warm bold=+0.23 rng=1.00
+  act[67] Preflop raise 4 -> ok temp=46.7/warm bold=-0.05 rng=1.00
+  telemetry settled 1 hand(s)
+  act[68] Preflop call -> ok temp=46.2/warm bold=-0.03 rng=0.75
+  act[69] Flop fold -> ok temp=49.3/warm bold=-0.12 rng=0.60
+  act[70] Preflop raise 6 -> ok temp=57.6/hot bold=-0.36 rng=1.00
+  telemetry settled 1 hand(s)
+  act[71] Flop fold -> ok temp=41.4/warm bold=+0.10 rng=0.75
+  act[72] Preflop raise 13 -> ok temp=37.7/warm bold=+0.21 rng=0.75
+  telemetry settled 1 hand(s)
+  act[73] Flop bet 16 -> ok temp=30.1/warm bold=+0.43 rng=1.00
+  act[74] Preflop raise 4 -> ok temp=46.9/warm bold=-0.05 rng=1.00
+  telemetry settled 1 hand(s)
+  act[75] Preflop fold -> ok temp=42.9/warm bold=+0.06 rng=0.45
+  telemetry settled 1 hand(s)
+  act[76] Preflop raise 8 -> ok temp=36.5/warm bold=+0.24 rng=0.75
+  act[77] Flop check -> ok temp=34.1/warm bold=+0.31 rng=1.00
+  act[78] Flop fold -> ok temp=46.9/warm bold=-0.05 rng=0.29
+  telemetry settled 1 hand(s)
+  act[79] Preflop raise 11 -> ok temp=51.6/hot bold=-0.19 rng=0.60
+  act[80] Flop bet 12 -> ok temp=35.2/warm bold=+0.28 rng=1.00
+  act[81] Preflop fold -> ok temp=53.0/hot bold=-0.23 rng=0.45
+  telemetry settled 1 hand(s)
+  act[82] Preflop raise 11 -> ok temp=50.9/hot bold=-0.17 rng=0.60
+  telemetry settled 1 hand(s)
+  act[83] Preflop call -> ok temp=51.0/hot bold=-0.17 rng=0.60
+  act[84] Flop bet 28 -> ok temp=51.0/hot bold=-0.17 rng=1.00
+  act[85] Preflop fold -> ok temp=47.3/warm bold=-0.07 rng=0.75
+  telemetry settled 1 hand(s)
+  act[86] Preflop raise 16 -> ok temp=38.0/warm bold=+0.20 rng=0.75
+  telemetry settled 1 hand(s)
+  act[87] Flop bet 16 -> ok temp=19.9/cold bold=+0.72 rng=1.00
+  act[88] Preflop fold -> ok temp=44.1/warm bold=+0.03 rng=0.45
+  telemetry settled 1 hand(s)
+  act[89] Preflop raise 4 -> ok temp=64.9/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[90] Flop bet 6 -> ok temp=35.5/warm bold=+0.27 rng=1.00
+  act[91] Turn bet 12 -> ok temp=30.1/warm bold=+0.43 rng=1.00
+  act[92] River check -> ok temp=23.2/cold bold=+0.62 rng=1.00 hyper
+  act[93] Preflop call -> ok temp=40.7/warm bold=+0.12 rng=1.00
+  telemetry settled 1 hand(s)
+  act[94] Flop bet 2 -> ok temp=28.9/warm bold=+0.46 rng=1.00
+  act[95] Preflop raise 18 -> ok temp=58.5/hot bold=-0.39 rng=0.45
+  telemetry settled 1 hand(s)
+  act[96] Preflop raise 11 -> ok temp=48.2/warm bold=-0.09 rng=0.60
+  telemetry settled 1 hand(s)
+  act[97] Flop bet 16 -> ok temp=37.7/warm bold=+0.21 rng=1.00
+  act[98] Flop call -> ok temp=32.0/warm bold=+0.37 rng=0.60
+  act[99] Turn bet 64 -> ok temp=23.3/cold bold=+0.62 rng=1.00
+  act[100] Turn call -> ok temp=34.9/warm bold=+0.29 rng=0.48
+  act[101] River bet 252 -> ok temp=19.0/cold bold=+0.74 rng=1.00
+  act[102] Preflop fold -> ok temp=53.4/hot bold=-0.24 rng=0.45
+  telemetry settled 1 hand(s)
+  act[103] Preflop raise 15 -> ok temp=41.9/warm bold=+0.09 rng=0.60
+  telemetry settled 1 hand(s)
+  act[104] Preflop fold -> ok temp=43.9/warm bold=+0.03 rng=0.48
+  act[105] Preflop raise 4 -> ok temp=62.7/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[106] Flop check -> ok temp=41.7/warm bold=+0.09 rng=1.00 hyper
+  act[107] Flop fold -> ok temp=41.7/warm bold=+0.09 rng=0.36 hyper
+  telemetry settled 1 hand(s)
+  act[108] Preflop raise 11 -> ok temp=61.2/hot bold=-0.46 rng=0.45
+  act[109] Preflop fold -> ok temp=57.6/hot bold=-0.36 rng=0.48
+  act[110] Preflop raise 4 -> ok temp=59.6/hot bold=-0.42 rng=1.00
+  telemetry settled 1 hand(s)
+  act[111] Preflop raise 14 -> ok temp=62.0/hot bold=-0.49 rng=0.60
+  telemetry settled 1 hand(s)
+  act[112] Flop raise 60 -> ok temp=46.1/warm bold=-0.03 rng=0.60
+  act[113] Preflop raise 11 -> ok temp=59.9/hot bold=-0.43 rng=0.45
+  telemetry settled 1 hand(s)
+  act[114] Flop raise 44 -> ok temp=45.6/warm bold=-0.02 rng=0.60 hyper
+  act[115] Preflop raise 4 -> ok temp=65.4/hot bold=-0.58 rng=1.00
+  telemetry settled 1 hand(s)
+  act[116] Preflop fold -> ok temp=38.6/warm bold=+0.18 rng=0.45
+  telemetry settled 1 hand(s)
+  act[117] Preflop raise 38 -> ok temp=57.1/hot bold=-0.35 rng=0.36 hyper
+  act[118] Flop bet 58 -> ok temp=48.7/warm bold=-0.11 rng=1.00
+  act[119] Preflop raise 339 -> ok temp=49.0/warm bold=-0.11 rng=0.45
+  telemetry settled 1 hand(s)
+  act[120] Flop bet 340 -> ok temp=27.3/warm bold=+0.51 rng=1.00 hyper
+  act[121] Preflop raise 11 -> ok temp=37.1/warm bold=+0.23 rng=0.75
+  telemetry settled 1 hand(s)
+  act[122] Preflop call -> ok temp=38.6/warm bold=+0.18 rng=0.60
+  act[123] Flop bet 22 -> ok temp=33.6/warm bold=+0.33 rng=1.00
+  act[124] Preflop fold -> ok temp=51.3/hot bold=-0.18 rng=0.60
+  telemetry settled 1 hand(s)
+  act[125] Preflop raise 6 -> ok temp=28.1/warm bold=+0.48 rng=1.00 bluff=steal
+  telemetry settled 1 hand(s)
+  act[126] Preflop fold -> ok temp=50.7/hot bold=-0.16 rng=0.75
+  telemetry settled 1 hand(s)
+  act[127] Preflop fold -> ok temp=59.1/hot bold=-0.40 rng=0.45
+  telemetry settled 1 hand(s)
+  act[128] Preflop raise 11 -> ok temp=52.6/hot bold=-0.22 rng=0.45
+  telemetry settled 1 hand(s)
+  act[129] Flop fold -> ok temp=40.8/warm bold=+0.12 rng=0.60
+  act[130] Preflop raise 13 -> ok temp=46.0/warm bold=-0.03 rng=0.75
+  telemetry settled 1 hand(s)
+  act[131] Flop bet 16 -> ok temp=31.4/warm bold=+0.39 rng=1.00
+  act[132] Turn check -> ok temp=21.7/cold bold=+0.67 rng=1.00
+  act[133] Turn fold -> ok temp=39.3/warm bold=+0.16 rng=0.36
+  telemetry settled 1 hand(s)
+  act[134] Preflop raise 11 -> ok temp=63.6/hot bold=-0.53 rng=0.45
+  act[135] Flop bet 12 -> ok temp=26.2/warm bold=+0.54 rng=1.00
+  act[136] Preflop raise 7 -> ok temp=43.9/warm bold=+0.03 rng=1.00
+  telemetry settled 1 hand(s)
+  act[137] Flop raise 25 -> ok temp=30.8/warm bold=+0.41 rng=0.75
+  act[138] Preflop raise 4 -> ok temp=52.9/hot bold=-0.23 rng=1.00
+  telemetry settled 1 hand(s)
+  act[139] Preflop fold -> ok temp=65.0/hot bold=-0.57 rng=0.45
+  telemetry settled 1 hand(s)
+  act[140] Preflop fold -> ok temp=50.7/hot bold=-0.16 rng=1.00
+  telemetry settled 1 hand(s)
+  act[141] Preflop raise 11 -> ok temp=30.5/warm bold=+0.41 rng=0.75
+  telemetry settled 1 hand(s)
+  act[142] Preflop raise 4 -> ok temp=54.0/hot bold=-0.26 rng=1.00
+  telemetry settled 1 hand(s)
+  act[143] Preflop raise 18 -> ok temp=57.4/hot bold=-0.35 rng=0.45
+  telemetry settled 1 hand(s)
+  act[144] Flop raise 48 -> ok temp=44.2/warm bold=+0.02 rng=0.60
+  act[145] Preflop raise 4 -> ok temp=52.3/hot bold=-0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[146] Flop bet 6 -> ok temp=31.1/warm bold=+0.40 rng=1.00
+  act[147] Turn bet 12 -> ok temp=24.7/cold bold=+0.58 rng=1.00
+  act[148] River bet 47 -> ok temp=3.4/cold bold=+1.00 rng=1.00
+  act[149] Preflop raise 4 -> ok temp=65.5/hot bold=-0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[150] Flop bet 6 -> ok temp=36.6/warm bold=+0.24 rng=1.00
+  act[151] Turn bet 12 -> ok temp=18.3/cold bold=+0.76 rng=1.00
+  act[152] Preflop raise 4 -> ok temp=60.2/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[153] Flop bet 6 -> ok temp=31.5/warm bold=+0.39 rng=1.00
+  act[154] Preflop raise 4 -> ok temp=52.6/hot bold=-0.22 rng=1.00
+  telemetry settled 1 hand(s)
+  act[155] Flop raise 11 -> ok temp=31.0/warm bold=+0.40 rng=0.75
+  act[156] Preflop raise 12 -> ok temp=54.3/hot bold=-0.27 rng=0.60
+  telemetry settled 1 hand(s)
+  act[157] Flop check -> ok temp=46.6/warm bold=-0.05 rng=1.00
+  act[158] Flop fold -> ok temp=47.4/warm bold=-0.07 rng=0.29
+  telemetry settled 1 hand(s)
+  act[159] Preflop raise 4 -> ok temp=58.9/hot bold=-0.40 rng=1.00
+  act[160] Preflop call -> ok temp=36.1/warm bold=+0.25 rng=0.75
+  act[161] Flop raise 25 -> ok temp=29.2/warm bold=+0.45 rng=0.48
+  act[162] Preflop raise 16 -> ok temp=41.1/warm bold=+0.11 rng=0.75
+  telemetry settled 1 hand(s)
+  act[163] Preflop fold -> ok temp=42.9/warm bold=+0.06 rng=0.48
+  act[164] Preflop raise 28 -> ok temp=53.2/hot bold=-0.23 rng=0.45
+  telemetry settled 1 hand(s)
+  act[165] Preflop call -> ok temp=36.0/warm bold=+0.26 rng=0.60
+  act[166] Flop bet 50 -> ok temp=17.9/cold bold=+0.77 rng=1.00
+  act[167] Turn bet 200 -> ok temp=11.9/cold bold=+0.95 rng=1.00
+  act[168] Preflop raise 4 -> ok temp=56.6/hot bold=-0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[169] Preflop check -> ok temp=44.6/warm bold=+0.01 rng=1.00
+  telemetry settled 1 hand(s)
+  act[170] Flop raise 7 -> ok temp=44.3/warm bold=+0.02 rng=0.75
+  act[171] Turn fold -> ok temp=43.2/warm bold=+0.05 rng=0.60
+  act[172] Preflop raise 4 -> ok temp=56.8/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[173] Flop raise 18 -> ok temp=43.2/warm bold=+0.05 rng=0.75 hyper
+  act[174] Preflop raise 4 -> ok temp=49.2/warm bold=-0.12 rng=1.00
+  telemetry settled 1 hand(s)
+  act[175] Flop raise 18 -> ok temp=45.9/warm bold=-0.03 rng=0.75
+  act[176] Preflop raise 11 -> ok temp=55.5/hot bold=-0.30 rng=0.75
+  telemetry settled 1 hand(s)
+  act[177] Preflop call -> ok temp=50.9/hot bold=-0.17 rng=0.60
+  act[178] Flop bet 32 -> ok temp=41.3/warm bold=+0.11 rng=1.00
+  act[179] Flop call -> ok temp=32.7/warm bold=+0.35 rng=0.48
+  act[180] Turn bet 128 -> ok temp=23.5/cold bold=+0.61 rng=1.00
+  act[181] Turn fold -> ok temp=42.2/warm bold=+0.08 rng=0.38
+  act[182] Preflop raise 11 -> ok temp=31.1/warm bold=+0.40 rng=0.75
+  telemetry settled 1 hand(s)
+  act[183] Preflop call -> ok temp=34.1/warm bold=+0.31 rng=0.60
+  act[184] Flop bet 18 -> ok temp=20.4/cold bold=+0.70 rng=1.00
+  act[185] Preflop raise 11 -> ok temp=53.5/hot bold=-0.24 rng=0.45
+  telemetry settled 1 hand(s)
+  act[186] Preflop call -> ok temp=39.1/warm bold=+0.17 rng=0.60
+  act[187] Flop raise 69 -> ok temp=39.4/warm bold=+0.16 rng=0.38
+  act[188] Turn raise 522 -> ok temp=42.8/warm bold=+0.06 rng=0.31
+  act[189] Preflop raise 4 -> ok temp=57.7/hot bold=-0.36 rng=1.00
+  telemetry settled 1 hand(s)
+  act[190] Flop bet 6 -> ok temp=36.7/warm bold=+0.24 rng=1.00
+  act[191] Flop fold -> ok temp=42.0/warm bold=+0.09 rng=0.75
+  act[192] Preflop fold -> ok temp=49.5/warm bold=-0.13 rng=0.60
+  telemetry settled 1 hand(s)
+  act[193] Preflop raise 52 -> ok temp=55.7/hot bold=-0.31 rng=0.36
+  telemetry settled 1 hand(s)
+  act[194] Preflop raise 11 -> ok temp=62.8/hot bold=-0.51 rng=0.45
+  telemetry settled 1 hand(s)
+  act[195] Flop bet 18 -> ok temp=44.4/warm bold=+0.02 rng=1.00
+  act[196] Preflop raise 13 -> ok temp=48.2/warm bold=-0.09 rng=0.75
+  telemetry settled 1 hand(s)
+  act[197] Flop bet 20 -> ok temp=46.1/warm bold=-0.03 rng=1.00
+  act[198] Preflop raise 5 -> ok temp=43.2/warm bold=+0.05 rng=1.00
+  telemetry settled 1 hand(s)
+  act[199] Flop bet 6 -> ok temp=28.4/warm bold=+0.47 rng=1.00
+  act[200] Turn bet 12 -> ok temp=26.5/warm bold=+0.53 rng=1.00
+  act[201] River bet 24 -> ok temp=28.9/warm bold=+0.46 rng=1.00
+  act[202] Preflop raise 11 -> ok temp=55.5/hot bold=-0.30 rng=0.45
+  telemetry settled 1 hand(s)
+  act[203] Flop raise 119 -> ok temp=38.8/warm bold=+0.18 rng=0.36
+  act[204] Preflop raise 4 -> ok temp=35.2/warm bold=+0.28 rng=1.00
+  telemetry settled 1 hand(s)
+  act[205] Preflop fold -> ok temp=58.5/hot bold=-0.39 rng=0.75 hyper
+  telemetry settled 1 hand(s)
+  act[206] Preflop raise 16 -> ok temp=32.8/warm bold=+0.35 rng=0.75
+  telemetry settled 1 hand(s)
+  act[207] Flop bet 16 -> ok temp=31.4/warm bold=+0.39 rng=1.00
+  act[208] Preflop raise 7 -> ok temp=41.5/warm bold=+0.10 rng=1.00 bluff=steal
+  telemetry settled 1 hand(s)
+  act[209] Preflop raise 7 -> ok temp=46.2/warm bold=-0.03 rng=1.00
+  telemetry settled 1 hand(s)
+  act[210] Flop raise 30 -> ok temp=42.1/warm bold=+0.08 rng=0.75
+  act[211] Preflop raise 4 -> ok temp=66.0/hot bold=-0.60 rng=1.00
+  telemetry settled 1 hand(s)
+  act[212] Flop fold -> ok temp=51.3/hot bold=-0.18 rng=0.45
+  act[213] Preflop raise 11 -> ok temp=63.1/hot bold=-0.52 rng=0.45
+  telemetry settled 1 hand(s)
+  act[214] Flop bet 12 -> ok temp=44.3/warm bold=+0.02 rng=1.00
+  act[215] Preflop raise 4 -> ok temp=65.2/hot bold=-0.58 rng=1.00
+  telemetry settled 1 hand(s)
+  act[216] Flop fold -> ok temp=52.5/hot bold=-0.21 rng=0.75
+  act[217] Preflop raise 17 -> ok temp=49.2/warm bold=-0.12 rng=0.60
+  telemetry settled 1 hand(s)
+  act[218] Preflop call -> ok temp=39.0/warm bold=+0.17 rng=0.60
+  act[219] Flop check -> ok temp=40.1/warm bold=+0.14 rng=1.00
+  act[220] Turn check -> ok temp=32.8/warm bold=+0.35 rng=1.00
+  act[221] River check -> ok temp=38.1/warm bold=+0.20 rng=1.00
+  act[222] Preflop raise 13 -> ok temp=40.0/warm bold=+0.14 rng=0.75
+  telemetry settled 1 hand(s)
+  act[223] Preflop fold -> ok temp=63.2/hot bold=-0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[224] Preflop raise 16 -> ok temp=61.9/hot bold=-0.48 rng=0.60
+  telemetry settled 1 hand(s)
+  act[225] Preflop fold -> ok temp=44.4/warm bold=+0.02 rng=0.48
+  telemetry settled 1 hand(s)
+  act[226] Preflop raise 9 -> ok temp=61.0/hot bold=-0.46 rng=1.00
+  act[227] Flop raise 66 -> ok temp=37.2/warm bold=+0.22 rng=0.60
+  act[228] Preflop raise 4 -> ok temp=52.4/hot bold=-0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[229] Flop bet 6 -> ok temp=15.8/cold bold=+0.83 rng=1.00
+  act[230] Preflop raise 6 -> ok temp=33.9/warm bold=+0.32 rng=1.00 bluff=steal
+  telemetry settled 1 hand(s)
+  act[231] Preflop call -> ok temp=33.5/warm bold=+0.33 rng=0.75 hyper
+  act[232] Flop bet 10 -> ok temp=31.5/warm bold=+0.39 rng=1.00
+  act[233] Preflop raise 4 -> ok temp=60.3/hot bold=-0.44 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[234] Flop raise 20 -> ok temp=43.0/warm bold=+0.06 rng=0.75
+  act[235] Preflop raise 11 -> ok temp=57.7/hot bold=-0.36 rng=0.45
+  telemetry settled 1 hand(s)
+  act[236] Flop bet 18 -> ok temp=23.2/cold bold=+0.62 rng=1.00
+  act[237] Preflop raise 4 -> ok temp=63.9/hot bold=-0.54 rng=1.00
+  telemetry settled 1 hand(s)
+  act[238] Preflop raise 4 -> ok temp=61.2/hot bold=-0.46 rng=1.00
+  telemetry settled 1 hand(s)
+  act[239] Preflop raise 4 -> ok temp=44.6/warm bold=+0.01 rng=1.00
+  telemetry settled 1 hand(s)
+  act[240] Preflop raise 4 -> ok temp=60.8/hot bold=-0.45 rng=1.00
+  telemetry settled 1 hand(s)
+  act[241] Preflop raise 11 -> ok temp=63.1/hot bold=-0.52 rng=0.45
+  telemetry settled 1 hand(s)
+  act[242] Flop bet 12 -> ok temp=40.6/warm bold=+0.13 rng=1.00
+  act[243] Preflop raise 4 -> ok temp=58.3/hot bold=-0.38 rng=1.00
+  telemetry settled 1 hand(s)
+  act[244] Preflop call -> ok temp=46.7/warm bold=-0.05 rng=0.75
+  act[245] Flop bet 28 -> ok temp=35.9/warm bold=+0.26 rng=1.00
+  act[246] Preflop raise 16 -> ok temp=38.1/warm bold=+0.20 rng=0.75
+  telemetry settled 1 hand(s)
+  act[247] Preflop raise 4 -> ok temp=60.0/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[248] Preflop raise 11 -> ok temp=60.4/hot bold=-0.44 rng=0.45
+  telemetry settled 1 hand(s)
+  act[249] Flop fold -> ok temp=50.4/hot bold=-0.15 rng=0.60
+  act[250] Preflop raise 18 -> ok temp=54.0/hot bold=-0.26 rng=0.45
+  telemetry settled 1 hand(s)
+  act[251] Flop bet 22 -> ok temp=19.7/cold bold=+0.72 rng=1.00
+  act[252] Preflop raise 6 -> ok temp=62.1/hot bold=-0.49 rng=1.00
+  telemetry settled 1 hand(s)
+  act[253] Flop bet 8 -> ok temp=33.5/warm bold=+0.33 rng=1.00
+  act[254] Preflop raise 4 -> ok temp=63.8/hot bold=-0.54 rng=1.00
+  telemetry settled 1 hand(s)
+  act[255] Preflop raise 6 -> ok temp=61.7/hot bold=-0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[256] Flop fold -> ok temp=33.5/warm bold=+0.33 rng=0.75
+  act[257] Preflop fold -> ok temp=65.1/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[258] Preflop raise 4 -> ok temp=60.7/hot bold=-0.45 rng=1.00
+  telemetry settled 1 hand(s)
+  act[259] Flop call -> ok temp=22.9/cold bold=+0.63 rng=0.75
+  act[260] Turn bet 14 -> ok temp=19.0/cold bold=+0.74 rng=1.00
+  act[261] River bet 57 -> ok temp=4.0/cold bold=+1.00 rng=1.00
+  act[262] Preflop raise 11 -> ok temp=43.5/warm bold=+0.04 rng=0.60
+  telemetry settled 1 hand(s)
+  act[263] Preflop call -> ok temp=32.9/warm bold=+0.35 rng=0.60
+  act[264] Flop bet 19 -> ok temp=30.4/warm bold=+0.42 rng=1.00
+  act[265] Flop fold -> ok temp=44.5/warm bold=+0.01 rng=0.38
+  act[266] Preflop raise 4 -> ok temp=64.7/hot bold=-0.56 rng=1.00
+  telemetry settled 1 hand(s)
+  act[267] Preflop raise 4 -> ok temp=58.0/hot bold=-0.37 rng=1.00
+  telemetry settled 1 hand(s)
+  act[268] Preflop fold -> ok temp=52.1/hot bold=-0.20 rng=0.45
+  telemetry settled 1 hand(s)
+  act[269] Preflop raise 7 -> ok temp=56.5/hot bold=-0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[270] Flop bet 8 -> ok temp=31.4/warm bold=+0.39 rng=1.00
+  act[271] Preflop raise 4 -> ok temp=63.9/hot bold=-0.54 rng=1.00
+  telemetry settled 1 hand(s)
+  act[272] Preflop raise 17 -> ok temp=48.2/warm bold=-0.09 rng=0.60
+  telemetry settled 1 hand(s)
+  act[273] Flop bet 18 -> ok temp=35.3/warm bold=+0.28 rng=1.00
+  act[274] Turn check -> ok temp=33.1/warm bold=+0.34 rng=1.00
+  act[275] Turn fold -> ok temp=44.1/warm bold=+0.03 rng=0.29
+  act[276] Preflop fold -> ok temp=56.9/hot bold=-0.34 rng=0.60
+  telemetry settled 1 hand(s)
+  act[277] Preflop raise 17 -> ok temp=46.7/warm bold=-0.05 rng=0.60
+  telemetry settled 1 hand(s)
+  act[278] Flop bet 18 -> ok temp=35.8/warm bold=+0.26 rng=1.00
+  act[279] Preflop raise 11 -> ok temp=44.6/warm bold=+0.01 rng=0.60
+  telemetry settled 1 hand(s)
+  act[280] Flop bet 12 -> ok temp=28.9/warm bold=+0.46 rng=1.00
+  act[281] Preflop raise 17 -> ok temp=44.3/warm bold=+0.02 rng=0.75
+  telemetry settled 1 hand(s)
+  act[282] Flop bet 20 -> ok temp=30.4/warm bold=+0.42 rng=1.00 hyper
+  act[283] Turn bet 40 -> ok temp=15.2/cold bold=+0.85 rng=1.00
+  act[284] Preflop raise 4 -> ok temp=55.2/hot bold=-0.29 rng=1.00
+  telemetry settled 1 hand(s)
+  act[285] Flop raise 11 -> ok temp=15.7/cold bold=+0.84 rng=0.75 hyper
+  act[286] Preflop raise 4 -> ok temp=59.3/hot bold=-0.41 rng=1.00
+  telemetry settled 1 hand(s)
+  act[287] Preflop raise 4 -> ok temp=62.9/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[288] Preflop fold -> ok temp=59.5/hot bold=-0.41 rng=1.00
+  telemetry settled 1 hand(s)
+  act[289] Preflop raise 14 -> ok temp=60.1/hot bold=-0.43 rng=0.45
+  telemetry settled 1 hand(s)
+  act[290] Preflop fold -> ok temp=44.8/warm bold=+0.01 rng=0.48
+  telemetry settled 1 hand(s)
+  act[291] Preflop raise 4 -> ok temp=49.5/warm bold=-0.13 rng=1.00
+  act[292] Preflop raise 6 -> ok temp=53.2/hot bold=-0.23 rng=1.00
+  telemetry settled 1 hand(s)
+  act[293] Flop raise 30 -> ok temp=44.6/warm bold=+0.01 rng=0.75
+  act[294] Turn raise 153 -> ok temp=40.2/warm bold=+0.14 rng=0.60
+  act[295] River raise 780 -> ok temp=41.2/warm bold=+0.11 rng=0.48
+  act[296] Preflop raise 15 -> ok temp=55.1/hot bold=-0.29 rng=0.75
+  telemetry settled 1 hand(s)
+  act[297] Flop raise 58 -> ok temp=56.8/hot bold=-0.34 rng=0.60 hyper
+  act[298] Turn bet 88 -> ok temp=32.4/warm bold=+0.36 rng=1.00
+  act[299] River bet 176 -> ok temp=12.6/cold bold=+0.93 rng=1.00
+  act[300] Preflop raise 4 -> ok temp=68.4/hot bold=-0.67 rng=1.00
+  telemetry settled 1 hand(s)
+  act[301] Preflop fold -> ok temp=42.2/warm bold=+0.08 rng=0.45
+  telemetry settled 1 hand(s)
+  act[302] Preflop raise 12 -> ok temp=34.5/warm bold=+0.30 rng=0.75 bluff=steal
+  act[303] Preflop raise 11 -> ok temp=31.9/warm bold=+0.37 rng=0.75
+  telemetry settled 1 hand(s)
+  act[304] Flop bet 12 -> ok temp=26.2/warm bold=+0.54 rng=1.00
+  act[305] Turn bet 24 -> ok temp=23.6/cold bold=+0.61 rng=1.00
+  telemetry settled 1 hand(s)
+  act[306] Preflop raise 11 -> ok temp=64.3/hot bold=-0.55 rng=0.45
+  act[307] Preflop fold -> ok temp=49.7/warm bold=-0.13 rng=0.36
+  telemetry settled 1 hand(s)
+  act[308] Preflop raise 13 -> ok temp=43.8/warm bold=+0.03 rng=0.75
+  act[309] Flop bet 20 -> ok temp=44.5/warm bold=+0.01 rng=1.00
+  act[310] Preflop fold -> ok temp=57.9/hot bold=-0.37 rng=0.45
+  telemetry settled 1 hand(s)
+  act[311] Preflop raise 25 -> ok temp=31.2/warm bold=+0.39 rng=0.45 bluff=steal
+  telemetry settled 1 hand(s)
+  act[312] Preflop call -> ok temp=33.1/warm bold=+0.34 rng=0.36
+  act[313] Flop bet 92 -> ok temp=30.6/warm bold=+0.41 rng=1.00
+  act[314] Preflop raise 6 -> ok temp=59.0/hot bold=-0.40 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[315] Flop check -> ok temp=36.0/warm bold=+0.26 rng=1.00
+  act[316] Turn check -> ok temp=26.1/warm bold=+0.54 rng=1.00 hyper
+  act[317] River check -> ok temp=16.0/cold bold=+0.83 rng=1.00
+  telemetry settled 1 hand(s)
+  act[318] Preflop raise 11 -> ok temp=53.3/hot bold=-0.24 rng=0.45
+  act[319] Flop fold -> ok temp=45.4/warm bold=-0.01 rng=0.38
+  act[320] Preflop raise 4 -> ok temp=54.6/hot bold=-0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[321] Flop bet 6 -> ok temp=24.6/cold bold=+0.58 rng=1.00
+  act[322] Turn bet 12 -> ok temp=19.3/cold bold=+0.73 rng=1.00
+  act[323] River bet 24 -> ok temp=20.3/cold bold=+0.71 rng=1.00
+  act[324] Preflop raise 4 -> ok temp=63.0/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[325] Preflop fold -> ok temp=44.9/warm bold=+0.00 rng=0.45
+  telemetry settled 1 hand(s)
+  act[326] Preflop raise 4 -> ok temp=43.3/warm bold=+0.05 rng=1.00
+  act[327] Preflop fold -> ok temp=50.9/hot bold=-0.17 rng=1.00
+  telemetry settled 1 hand(s)
+  act[328] Preflop raise 18 -> ok temp=45.3/warm bold=-0.01 rng=0.45
+  telemetry settled 1 hand(s)
+  act[329] Preflop raise 273 -> ok temp=28.7/warm bold=+0.47 rng=0.60
+  act[330] Preflop raise 4 -> ok temp=61.9/hot bold=-0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[331] Preflop fold -> ok temp=50.8/hot bold=-0.17 rng=0.60
+  act[332] Preflop raise 4 -> ok temp=65.7/hot bold=-0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[333] Preflop fold -> ok temp=54.0/hot bold=-0.26 rng=0.60
+  act[334] Preflop raise 11 -> ok temp=41.5/warm bold=+0.10 rng=0.75
+  telemetry settled 1 hand(s)
+  act[335] Flop bet 12 -> ok temp=41.0/warm bold=+0.11 rng=1.00
+  act[336] Preflop raise 22 -> ok temp=55.1/hot bold=-0.29 rng=0.75
+  telemetry settled 1 hand(s)
+  act[337] Flop check -> ok temp=33.8/warm bold=+0.32 rng=1.00
+  act[338] Turn check -> ok temp=34.4/warm bold=+0.30 rng=1.00
+  act[339] River check -> ok temp=30.3/warm bold=+0.42 rng=1.00
+  act[340] Preflop call -> ok temp=37.2/warm bold=+0.22 rng=0.75
+  act[341] Flop check -> ok temp=33.2/warm bold=+0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[342] Flop fold -> ok temp=47.3/warm bold=-0.07 rng=0.29
+  act[343] Preflop fold -> ok temp=44.1/warm bold=+0.03 rng=0.60
+  telemetry settled 1 hand(s)
+  act[344] Preflop raise 16 -> ok temp=42.9/warm bold=+0.06 rng=0.75
+  telemetry settled 1 hand(s)
+  act[345] Flop bet 16 -> ok temp=42.8/warm bold=+0.06 rng=1.00
+  act[346] Preflop raise 4 -> ok temp=29.1/warm bold=+0.45 rng=1.00
+  telemetry settled 1 hand(s)
+  act[347] Preflop call -> ok temp=31.0/warm bold=+0.40 rng=0.75
+  act[348] Flop bet 6 -> ok temp=16.6/cold bold=+0.81 rng=1.00
+  act[349] Preflop raise 4 -> ok temp=65.2/hot bold=-0.58 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[350] Preflop call -> ok temp=41.3/warm bold=+0.11 rng=0.75
+  act[351] Flop bet 6 -> ok temp=27.3/warm bold=+0.51 rng=1.00 hyper
+STOP: busted (totalChips=0). Rebuy is owner-gated, pausing.
+  telemetry settled 1 hand(s)
+=== session done: 351/351 accepted actions across ~168 observed hand/table ids; chips 2573 -> 2870 (delta 297) ===
+
+=== session 2 on [Poker] Playground S14 (chips 2870, uptime 3.0h) ===
+policy=learned:candidate-v7-0001c competition=cmsrglcro33ttvijti3slinjh seconds=21600 telemetry=C:\Users\user\Fold-ver-4 (multiway)\.arena-training.jsonl
+joined: {"kind": "queued", "lobby": {"position": 58, "total": 58, "joinedAt": 1786746385762}, "participant": {"competitionId": "cmsrglcro33ttvijti3slinjh", "agentId": "cmsnsh9er1ato12wxq5knep9d", "initialChip
+  act[1] Preflop raise 4 -> ok temp=57.0/hot bold=-0.34 rng=1.00
+  act[2] Flop bet 8 -> ok temp=47.4/warm bold=-0.07 rng=1.00
+  act[3] Preflop raise 82 -> ok temp=56.0/hot bold=-0.31 rng=0.36
+  telemetry settled 1 hand(s)
+  act[4] Preflop raise 4 -> ok temp=53.6/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[5] Preflop raise 4 -> ok temp=47.5/warm bold=-0.07 rng=1.00
+  telemetry settled 1 hand(s)
+  act[6] Preflop raise 9 -> ok temp=44.0/warm bold=+0.03 rng=0.60
+  telemetry settled 1 hand(s)
+  act[7] Flop bet 10 -> ok temp=21.1/cold bold=+0.68 rng=1.00
+  act[8] Turn bet 20 -> ok temp=15.7/cold bold=+0.84 rng=1.00
+  act[9] River bet 80 -> ok temp=6.5/cold bold=+1.00 rng=1.00
+  act[10] Preflop fold -> ok temp=64.2/hot bold=-0.55 rng=1.00
+  telemetry settled 1 hand(s)
+  act[11] Preflop raise 12 -> ok temp=34.3/warm bold=+0.31 rng=0.60
+  telemetry settled 1 hand(s)
+  act[12] Preflop call -> ok temp=34.4/warm bold=+0.30 rng=0.60
+  act[13] Flop bet 21 -> ok temp=33.9/warm bold=+0.32 rng=1.00
+  act[14] Turn bet 42 -> ok temp=31.4/warm bold=+0.39 rng=1.00
+  act[15] Preflop raise 11 -> ok temp=44.0/warm bold=+0.03 rng=0.60
+  telemetry settled 1 hand(s)
+  act[16] Preflop raise 4 -> ok temp=65.4/hot bold=-0.58 rng=1.00
+  telemetry settled 1 hand(s)
+  act[17] Flop fold -> ok temp=35.7/warm bold=+0.27 rng=0.75
+  act[18] Preflop raise 11 -> ok temp=35.6/warm bold=+0.27 rng=0.75
+  telemetry settled 1 hand(s)
+  act[19] Flop bet 12 -> ok temp=23.6/cold bold=+0.61 rng=1.00
+  act[20] Preflop raise 6 -> ok temp=57.3/hot bold=-0.35 rng=1.00
+  telemetry settled 1 hand(s)
+  act[21] Preflop raise 4 -> ok temp=58.9/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[22] Preflop fold -> ok temp=57.0/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[23] Preflop raise 17 -> ok temp=43.9/warm bold=+0.03 rng=0.60
+  telemetry settled 1 hand(s)
+  act[24] Flop bet 18 -> ok temp=32.5/warm bold=+0.36 rng=1.00
+  act[25] Preflop raise 11 -> ok temp=54.6/hot bold=-0.27 rng=0.45
+  telemetry settled 1 hand(s)
+  act[26] Flop raise 31 -> ok temp=43.7/warm bold=+0.04 rng=0.60
+  act[27] Preflop raise 11 -> ok temp=42.4/warm bold=+0.07 rng=0.75
+  telemetry settled 1 hand(s)
+  act[28] Flop bet 12 -> ok temp=42.2/warm bold=+0.08 rng=1.00
+  act[29] Preflop raise 4 -> ok temp=24.5/cold bold=+0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[30] Preflop raise 4 -> ok temp=56.6/hot bold=-0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[31] Preflop call -> ok temp=34.0/warm bold=+0.31 rng=0.45
+  act[32] Flop bet 18 -> ok temp=30.6/warm bold=+0.41 rng=1.00
+  act[33] Preflop raise 4 -> ok temp=63.3/hot bold=-0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[34] Flop call -> ok temp=38.8/warm bold=+0.18 rng=0.75
+  act[35] Turn call -> ok temp=25.7/warm bold=+0.55 rng=0.60
+  act[36] River raise 216 -> ok temp=12.5/cold bold=+0.93 rng=0.48
+  act[37] Preflop raise 6 -> ok temp=52.7/hot bold=-0.22 rng=1.00
+  telemetry settled 1 hand(s)
+  act[38] Flop raise 119 -> ok temp=49.9/warm bold=-0.14 rng=0.36
+  act[39] Turn fold -> ok temp=46.4/warm bold=-0.04 rng=0.38
+  telemetry settled 1 hand(s)
+  act[40] Preflop raise 8 -> ok temp=39.2/warm bold=+0.17 rng=0.75
+  act[41] Preflop call -> ok temp=38.6/warm bold=+0.18 rng=0.60
+  act[42] Flop bet 12 -> ok temp=27.4/warm bold=+0.50 rng=1.00
+  act[43] Flop fold -> ok temp=39.7/warm bold=+0.15 rng=0.38
+  telemetry settled 1 hand(s)
+  act[44] Preflop raise 4 -> ok temp=65.3/hot bold=-0.58 rng=1.00
+  act[45] Preflop raise 11 -> ok temp=62.9/hot bold=-0.51 rng=0.45
+  telemetry settled 1 hand(s)
+  act[46] Preflop fold -> ok temp=55.1/hot bold=-0.29 rng=0.48
+  act[47] Preflop raise 4 -> ok temp=58.6/hot bold=-0.39 rng=1.00
+  telemetry settled 1 hand(s)
+  act[48] Preflop call -> ok temp=39.6/warm bold=+0.15 rng=0.75
+  act[49] Flop bet 26 -> ok temp=30.0/warm bold=+0.43 rng=1.00
+  act[50] Preflop raise 13 -> ok temp=33.6/warm bold=+0.33 rng=0.75 hyper
+  telemetry settled 1 hand(s)
+  act[51] Flop bet 20 -> ok temp=32.3/warm bold=+0.36 rng=1.00
+  act[52] Preflop raise 4 -> ok temp=59.1/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[53] Preflop call -> ok temp=30.2/warm bold=+0.42 rng=0.75
+  act[54] Flop raise 26 -> ok temp=15.0/cold bold=+0.86 rng=0.48
+  act[55] Flop call -> ok temp=15.1/cold bold=+0.85 rng=0.48
+  act[56] Turn raise 364 -> ok temp=9.5/cold bold=+1.00 rng=0.31
+  act[57] Preflop raise 4 -> ok temp=63.4/hot bold=-0.53 rng=1.00
+  telemetry settled 1 hand(s)
+  act[58] Preflop call -> ok temp=46.1/warm bold=-0.03 rng=0.75
+  act[59] Flop call -> ok temp=30.6/warm bold=+0.41 rng=0.48
+  act[60] Turn raise 214 -> ok temp=30.4/warm bold=+0.42 rng=0.38
+  act[61] River raise 1314 -> ok temp=40.8/warm bold=+0.12 rng=0.31
+  act[62] Preflop fold -> ok temp=50.6/hot bold=-0.16 rng=0.45
+  telemetry settled 1 hand(s)
+  act[63] Preflop check -> ok temp=48.7/warm bold=-0.11 rng=1.00
+  telemetry settled 1 hand(s)
+  act[64] Flop bet 3 -> ok temp=47.3/warm bold=-0.07 rng=1.00
+  act[65] Turn check -> ok temp=35.3/warm bold=+0.28 rng=1.00
+  act[66] Turn fold -> ok temp=42.3/warm bold=+0.08 rng=0.45
+  telemetry settled 1 hand(s)
+  act[67] Preflop raise 16 -> ok temp=40.1/warm bold=+0.14 rng=0.75
+  act[68] Preflop raise 17 -> ok temp=33.9/warm bold=+0.32 rng=0.60
+  telemetry settled 1 hand(s)
+  act[69] Preflop raise 4 -> ok temp=63.0/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[70] Preflop call -> ok temp=41.0/warm bold=+0.11 rng=0.75
+  act[71] Flop fold -> ok temp=47.5/warm bold=-0.07 rng=0.36
+  act[72] Preflop raise 27 -> ok temp=48.8/warm bold=-0.11 rng=0.60
+  telemetry settled 1 hand(s)
+  act[73] Preflop call -> ok temp=39.1/warm bold=+0.17 rng=0.60
+  act[74] Flop bet 48 -> ok temp=30.3/warm bold=+0.42 rng=1.00
+  act[75] Preflop raise 4 -> ok temp=62.8/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[76] Flop raise 18 -> ok temp=44.1/warm bold=+0.03 rng=0.75
+  act[77] Preflop raise 4 -> ok temp=60.5/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[78] Preflop call -> ok temp=48.5/warm bold=-0.10 rng=0.75
+  act[79] Flop bet 18 -> ok temp=50.4/hot bold=-0.15 rng=1.00
+  act[80] Preflop raise 19 -> ok temp=37.7/warm bold=+0.21 rng=0.60
+  act[81] Preflop call -> ok temp=37.8/warm bold=+0.21 rng=0.60 hyper
+  act[82] Flop check -> ok temp=30.4/warm bold=+0.42 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[83] Flop fold -> ok temp=46.9/warm bold=-0.05 rng=0.23
+  act[84] Preflop raise 21 -> ok temp=54.3/hot bold=-0.27 rng=0.45
+  telemetry settled 1 hand(s)
+  act[85] Preflop call -> ok temp=38.0/warm bold=+0.20 rng=0.48
+  act[86] Flop raise 201 -> ok temp=45.7/warm bold=-0.02 rng=0.48
+  act[87] Turn bet 268 -> ok temp=29.0/warm bold=+0.46 rng=1.00
+  act[88] River bet 496 -> ok temp=29.3/warm bold=+0.45 rng=1.00
+  act[89] Preflop raise 4 -> ok temp=64.1/hot bold=-0.55 rng=1.00
+  telemetry settled 1 hand(s)
+  act[90] Preflop fold -> ok temp=42.7/warm bold=+0.07 rng=0.45
+  telemetry settled 1 hand(s)
+  act[91] Preflop fold -> ok temp=63.0/hot bold=-0.51 rng=0.45
+  act[92] Preflop fold -> ok temp=33.9/warm bold=+0.32 rng=0.75
+  telemetry settled 2 hand(s)
+  act[93] Preflop raise 4 -> ok temp=41.8/warm bold=+0.09 rng=1.00
+  act[94] Preflop raise 4 -> ok temp=56.0/hot bold=-0.31 rng=1.00
+  telemetry settled 1 hand(s)
+  act[95] Preflop raise 4 -> ok temp=47.5/warm bold=-0.07 rng=1.00
+  telemetry settled 1 hand(s)
+  act[96] Preflop fold -> ok temp=41.4/warm bold=+0.10 rng=0.45
+  telemetry settled 1 hand(s)
+  act[97] Preflop raise 4 -> ok temp=65.2/hot bold=-0.58 rng=1.00
+  act[98] Preflop raise 4 -> ok temp=37.6/warm bold=+0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[99] Flop bet 4 -> ok temp=42.5/warm bold=+0.07 rng=1.00
+  act[100] Flop fold -> ok temp=45.2/warm bold=-0.01 rng=0.75
+  telemetry settled 1 hand(s)
+  act[101] Preflop raise 4 -> ok temp=54.6/hot bold=-0.27 rng=1.00
+  act[102] Preflop raise 391 -> ok temp=47.6/warm bold=-0.07 rng=0.45
+  telemetry settled 1 hand(s)
+  act[103] Flop bet 212 -> ok temp=39.7/warm bold=+0.15 rng=1.00
+  act[104] Preflop raise 13 -> ok temp=61.7/hot bold=-0.48 rng=0.60
+  telemetry settled 1 hand(s)
+  act[105] Flop bet 21 -> ok temp=18.1/cold bold=+0.77 rng=1.00
+  act[106] Turn bet 84 -> ok temp=6.2/cold bold=+1.00 rng=1.00
+  act[107] Preflop fold -> ok temp=44.3/warm bold=+0.02 rng=0.60
+  telemetry settled 1 hand(s)
+  act[108] Preflop raise 4 -> ok temp=61.9/hot bold=-0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[109] Preflop call -> ok temp=32.7/warm bold=+0.35 rng=0.45
+  act[110] Flop bet 18 -> ok temp=18.0/cold bold=+0.77 rng=1.00
+  act[111] Preflop raise 11 -> ok temp=48.5/warm bold=-0.10 rng=0.60
+  telemetry settled 1 hand(s)
+  act[112] Preflop raise 4 -> ok temp=44.5/warm bold=+0.01 rng=1.00
+  telemetry settled 1 hand(s)
+  act[113] Flop raise 18 -> ok temp=14.6/cold bold=+0.87 rng=0.75
+  act[114] Preflop raise 4 -> ok temp=65.6/hot bold=-0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[115] Flop bet 6 -> ok temp=38.1/warm bold=+0.20 rng=1.00
+  act[116] Turn bet 12 -> ok temp=38.1/warm bold=+0.20 rng=1.00
+  act[117] Turn fold -> ok temp=44.3/warm bold=+0.02 rng=0.60
+  telemetry settled 1 hand(s)
+  act[118] Preflop raise 66 -> ok temp=53.9/hot bold=-0.25 rng=0.60
+  act[119] Flop bet 153 -> ok temp=14.0/cold bold=+0.89 rng=1.00
+  act[120] Preflop fold -> ok temp=48.3/warm bold=-0.09 rng=0.60
+  telemetry settled 1 hand(s)
+  act[121] Preflop raise 4 -> ok temp=60.4/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[122] Preflop fold -> ok temp=63.8/hot bold=-0.54 rng=1.00
+  telemetry settled 1 hand(s)
+  act[123] Preflop raise 6 -> ok temp=35.6/warm bold=+0.27 rng=1.00 bluff=steal
+  telemetry settled 1 hand(s)
+  act[124] Preflop raise 11 -> ok temp=61.2/hot bold=-0.46 rng=0.45
+  telemetry settled 1 hand(s)
+  act[125] Preflop call -> ok temp=51.5/hot bold=-0.19 rng=0.60
+  act[126] Flop raise 209 -> ok temp=49.3/warm bold=-0.12 rng=0.29
+  act[127] Preflop raise 11 -> ok temp=65.5/hot bold=-0.59 rng=0.45
+  telemetry settled 1 hand(s)
+  act[128] Preflop call -> ok temp=55.7/hot bold=-0.31 rng=0.60
+  act[129] Flop check -> ok temp=53.8/hot bold=-0.25 rng=1.00
+  act[130] Flop fold -> ok temp=53.8/hot bold=-0.25 rng=0.23 hyper
+  act[131] Preflop raise 58 -> ok temp=53.3/hot bold=-0.24 rng=0.37
+  telemetry settled 1 hand(s)
+  act[132] Preflop call -> ok temp=40.4/warm bold=+0.13 rng=0.48
+  act[133] Flop bet 112 -> ok temp=25.8/warm bold=+0.55 rng=1.00
+  act[134] Flop call -> ok temp=38.2/warm bold=+0.19 rng=0.38
+  act[135] Turn bet 440 -> ok temp=25.6/warm bold=+0.55 rng=1.00
+  act[136] Preflop raise 5 -> ok temp=42.9/warm bold=+0.06 rng=1.00
+  telemetry settled 1 hand(s)
+  act[137] Flop check -> ok temp=31.5/warm bold=+0.39 rng=1.00
+  act[138] Flop fold -> ok temp=43.2/warm bold=+0.05 rng=0.45
+  act[139] Preflop fold -> ok temp=38.9/warm bold=+0.17 rng=1.00
+  telemetry settled 2 hand(s)
+  act[140] Preflop raise 11 -> ok temp=43.2/warm bold=+0.05 rng=0.60
+  act[141] Flop bet 12 -> ok temp=24.5/cold bold=+0.59 rng=1.00
+  act[142] Preflop raise 16 -> ok temp=33.8/warm bold=+0.32 rng=0.75 bluff=steal
+  telemetry settled 1 hand(s)
+  act[143] Flop bet 16 -> ok temp=33.3/warm bold=+0.33 rng=1.00
+  act[144] Preflop raise 4 -> ok temp=33.4/warm bold=+0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[145] Flop bet 4 -> ok temp=23.9/cold bold=+0.60 rng=1.00
+  act[146] Flop call -> ok temp=26.3/warm bold=+0.53 rng=0.75
+  act[147] Turn bet 35 -> ok temp=9.9/cold bold=+1.00 rng=1.00
+  act[148] River bet 52 -> ok temp=13.9/cold bold=+0.89 rng=1.00
+  act[149] Preflop raise 4 -> ok temp=53.9/hot bold=-0.25 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[150] Flop raise 9 -> ok temp=41.9/warm bold=+0.09 rng=0.75
+  act[151] Turn fold -> ok temp=41.6/warm bold=+0.10 rng=0.36
+  telemetry settled 1 hand(s)
+  act[152] Preflop raise 4 -> ok temp=54.9/hot bold=-0.28 rng=1.00
+  act[153] Preflop raise 4 -> ok temp=52.2/hot bold=-0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[154] Preflop call -> ok temp=37.0/warm bold=+0.23 rng=0.60
+  act[155] Flop bet 14 -> ok temp=28.6/warm bold=+0.47 rng=1.00
+  act[156] Preflop fold -> ok temp=60.8/hot bold=-0.45 rng=0.45
+  telemetry settled 1 hand(s)
+  act[157] Preflop raise 6 -> ok temp=51.5/hot bold=-0.19 rng=1.00
+  telemetry settled 1 hand(s)
+  act[158] Preflop call -> ok temp=46.3/warm bold=-0.04 rng=0.75
+  act[159] Flop fold -> ok temp=44.8/warm bold=+0.01 rng=0.48
+  act[160] Preflop raise 4 -> ok temp=51.2/hot bold=-0.18 rng=1.00
+  telemetry settled 1 hand(s)
+  act[161] Flop check -> ok temp=40.2/warm bold=+0.14 rng=1.00
+  act[162] Turn check -> ok temp=39.9/warm bold=+0.15 rng=1.00
+  act[163] River check -> ok temp=37.7/warm bold=+0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[164] Preflop raise 4 -> ok temp=37.8/warm bold=+0.21 rng=1.00
+  act[165] Flop bet 4 -> ok temp=34.9/warm bold=+0.29 rng=1.00
+  act[166] Preflop raise 4 -> ok temp=61.7/hot bold=-0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[167] Flop call -> ok temp=28.1/warm bold=+0.48 rng=0.75
+  act[168] Turn fold -> ok temp=29.0/warm bold=+0.46 rng=0.60 hyper
+  act[169] Preflop raise 11 -> ok temp=60.8/hot bold=-0.45 rng=0.45
+  telemetry settled 1 hand(s)
+  act[170] Preflop call -> ok temp=40.5/warm bold=+0.13 rng=0.60
+  act[171] Flop raise 103 -> ok temp=38.6/warm bold=+0.18 rng=0.48
+  act[172] Preflop raise 13 -> ok temp=51.6/hot bold=-0.19 rng=0.75
+  telemetry settled 1 hand(s)
+  act[173] Flop bet 16 -> ok temp=29.5/warm bold=+0.44 rng=1.00
+  act[174] Preflop raise 4 -> ok temp=31.1/warm bold=+0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[175] Flop bet 4 -> ok temp=17.5/cold bold=+0.79 rng=1.00
+  act[176] Preflop raise 4 -> ok temp=51.5/hot bold=-0.19 rng=1.00
+  telemetry settled 1 hand(s)
+  act[177] Preflop raise 16 -> ok temp=41.9/warm bold=+0.09 rng=0.75
+  telemetry settled 1 hand(s)
+  act[178] Flop bet 16 -> ok temp=21.9/cold bold=+0.66 rng=1.00
+  act[179] Preflop raise 4 -> ok temp=48.5/warm bold=-0.10 rng=1.00
+  telemetry settled 1 hand(s)
+  act[180] Preflop raise 11 -> ok temp=51.5/hot bold=-0.19 rng=0.45
+  telemetry settled 1 hand(s)
+  act[181] Flop raise 73 -> ok temp=41.9/warm bold=+0.09 rng=0.48
+  act[182] Preflop raise 13 -> ok temp=51.1/hot bold=-0.17 rng=0.75
+  telemetry settled 1 hand(s)
+  act[183] Flop bet 20 -> ok temp=23.8/cold bold=+0.61 rng=1.00
+  act[184] Preflop raise 4 -> ok temp=57.4/hot bold=-0.35 rng=1.00
+  telemetry settled 1 hand(s)
+  act[185] Preflop raise 12 -> ok temp=33.8/warm bold=+0.32 rng=0.60
+  telemetry settled 1 hand(s)
+  act[186] Preflop raise 13 -> ok temp=42.6/warm bold=+0.07 rng=0.75
+  telemetry settled 1 hand(s)
+  act[187] Preflop call -> HTTP 0 temp=37.4/warm bold=+0.22 rng=0.36 TimeoutError('The read operation timed out')
+  act[188] Flop check -> HTTP 409 It is not this agent's turn
+  act[189] Flop raise 497 -> ok temp=33.5/warm bold=+0.33 rng=0.29
+  act[190] Preflop raise 14 -> ok temp=50.0/hot bold=-0.14 rng=0.60
+  telemetry settled 1 hand(s)
+  act[191] Preflop raise 11 -> ok temp=62.4/hot bold=-0.50 rng=0.45
+  telemetry settled 1 hand(s)
+  act[192] Preflop call -> ok temp=41.1/warm bold=+0.11 rng=0.60
+  act[193] Flop fold -> ok temp=44.1/warm bold=+0.03 rng=0.29
+  act[194] Preflop raise 10 -> ok temp=50.6/hot bold=-0.16 rng=0.45
+  telemetry settled 1 hand(s)
+  act[195] Flop raise 41 -> ok temp=38.0/warm bold=+0.20 rng=0.48
+  act[196] Preflop raise 11 -> ok temp=53.3/hot bold=-0.24 rng=0.45
+  telemetry settled 1 hand(s)
+  act[197] Preflop fold -> ok temp=48.7/warm bold=-0.11 rng=0.36
+  act[198] Preflop raise 4 -> ok temp=65.6/hot bold=-0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[199] Preflop call -> ok temp=48.8/warm bold=-0.11 rng=0.75
+  act[200] Flop check -> ok temp=48.6/warm bold=-0.10 rng=1.00
+  act[201] Turn fold -> ok temp=47.2/warm bold=-0.06 rng=0.36
+  act[202] Preflop raise 4 -> ok temp=57.5/hot bold=-0.36 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[203] Flop bet 8 -> ok temp=44.5/warm bold=+0.01 rng=1.00
+  act[204] Preflop raise 4 -> ok temp=61.3/hot bold=-0.47 rng=1.00
+  telemetry settled 1 hand(s)
+  act[205] Preflop raise 11 -> ok temp=38.7/warm bold=+0.18 rng=0.75
+  telemetry settled 1 hand(s)
+  act[206] Flop bet 12 -> ok temp=42.2/warm bold=+0.08 rng=1.00
+  act[207] Preflop raise 4 -> ok temp=58.9/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[208] Flop raise 11 -> ok temp=34.8/warm bold=+0.29 rng=0.75
+  act[209] Preflop raise 11 -> ok temp=54.8/hot bold=-0.28 rng=0.45
+  telemetry settled 1 hand(s)
+  act[210] Flop bet 12 -> ok temp=18.5/cold bold=+0.76 rng=1.00
+  act[211] Preflop raise 4 -> ok temp=62.1/hot bold=-0.49 rng=1.00
+  telemetry settled 1 hand(s)
+  act[212] Flop raise 14 -> ok temp=51.3/hot bold=-0.18 rng=0.75
+  act[213] Preflop raise 11 -> ok temp=60.9/hot bold=-0.45 rng=0.45
+  telemetry settled 1 hand(s)
+  act[214] Flop raise 31 -> ok temp=33.0/warm bold=+0.34 rng=0.60
+  act[215] Preflop raise 11 -> ok temp=49.5/warm bold=-0.13 rng=0.60
+  telemetry settled 1 hand(s)
+  act[216] Preflop call -> ok temp=41.1/warm bold=+0.11 rng=0.48
+  act[217] Flop bet 34 -> ok temp=25.1/warm bold=+0.57 rng=1.00
+  act[218] Turn bet 68 -> ok temp=14.6/cold bold=+0.87 rng=1.00
+  act[219] River bet 136 -> ok temp=10.6/cold bold=+0.98 rng=1.00
+  act[220] Preflop raise 18 -> ok temp=54.2/hot bold=-0.26 rng=0.45
+  telemetry settled 1 hand(s)
+  act[221] Flop bet 20 -> ok temp=29.7/warm bold=+0.44 rng=1.00 hyper
+  act[222] Preflop raise 11 -> ok temp=62.1/hot bold=-0.49 rng=0.45
+  telemetry settled 1 hand(s)
+  act[223] Flop raise 41 -> ok temp=29.2/warm bold=+0.45 rng=0.60
+  act[224] Preflop raise 4 -> ok temp=55.8/hot bold=-0.31 rng=1.00
+  telemetry settled 1 hand(s)
+  act[225] Preflop fold -> ok temp=41.9/warm bold=+0.09 rng=0.45
+  telemetry settled 1 hand(s)
+  act[226] Preflop raise 5 -> ok temp=42.1/warm bold=+0.08 rng=1.00
+  act[227] Flop bet 8 -> ok temp=43.5/warm bold=+0.04 rng=1.00 hyper
+  act[228] Turn bet 20 -> ok temp=42.5/warm bold=+0.07 rng=1.00
+  act[229] Turn fold -> ok temp=46.7/warm bold=-0.05 rng=0.75
+  act[230] Preflop raise 4 -> ok temp=33.1/warm bold=+0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[231] Preflop raise 7 -> ok temp=39.4/warm bold=+0.16 rng=1.00
+  telemetry settled 1 hand(s)
+  act[232] Preflop call -> ok temp=30.0/warm bold=+0.43 rng=0.60
+  act[233] Flop raise 132 -> ok temp=39.6/warm bold=+0.15 rng=0.36
+  act[234] Preflop raise 4 -> ok temp=57.0/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[235] Flop bet 6 -> ok temp=21.8/cold bold=+0.66 rng=1.00
+  act[236] Turn bet 25 -> ok temp=5.0/cold bold=+1.00 rng=1.00 hyper
+  act[237] River bet 75 -> ok temp=0.2/cold bold=+1.00 rng=1.00
+  act[238] Preflop fold -> ok temp=44.8/warm bold=+0.01 rng=0.60
+  telemetry settled 1 hand(s)
+  act[239] Preflop fold -> ok temp=58.1/hot bold=-0.37 rng=1.00
+  telemetry settled 1 hand(s)
+  act[240] Preflop raise 11 -> ok temp=45.6/warm bold=-0.02 rng=0.60
+  telemetry settled 1 hand(s)
+  act[241] Preflop raise 13 -> ok temp=46.0/warm bold=-0.03 rng=0.75
+  telemetry settled 1 hand(s)
+  act[242] Flop bet 20 -> ok temp=19.1/cold bold=+0.74 rng=1.00
+  act[243] Turn bet 40 -> ok temp=5.8/cold bold=+1.00 rng=1.00
+  act[244] River bet 160 -> ok temp=0.7/cold bold=+1.00 rng=1.00
+  act[245] River raise 1720 -> ok temp=5.9/cold bold=+1.00 rng=0.48
+  telemetry settled 1 hand(s)
+  act[246] Preflop raise 4 -> ok temp=53.4/hot bold=-0.24 rng=1.00
+  act[247] Flop raise 16 -> ok temp=20.5/cold bold=+0.70 rng=0.75
+  act[248] Flop raise 153 -> ok temp=23.3/cold bold=+0.62 rng=0.48
+  act[249] Flop call -> ok temp=27.1/warm bold=+0.51 rng=0.38
+  act[250] Turn raise 1986 -> ok temp=29.9/warm bold=+0.43 rng=0.31
+  act[251] Preflop raise 4 -> ok temp=40.2/warm bold=+0.14 rng=1.00
+  telemetry settled 1 hand(s)
+  act[252] Flop bet 5 -> ok temp=28.1/warm bold=+0.48 rng=1.00
+  act[253] Preflop raise 6 -> ok temp=59.3/hot bold=-0.41 rng=1.00
+  telemetry settled 1 hand(s)
+  act[254] Flop bet 13 -> ok temp=51.1/hot bold=-0.17 rng=1.00
+  act[255] Turn fold -> ok temp=40.3/warm bold=+0.13 rng=0.45
+  telemetry settled 1 hand(s)
+  act[256] Preflop raise 4 -> ok temp=55.0/hot bold=-0.29 rng=1.00 hyper
+  act[257] Preflop call -> ok temp=34.1/warm bold=+0.31 rng=0.60
+  act[258] Flop bet 16 -> ok temp=21.7/cold bold=+0.67 rng=1.00
+  act[259] Preflop raise 11 -> ok temp=54.4/hot bold=-0.27 rng=0.45
+  telemetry settled 1 hand(s)
+  act[260] Flop bet 17 -> ok temp=29.8/warm bold=+0.43 rng=1.00
+  act[261] Preflop raise 4 -> ok temp=60.8/hot bold=-0.45 rng=1.00
+  telemetry settled 1 hand(s)
+  act[262] Preflop raise 4 -> ok temp=62.0/hot bold=-0.49 rng=1.00
+  telemetry settled 1 hand(s)
+  act[263] Preflop call -> ok temp=46.1/warm bold=-0.03 rng=0.75
+  act[264] Flop fold -> ok temp=50.3/hot bold=-0.15 rng=0.23
+  act[265] Preflop fold -> ok temp=56.9/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[266] Preflop raise 4 -> ok temp=60.0/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[267] Flop bet 7 -> ok temp=46.8/warm bold=-0.05 rng=1.00
+  act[268] Preflop raise 4 -> ok temp=60.1/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[269] Flop bet 6 -> ok temp=36.5/warm bold=+0.24 rng=1.00
+  act[270] Preflop raise 4 -> ok temp=62.4/hot bold=-0.50 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[271] Preflop raise 4 -> ok temp=64.8/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[272] Preflop call -> ok temp=39.3/warm bold=+0.16 rng=0.75
+  act[273] Flop fold -> ok temp=45.2/warm bold=-0.01 rng=0.36
+  act[274] Preflop raise 4 -> ok temp=37.9/warm bold=+0.20 rng=1.00
+  telemetry settled 1 hand(s)
+  act[275] Preflop raise 4 -> ok temp=55.1/hot bold=-0.29 rng=1.00
+  telemetry settled 1 hand(s)
+  act[276] Preflop call -> ok temp=39.8/warm bold=+0.15 rng=0.75
+  act[277] Flop bet 6 -> ok temp=40.2/warm bold=+0.14 rng=1.00 hyper
+  act[278] Preflop raise 12 -> ok temp=26.7/warm bold=+0.52 rng=0.60
+  telemetry settled 1 hand(s)
+  act[279] Flop raise 51 -> ok temp=26.2/warm bold=+0.54 rng=0.60
+  act[280] Preflop raise 11 -> ok temp=65.9/hot bold=-0.60 rng=0.45
+  telemetry settled 1 hand(s)
+  act[281] Preflop fold -> ok temp=50.8/hot bold=-0.17 rng=0.60
+  act[282] Preflop raise 4 -> ok temp=53.9/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[283] Preflop raise 4 -> ok temp=47.5/warm bold=-0.07 rng=1.00
+  telemetry settled 1 hand(s)
+  act[284] Preflop raise 31 -> HTTP 0 temp=28.1/warm bold=+0.48 rng=0.60 TimeoutError('The read operation timed out')
+  act[285] Preflop fold -> ok
+  telemetry settled 1 hand(s)
+  act[286] Preflop raise 11 -> ok temp=64.7/hot bold=-0.56 rng=0.45
+  act[287] Flop raise 52 -> ok temp=28.8/warm bold=+0.46 rng=0.60
+  act[288] Preflop raise 11 -> ok temp=58.6/hot bold=-0.39 rng=0.45
+  telemetry settled 1 hand(s)
+  act[289] Flop bet 12 -> ok temp=18.6/cold bold=+0.75 rng=1.00
+  act[290] Preflop raise 11 -> ok temp=41.0/warm bold=+0.11 rng=0.60
+  telemetry settled 1 hand(s)
+  act[291] Flop bet 12 -> ok temp=17.8/cold bold=+0.78 rng=1.00
+  act[292] Turn bet 48 -> ok temp=11.2/cold bold=+0.97 rng=1.00
+  act[293] Preflop raise 4 -> ok temp=54.6/hot bold=-0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[294] Preflop call -> ok temp=38.9/warm bold=+0.17 rng=0.60
+  act[295] Flop bet 16 -> ok temp=27.8/warm bold=+0.49 rng=1.00
+  act[296] Preflop raise 13 -> ok temp=44.2/warm bold=+0.02 rng=0.75
+  telemetry settled 1 hand(s)
+  act[297] Flop bet 20 -> ok temp=44.2/warm bold=+0.02 rng=1.00
+  act[298] Preflop raise 8 -> ok temp=35.7/warm bold=+0.27 rng=0.75
+  telemetry settled 1 hand(s)
+  act[299] Preflop fold -> ok temp=47.2/warm bold=-0.06 rng=0.45
+  telemetry settled 1 hand(s)
+  act[300] Preflop raise 4 -> ok temp=58.8/hot bold=-0.39 rng=1.00
+  telemetry settled 1 hand(s)
+  act[301] Flop raise 11 -> ok temp=39.4/warm bold=+0.16 rng=0.75
+  act[302] Preflop raise 4 -> ok temp=37.1/warm bold=+0.23 rng=1.00
+  telemetry settled 1 hand(s)
+  act[303] Preflop raise 11 -> ok temp=60.5/hot bold=-0.44 rng=0.45
+  telemetry settled 1 hand(s)
+  act[304] Flop raise 97 -> ok temp=45.0/warm bold=+0.00 rng=0.48
+  act[305] Preflop raise 4 -> ok temp=61.8/hot bold=-0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[306] Flop bet 11 -> ok temp=53.0/hot bold=-0.23 rng=1.00
+  act[307] Preflop raise 4 -> ok temp=56.2/hot bold=-0.32 rng=1.00
+  telemetry settled 1 hand(s)
+  act[308] Preflop raise 11 -> ok temp=38.1/warm bold=+0.20 rng=0.75
+  telemetry settled 1 hand(s)
+  act[309] Flop bet 12 -> ok temp=32.3/warm bold=+0.36 rng=1.00
+  act[310] Preflop raise 4 -> ok temp=56.5/hot bold=-0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[311] Preflop raise 11 -> ok temp=55.7/hot bold=-0.31 rng=0.45
+  telemetry settled 1 hand(s)
+  act[312] Flop raise 52 -> ok temp=45.0/warm bold=+0.00 rng=0.60
+  act[313] Preflop raise 11 -> ok temp=52.1/hot bold=-0.20 rng=0.45
+  telemetry settled 1 hand(s)
+  act[314] Flop bet 12 -> ok temp=30.0/warm bold=+0.43 rng=1.00
+  act[315] Preflop raise 4 -> ok temp=63.0/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[316] Flop bet 6 -> ok temp=49.5/warm bold=-0.13 rng=1.00
+  act[317] Preflop raise 6 -> ok temp=56.8/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[318] Flop bet 8 -> ok temp=27.9/warm bold=+0.49 rng=1.00
+  act[319] Turn bet 16 -> ok temp=30.7/warm bold=+0.41 rng=1.00
+  act[320] River fold -> ok temp=40.1/warm bold=+0.14 rng=0.45
+  telemetry settled 1 hand(s)
+  act[321] Preflop raise 18 -> ok temp=64.0/hot bold=-0.54 rng=0.45 hyper
+  act[322] Preflop fold -> ok temp=47.2/warm bold=-0.06 rng=0.48
+  act[323] Preflop fold -> ok temp=57.2/hot bold=-0.35 rng=0.45
+  telemetry settled 1 hand(s)
+  act[324] Preflop raise 11 -> ok temp=49.0/warm bold=-0.11 rng=0.60
+  telemetry settled 1 hand(s)
+  act[325] Preflop call -> ok temp=41.4/warm bold=+0.10 rng=0.60
+  act[326] Flop bet 23 -> ok temp=42.6/warm bold=+0.07 rng=1.00
+  act[327] Preflop fold -> ok temp=53.3/hot bold=-0.24 rng=0.75
+  telemetry settled 1 hand(s)
+  act[328] Preflop raise 4 -> ok temp=49.5/warm bold=-0.13 rng=1.00
+  telemetry settled 1 hand(s)
+  act[329] Preflop call -> ok temp=38.7/warm bold=+0.18 rng=0.75
+  act[330] Flop raise 35 -> ok temp=43.3/warm bold=+0.05 rng=0.60
+  act[331] Turn raise 210 -> ok temp=42.4/warm bold=+0.07 rng=0.48
+  act[332] Preflop fold -> ok temp=57.2/hot bold=-0.35 rng=0.45
+  telemetry settled 1 hand(s)
+  act[333] Preflop raise 29 -> ok temp=42.2/warm bold=+0.08 rng=0.36
+  telemetry settled 1 hand(s)
+  act[334] Preflop call -> ok temp=32.9/warm bold=+0.35 rng=0.48
+  act[335] Flop bet 64 -> ok temp=31.0/warm bold=+0.40 rng=1.00
+  act[336] Preflop fold -> ok temp=44.6/warm bold=+0.01 rng=0.60
+  telemetry settled 1 hand(s)
+  act[337] Preflop fold -> ok temp=50.6/hot bold=-0.16 rng=1.00
+  telemetry settled 1 hand(s)
+  act[338] Preflop raise 16 -> ok temp=41.6/warm bold=+0.10 rng=0.75
+  telemetry settled 1 hand(s)
+  act[339] Preflop call -> ok temp=41.3/warm bold=+0.11 rng=0.60
+  act[340] Flop bet 28 -> ok temp=40.6/warm bold=+0.13 rng=1.00
+  act[341] Preflop raise 4 -> ok temp=65.2/hot bold=-0.58 rng=1.00
+  telemetry settled 1 hand(s)
+  act[342] Preflop raise 12 -> ok temp=36.5/warm bold=+0.24 rng=0.75
+  telemetry settled 2 hand(s)
+  act[343] Preflop raise 40 -> ok temp=49.4/warm bold=-0.13 rng=0.36
+  act[344] Preflop fold -> ok temp=52.2/hot bold=-0.21 rng=0.31
+  act[345] Preflop raise 6 -> ok temp=62.5/hot bold=-0.50 rng=1.00
+  telemetry settled 1 hand(s)
+  act[346] Flop raise 129 -> ok temp=51.9/hot bold=-0.20 rng=0.36
+  act[347] Flop fold -> ok temp=46.2/warm bold=-0.03 rng=0.48
+  telemetry settled 1 hand(s)
+  act[348] Preflop raise 14 -> ok temp=60.9/hot bold=-0.45 rng=0.60
+  act[349] Flop bet 24 -> ok temp=48.7/warm bold=-0.11 rng=1.00
+  act[350] Preflop raise 11 -> ok temp=39.4/warm bold=+0.16 rng=0.60
+  telemetry settled 1 hand(s)
+  act[351] Flop bet 14 -> ok temp=30.0/warm bold=+0.43 rng=1.00
+  act[352] Turn check -> ok temp=24.3/cold bold=+0.59 rng=1.00
+  act[353] River bet 28 -> ok temp=4.6/cold bold=+1.00 rng=1.00
+  act[354] Preflop raise 11 -> ok temp=45.7/warm bold=-0.02 rng=0.60
+  telemetry settled 1 hand(s)
+  act[355] Flop check -> ok temp=30.8/warm bold=+0.41 rng=1.00
+  act[356] Turn bet 12 -> ok temp=10.8/cold bold=+0.98 rng=1.00
+  act[357] River bet 48 -> ok temp=5.4/cold bold=+1.00 rng=1.00
+  act[358] Preflop raise 4 -> ok temp=53.8/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[359] Preflop raise 4 -> ok temp=55.1/hot bold=-0.29 rng=1.00
+  telemetry settled 1 hand(s)
+  act[360] Flop bet 6 -> ok temp=34.1/warm bold=+0.31 rng=1.00
+  act[361] Preflop raise 13 -> ok temp=46.6/warm bold=-0.05 rng=0.45
+  telemetry settled 1 hand(s)
+  act[362] Preflop call -> ok temp=36.6/warm bold=+0.24 rng=0.48
+  act[363] Flop check -> ok temp=33.8/warm bold=+0.32 rng=1.00
+  act[364] Turn check -> ok temp=24.9/cold bold=+0.57 rng=1.00
+  act[365] River check -> ok temp=24.6/cold bold=+0.58 rng=1.00
+  act[366] Preflop raise 4 -> ok temp=59.1/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[367] Flop bet 6 -> ok temp=40.0/warm bold=+0.14 rng=1.00
+  act[368] Turn check -> ok temp=38.5/warm bold=+0.19 rng=1.00 hyper
+  act[369] Turn fold -> ok temp=43.0/warm bold=+0.06 rng=0.36
+  telemetry settled 1 hand(s)
+  act[370] Preflop raise 4 -> ok temp=49.7/warm bold=-0.13 rng=1.00
+  act[371] Flop raise 11 -> ok temp=36.1/warm bold=+0.25 rng=0.75
+  act[372] Flop call -> ok temp=39.7/warm bold=+0.15 rng=0.60
+  act[373] Turn raise 74 -> ok temp=37.1/warm bold=+0.23 rng=0.48
+  act[374] Turn fold -> ok temp=38.9/warm bold=+0.17 rng=0.38
+  act[375] Preflop fold -> ok temp=57.3/hot bold=-0.35 rng=1.00
+  telemetry settled 1 hand(s)
+  act[376] Preflop raise 11 -> ok temp=60.2/hot bold=-0.43 rng=0.45
+  telemetry settled 1 hand(s)
+  act[377] Preflop fold -> ok temp=44.4/warm bold=+0.02 rng=0.36
+  telemetry settled 1 hand(s)
+  act[378] Preflop raise 4 -> ok temp=37.8/warm bold=+0.21 rng=1.00
+  act[379] Preflop raise 4 -> ok temp=55.4/hot bold=-0.30 rng=1.00
+  telemetry settled 1 hand(s)
+  act[380] Preflop raise 11 -> ok temp=41.8/warm bold=+0.09 rng=0.75
+  telemetry settled 1 hand(s)
+  act[381] Flop bet 12 -> ok temp=39.1/warm bold=+0.17 rng=1.00
+  act[382] Preflop raise 13 -> ok temp=43.7/warm bold=+0.04 rng=0.45
+  telemetry settled 1 hand(s)
+  act[383] Preflop fold -> ok temp=64.6/hot bold=-0.56 rng=1.00
+  telemetry settled 1 hand(s)
+  act[384] Preflop raise 4 -> ok temp=63.3/hot bold=-0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[385] Preflop call -> ok temp=37.0/warm bold=+0.23 rng=0.45
+  act[386] Flop check -> ok temp=31.5/warm bold=+0.39 rng=1.00
+  act[387] Turn check -> ok temp=27.7/warm bold=+0.49 rng=1.00
+  act[388] River bet 18 -> ok temp=6.6/cold bold=+1.00 rng=1.00
+  act[389] Preflop fold -> ok temp=51.7/hot bold=-0.19 rng=1.00
+  telemetry settled 1 hand(s)
+  act[390] Preflop raise 11 -> ok temp=42.9/warm bold=+0.06 rng=0.60
+  telemetry settled 1 hand(s)
+  act[391] Flop bet 12 -> ok temp=10.9/cold bold=+0.97 rng=1.00
+  act[392] Preflop raise 53 -> ok temp=58.1/hot bold=-0.37 rng=0.36
+  telemetry settled 1 hand(s)
+  act[393] Flop raise 205 -> ok temp=35.8/warm bold=+0.26 rng=0.38
+  act[394] Turn raise 944 -> ok temp=39.8/warm bold=+0.15 rng=0.31
+  act[395] Preflop raise 28 -> ok temp=51.2/hot bold=-0.18 rng=0.60
+  telemetry settled 1 hand(s)
+  act[396] Preflop call -> ok temp=45.3/warm bold=-0.01 rng=0.48
+  act[397] Flop check -> ok temp=45.3/warm bold=-0.01 rng=1.00
+  act[398] Flop fold -> ok temp=48.9/warm bold=-0.11 rng=0.22
+  telemetry settled 1 hand(s)
+  act[399] Preflop raise 4 -> ok temp=62.7/hot bold=-0.51 rng=1.00
+  act[400] Preflop raise 11 -> ok temp=44.3/warm bold=+0.02 rng=0.60
+  telemetry settled 1 hand(s)
+  act[401] Flop bet 12 -> ok temp=31.2/warm bold=+0.39 rng=1.00
+  act[402] Preflop raise 4 -> ok temp=58.7/hot bold=-0.39 rng=1.00
+  telemetry settled 1 hand(s)
+  act[403] Flop bet 4 -> ok temp=33.3/warm bold=+0.33 rng=1.00
+  act[404] Preflop raise 4 -> ok temp=61.8/hot bold=-0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[405] Flop fold -> ok temp=45.5/warm bold=-0.01 rng=0.75
+  act[406] Preflop raise 11 -> ok temp=40.8/warm bold=+0.12 rng=0.75
+  act[407] Preflop call -> ok temp=40.5/warm bold=+0.13 rng=0.60
+  act[408] Flop bet 18 -> ok temp=34.0/warm bold=+0.31 rng=1.00
+  telemetry settled 2 hand(s)
+  act[409] Preflop raise 5 -> ok temp=45.9/warm bold=-0.03 rng=1.00
+  act[410] Preflop call -> ok temp=46.4/warm bold=-0.04 rng=0.75
+  act[411] Flop bet 22 -> ok temp=45.2/warm bold=-0.01 rng=1.00
+  act[412] Flop fold -> ok temp=39.9/warm bold=+0.15 rng=0.48
+  act[413] Preflop raise 11 -> ok temp=58.2/hot bold=-0.38 rng=0.45
+  telemetry settled 1 hand(s)
+  act[414] Preflop call -> ok temp=36.2/warm bold=+0.25 rng=0.60
+  act[415] Flop bet 18 -> ok temp=24.7/cold bold=+0.58 rng=1.00
+  act[416] Turn fold -> ok temp=37.3/warm bold=+0.22 rng=0.29
+  telemetry settled 1 hand(s)
+  act[417] Preflop raise 17 -> ok temp=47.4/warm bold=-0.07 rng=0.60
+  act[418] Flop bet 18 -> ok temp=37.5/warm bold=+0.21 rng=1.00
+  act[419] Preflop raise 4 -> ok temp=55.9/hot bold=-0.31 rng=1.00
+  telemetry settled 1 hand(s)
+  act[420] Flop bet 6 -> ok temp=45.5/warm bold=-0.01 rng=1.00
+  act[421] Preflop raise 11 -> ok temp=65.7/hot bold=-0.59 rng=0.45
+  telemetry settled 1 hand(s)
+  act[422] Preflop fold -> ok temp=42.9/warm bold=+0.06 rng=0.36
+  telemetry settled 1 hand(s)
+  act[423] Preflop raise 4 -> ok temp=53.6/hot bold=-0.25 rng=1.00
+  act[424] Flop bet 4 -> ok temp=38.5/warm bold=+0.19 rng=1.00
+  act[425] Preflop raise 4 -> ok temp=55.7/hot bold=-0.31 rng=1.00
+  telemetry settled 1 hand(s)
+  act[426] Flop check -> ok temp=43.4/warm bold=+0.05 rng=1.00
+  act[427] Turn check -> ok temp=39.8/warm bold=+0.15 rng=1.00
+  act[428] Turn fold -> ok temp=41.2/warm bold=+0.11 rng=0.36
+  telemetry settled 1 hand(s)
+  act[429] Preflop raise 11 -> ok temp=41.6/warm bold=+0.10 rng=0.75
+  act[430] Preflop raise 11 -> ok temp=61.6/hot bold=-0.47 rng=0.45
+  telemetry settled 1 hand(s)
+  act[431] Preflop fold -> ok temp=50.9/hot bold=-0.17 rng=0.48
+  act[432] Preflop raise 17 -> ok temp=49.4/warm bold=-0.13 rng=0.60
+  telemetry settled 1 hand(s)
+  act[433] Preflop raise 4 -> ok temp=65.2/hot bold=-0.58 rng=1.00
+  telemetry settled 1 hand(s)
+  act[434] Flop bet 5 -> ok temp=42.6/warm bold=+0.07 rng=1.00 hyper
+  act[435] Preflop fold -> ok temp=64.5/hot bold=-0.56 rng=0.45
+  telemetry settled 1 hand(s)
+  act[436] Preflop raise 17 -> ok temp=46.6/warm bold=-0.05 rng=0.60
+  telemetry settled 1 hand(s)
+  act[437] Flop bet 20 -> ok temp=33.6/warm bold=+0.33 rng=1.00
+  act[438] Preflop fold -> ok temp=54.8/hot bold=-0.28 rng=0.75
+  telemetry settled 1 hand(s)
+  act[439] Preflop raise 17 -> ok temp=44.6/warm bold=+0.01 rng=0.60
+  telemetry settled 1 hand(s)
+  act[440] Flop bet 18 -> ok temp=32.8/warm bold=+0.35 rng=1.00
+  act[441] Turn bet 36 -> ok temp=32.2/warm bold=+0.37 rng=1.00
+  act[442] Preflop raise 4 -> ok temp=61.1/hot bold=-0.46 rng=1.00
+  telemetry settled 1 hand(s)
+  act[443] Flop fold -> ok temp=46.6/warm bold=-0.05 rng=0.45
+  telemetry settled 1 hand(s)
+  act[444] Preflop raise 11 -> ok temp=61.5/hot bold=-0.47 rng=0.45
+  act[445] Flop bet 17 -> ok temp=40.3/warm bold=+0.13 rng=1.00
+  act[446] Preflop raise 4 -> ok temp=51.9/hot bold=-0.20 rng=1.00
+  telemetry settled 1 hand(s)
+  act[447] Flop bet 6 -> ok temp=43.9/warm bold=+0.03 rng=1.00
+  act[448] Flop call -> ok temp=34.4/warm bold=+0.30 rng=0.75
+  act[449] Turn check -> ok temp=26.0/warm bold=+0.54 rng=1.00
+  act[450] Turn fold -> ok temp=42.0/warm bold=+0.09 rng=0.29
+  act[451] Preflop raise 8 -> ok temp=38.1/warm bold=+0.20 rng=0.75
+  telemetry settled 1 hand(s)
+  act[452] Preflop raise 18 -> ok temp=54.1/hot bold=-0.26 rng=0.45
+  telemetry settled 1 hand(s)
+  act[453] Flop bet 20 -> ok temp=15.0/cold bold=+0.86 rng=1.00
+  act[454] Preflop raise 11 -> ok temp=61.7/hot bold=-0.48 rng=0.45
+  telemetry settled 1 hand(s)
+  act[455] Flop bet 18 -> ok temp=27.9/warm bold=+0.49 rng=1.00 hyper
+  act[456] Preflop fold -> ok temp=62.1/hot bold=-0.49 rng=1.00
+  telemetry settled 1 hand(s)
+  act[457] Preflop raise 4 -> ok temp=48.9/warm bold=-0.11 rng=1.00
+  telemetry settled 1 hand(s)
+  act[458] Preflop raise 11 -> ok temp=55.1/hot bold=-0.29 rng=0.45
+  telemetry settled 1 hand(s)
+  act[459] Preflop call -> ok temp=40.7/warm bold=+0.12 rng=0.60
+  act[460] Flop raise 147 -> ok temp=48.3/warm bold=-0.09 rng=0.29
+  act[461] Flop fold -> ok temp=45.8/warm bold=-0.02 rng=0.38
+  telemetry settled 1 hand(s)
+  act[462] Preflop raise 4 -> ok temp=53.3/hot bold=-0.24 rng=1.00
+  act[463] Flop check -> ok temp=47.8/warm bold=-0.08 rng=1.00
+  act[464] Turn check -> ok temp=45.4/warm bold=-0.01 rng=1.00 hyper
+  act[465] River check -> ok temp=41.9/warm bold=+0.09 rng=1.00 hyper
+  act[466] Preflop fold -> ok temp=56.2/hot bold=-0.32 rng=0.75
+  telemetry settled 1 hand(s)
+  act[467] Preflop raise 11 -> ok temp=62.8/hot bold=-0.51 rng=0.45
+  telemetry settled 1 hand(s)
+  act[468] Flop bet 25 -> ok temp=12.4/cold bold=+0.93 rng=1.00
+  act[469] Preflop raise 4 -> ok temp=60.1/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[470] Preflop raise 7 -> ok temp=28.2/warm bold=+0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[471] Preflop raise 6 -> ok temp=53.9/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[472] Flop check -> ok temp=47.0/warm bold=-0.06 rng=1.00
+  act[473] Turn bet 10 -> ok temp=29.4/warm bold=+0.45 rng=1.00
+  act[474] Preflop raise 4 -> ok temp=51.4/hot bold=-0.18 rng=1.00
+  telemetry settled 1 hand(s)
+  act[475] Preflop raise 4 -> ok temp=59.4/hot bold=-0.41 rng=1.00
+  telemetry settled 1 hand(s)
+  act[476] Flop check -> ok temp=37.5/warm bold=+0.21 rng=1.00
+  act[477] Turn check -> ok temp=34.5/warm bold=+0.30 rng=1.00
+  act[478] River check -> ok temp=31.0/warm bold=+0.40 rng=1.00
+  act[479] Preflop fold -> ok temp=53.5/hot bold=-0.24 rng=0.45
+  telemetry settled 1 hand(s)
+  act[480] Preflop raise 4 -> ok temp=66.3/hot bold=-0.61 rng=1.00
+  telemetry settled 1 hand(s)
+  act[481] Preflop fold -> ok temp=50.8/hot bold=-0.17 rng=0.36
+  act[482] Preflop raise 5 -> ok temp=42.1/warm bold=+0.08 rng=1.00
+  telemetry settled 1 hand(s)
+  act[483] Flop check -> ok temp=28.5/warm bold=+0.47 rng=1.00
+  act[484] Flop fold -> ok temp=38.3/warm bold=+0.19 rng=0.45
+  telemetry settled 1 hand(s)
+  act[485] Preflop raise 4 -> ok temp=50.5/hot bold=-0.16 rng=1.00
+  act[486] Flop bet 4 -> ok temp=42.6/warm bold=+0.07 rng=1.00
+  act[487] Preflop raise 4 -> ok temp=61.0/hot bold=-0.46 rng=1.00
+  telemetry settled 1 hand(s)
+  act[488] Preflop raise 4 -> ok temp=59.8/hot bold=-0.42 rng=1.00
+  telemetry settled 1 hand(s)
+  act[489] Preflop raise 11 -> ok temp=63.9/hot bold=-0.54 rng=0.45
+  telemetry settled 1 hand(s)
+  act[490] Preflop fold -> ok temp=56.7/hot bold=-0.33 rng=0.60
+  act[491] Preflop raise 29 -> ok temp=46.8/warm bold=-0.05 rng=0.36
+  telemetry settled 1 hand(s)
+  act[492] Preflop call -> ok temp=39.2/warm bold=+0.17 rng=0.38
+  act[493] Flop bet 76 -> ok temp=22.8/cold bold=+0.63 rng=1.00
+  act[494] Turn bet 152 -> ok temp=19.8/cold bold=+0.72 rng=1.00
+  act[495] Preflop raise 4 -> ok temp=66.2/hot bold=-0.61 rng=1.00
+  telemetry settled 1 hand(s)
+  act[496] Preflop call -> ok temp=40.3/warm bold=+0.13 rng=0.60
+  act[497] Flop bet 16 -> ok temp=26.7/warm bold=+0.52 rng=1.00
+  act[498] Preflop raise 6 -> ok temp=28.6/warm bold=+0.47 rng=1.00
+  telemetry settled 1 hand(s)
+  act[499] Preflop raise 4 -> ok temp=60.0/hot bold=-0.43 rng=1.00
+  telemetry settled 1 hand(s)
+  act[500] Preflop call -> ok temp=39.6/warm bold=+0.15 rng=0.45
+  act[501] Flop bet 23 -> ok temp=37.3/warm bold=+0.22 rng=1.00
+  act[502] Preflop raise 11 -> ok temp=61.6/hot bold=-0.47 rng=0.45
+  telemetry settled 1 hand(s)
+  act[503] Flop raise 74 -> ok temp=42.9/warm bold=+0.06 rng=0.60
+  act[504] Preflop fold -> ok temp=57.7/hot bold=-0.36 rng=0.45
+  telemetry settled 1 hand(s)
+  act[505] Preflop raise 4 -> ok temp=65.1/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[506] Flop bet 4 -> ok temp=27.7/warm bold=+0.49 rng=1.00
+  act[507] Preflop raise 71 -> ok temp=49.2/warm bold=-0.12 rng=0.36
+  telemetry settled 1 hand(s)
+  act[508] Preflop fold -> ok temp=50.5/hot bold=-0.16 rng=0.38
+  act[509] Preflop fold -> ok temp=53.8/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[510] Preflop raise 73 -> ok temp=60.3/hot bold=-0.44 rng=0.36
+  telemetry settled 1 hand(s)
+  act[511] Flop raise 374 -> ok temp=30.7/warm bold=+0.41 rng=0.38
+  act[512] Preflop raise 4 -> ok temp=60.6/hot bold=-0.45 rng=1.00
+  telemetry settled 1 hand(s)
+  act[513] Preflop fold -> ok temp=46.1/warm bold=-0.03 rng=0.45
+  act[514] Preflop raise 14 -> ok temp=57.8/hot bold=-0.37 rng=0.60
+  telemetry settled 1 hand(s)
+  act[515] Preflop call -> ok temp=39.6/warm bold=+0.15 rng=0.36
+  act[516] Flop check -> ok temp=35.2/warm bold=+0.28 rng=1.00
+  act[517] Turn check -> ok temp=33.2/warm bold=+0.34 rng=1.00
+  act[518] River check -> ok temp=31.6/warm bold=+0.38 rng=1.00
+  telemetry settled 1 hand(s)
+  act[519] Preflop raise 4 -> ok temp=67.0/hot bold=-0.63 rng=1.00
+  act[520] Flop raise 12 -> ok temp=26.0/warm bold=+0.54 rng=0.75
+  act[521] Flop fold -> ok temp=48.3/warm bold=-0.09 rng=0.36
+  telemetry settled 1 hand(s)
+  act[522] Preflop raise 4 -> ok temp=61.9/hot bold=-0.48 rng=1.00
+  act[523] Flop bet 6 -> ok temp=48.2/warm bold=-0.09 rng=1.00
+  act[524] Preflop raise 4 -> ok temp=47.1/warm bold=-0.06 rng=1.00
+  telemetry settled 1 hand(s)
+  act[525] Preflop fold -> ok temp=41.9/warm bold=+0.09 rng=0.45
+  act[526] Preflop raise 4 -> ok temp=49.9/warm bold=-0.14 rng=1.00
+  telemetry settled 1 hand(s)
+  act[527] Preflop call -> ok temp=32.4/warm bold=+0.36 rng=0.75
+  act[528] Flop bet 6 -> ok temp=26.3/warm bold=+0.53 rng=1.00
+  act[529] Preflop raise 17 -> ok temp=50.0/hot bold=-0.14 rng=0.60
+  telemetry settled 1 hand(s)
+  act[530] Preflop call -> ok temp=40.1/warm bold=+0.14 rng=0.60
+  act[531] Flop bet 31 -> ok temp=28.3/warm bold=+0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[532] Preflop raise 4 -> ok temp=58.2/hot bold=-0.38 rng=1.00
+  act[533] Preflop raise 4 -> ok temp=54.8/hot bold=-0.28 rng=1.00
+  telemetry settled 1 hand(s)
+  act[534] Flop bet 4 -> ok temp=38.2/warm bold=+0.19 rng=1.00
+  act[535] Preflop raise 11 -> ok temp=32.2/warm bold=+0.37 rng=0.75
+  telemetry settled 1 hand(s)
+  act[536] Preflop raise 6 -> ok temp=30.9/warm bold=+0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[537] Preflop call -> ok temp=35.5/warm bold=+0.27 rng=0.60
+  act[538] Flop fold -> ok temp=43.4/warm bold=+0.05 rng=0.36
+  telemetry settled 1 hand(s)
+  act[539] Preflop raise 33 -> ok temp=49.1/warm bold=-0.12 rng=0.36
+  act[540] Flop bet 50 -> ok temp=43.4/warm bold=+0.05 rng=1.00
+  act[541] Preflop raise 4 -> ok temp=60.5/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[542] Preflop fold -> ok temp=47.4/warm bold=-0.07 rng=0.45
+  act[543] Preflop raise 11 -> ok temp=56.0/hot bold=-0.31 rng=0.45
+  telemetry settled 1 hand(s)
+  act[544] Preflop call -> ok temp=41.3/warm bold=+0.11 rng=0.48
+  act[545] Flop bet 34 -> ok temp=42.8/warm bold=+0.06 rng=1.00
+  act[546] Turn bet 68 -> ok temp=27.1/warm bold=+0.51 rng=1.00
+  act[547] River bet 136 -> ok temp=28.5/warm bold=+0.47 rng=1.00
+  act[548] Preflop raise 11 -> ok temp=54.9/hot bold=-0.28 rng=0.45
+  telemetry settled 1 hand(s)
+  act[549] Flop raise 48 -> ok temp=20.8/cold bold=+0.69 rng=0.48
+  act[550] Preflop raise 4 -> ok temp=58.9/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[551] Flop bet 6 -> ok temp=36.5/warm bold=+0.24 rng=1.00
+  act[552] Preflop fold -> ok temp=52.1/hot bold=-0.20 rng=0.45
+  telemetry settled 1 hand(s)
+  act[553] Preflop raise 7 -> ok temp=59.0/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[554] Preflop raise 64 -> ok temp=27.6/warm bold=+0.50 rng=0.60
+  act[555] Preflop raise 11 -> ok temp=60.5/hot bold=-0.44 rng=0.45
+  telemetry settled 1 hand(s)
+  act[556] Flop raise 62 -> ok temp=45.3/warm bold=-0.01 rng=0.60
+  act[557] Preflop raise 4 -> ok temp=63.0/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[558] Preflop fold -> ok temp=56.8/hot bold=-0.34 rng=0.75
+  act[559] Preflop raise 11 -> ok temp=53.4/hot bold=-0.24 rng=0.45
+  telemetry settled 1 hand(s)
+  act[560] Flop raise 31 -> ok temp=45.6/warm bold=-0.02 rng=0.60
+  act[561] Preflop raise 4 -> ok temp=38.8/warm bold=+0.18 rng=1.00
+  telemetry settled 1 hand(s)
+  act[562] Flop bet 8 -> ok temp=15.6/cold bold=+0.84 rng=1.00
+  act[563] Turn bet 24 -> ok temp=9.8/cold bold=+1.00 rng=1.00
+  act[564] Preflop raise 13 -> ok temp=55.0/hot bold=-0.29 rng=0.75
+  telemetry settled 1 hand(s)
+  act[565] Flop bet 20 -> ok temp=37.9/warm bold=+0.20 rng=1.00
+  act[566] Flop call -> ok temp=32.0/warm bold=+0.37 rng=0.60
+  act[567] Turn bet 80 -> ok temp=25.4/warm bold=+0.56 rng=1.00
+  act[568] Turn call -> ok temp=31.2/warm bold=+0.39 rng=0.48
+  act[569] River bet 314 -> ok temp=32.9/warm bold=+0.35 rng=1.00
+  act[570] Preflop raise 13 -> ok temp=59.2/hot bold=-0.41 rng=0.60
+  telemetry settled 1 hand(s)
+  act[571] Flop bet 21 -> ok temp=49.3/warm bold=-0.12 rng=1.00
+  telemetry settled 1 hand(s)
+  act[572] Preflop raise 4 -> ok temp=50.9/hot bold=-0.17 rng=1.00
+  act[573] Flop check -> ok temp=30.4/warm bold=+0.42 rng=1.00
+  act[574] Turn bet 6 -> ok temp=19.2/cold bold=+0.74 rng=1.00
+  act[575] Preflop raise 7 -> ok temp=46.5/warm bold=-0.04 rng=1.00
+  telemetry settled 1 hand(s)
+  act[576] Preflop raise 12 -> ok temp=33.4/warm bold=+0.33 rng=0.60
+  telemetry settled 1 hand(s)
+  act[577] Preflop fold -> ok temp=47.3/warm bold=-0.07 rng=0.60
+  telemetry settled 1 hand(s)
+  act[578] Preflop raise 27 -> ok temp=51.8/hot bold=-0.19 rng=0.45
+  telemetry settled 1 hand(s)
+  act[579] Preflop raise 12 -> ok temp=42.5/warm bold=+0.07 rng=0.60
+  telemetry settled 1 hand(s)
+  act[580] Preflop raise 4 -> ok temp=49.2/warm bold=-0.12 rng=1.00
+  telemetry settled 1 hand(s)
+  act[581] Preflop fold -> ok temp=39.2/warm bold=+0.17 rng=0.45
+  telemetry settled 1 hand(s)
+  act[582] Preflop raise 11 -> ok temp=60.2/hot bold=-0.43 rng=0.45
+  act[583] Preflop call -> ok temp=48.5/warm bold=-0.10 rng=0.60
+  act[584] Flop fold -> ok temp=53.9/hot bold=-0.25 rng=0.24
+  act[585] Preflop call -> ok temp=54.4/hot bold=-0.27 rng=0.75
+  act[586] Flop bet 10 -> ok temp=54.3/hot bold=-0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[587] Preflop raise 4 -> ok temp=60.3/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[588] Flop call -> ok temp=27.2/warm bold=+0.51 rng=0.75
+  act[589] Turn raise 41 -> ok temp=16.1/cold bold=+0.83 rng=0.48 hyper
+  act[590] River fold -> ok temp=25.5/warm bold=+0.56 rng=0.38
+  telemetry settled 1 hand(s)
+  act[591] Preflop raise 4 -> ok temp=62.3/hot bold=-0.49 rng=1.00
+  act[592] Flop bet 7 -> ok temp=45.0/warm bold=+0.00 rng=1.00
+  act[593] Turn bet 14 -> ok temp=36.1/warm bold=+0.25 rng=1.00
+  act[594] River fold -> ok temp=40.2/warm bold=+0.14 rng=0.60
+  telemetry settled 1 hand(s)
+  act[595] Preflop raise 13 -> ok temp=45.7/warm bold=-0.02 rng=0.75
+  act[596] Flop bet 20 -> ok temp=46.2/warm bold=-0.03 rng=1.00
+  act[597] Preflop raise 4 -> ok temp=33.4/warm bold=+0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[598] Preflop raise 4 -> ok temp=54.6/hot bold=-0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[599] Flop bet 4 -> ok temp=23.5/cold bold=+0.61 rng=1.00
+  act[600] Preflop raise 14 -> ok temp=51.3/hot bold=-0.18 rng=0.60
+  telemetry settled 1 hand(s)
+  act[601] Flop check -> ok temp=28.5/warm bold=+0.47 rng=1.00
+  act[602] Flop fold -> ok temp=43.5/warm bold=+0.04 rng=0.36
+  act[603] Preflop raise 39 -> ok temp=48.0/warm bold=-0.09 rng=0.36
+  telemetry settled 1 hand(s)
+  act[604] Preflop fold -> ok temp=48.8/warm bold=-0.11 rng=0.38
+  act[605] Preflop raise 4 -> ok temp=61.5/hot bold=-0.47 rng=1.00
+  telemetry settled 1 hand(s)
+  act[606] Flop fold -> ok temp=34.1/warm bold=+0.31 rng=0.75
+  act[607] Preflop raise 40 -> ok temp=47.8/warm bold=-0.08 rng=0.36
+  telemetry settled 1 hand(s)
+  act[608] Preflop call -> ok temp=30.9/warm bold=+0.40 rng=0.48
+  act[609] Flop bet 86 -> ok temp=26.8/warm bold=+0.52 rng=1.00
+  act[610] Preflop raise 11 -> ok temp=31.8/warm bold=+0.38 rng=0.75
+  telemetry settled 1 hand(s)
+  act[611] Flop check -> ok temp=31.4/warm bold=+0.39 rng=1.00
+  act[612] Flop fold -> ok temp=46.6/warm bold=-0.05 rng=0.29
+  telemetry settled 1 hand(s)
+  act[613] Preflop raise 13 -> ok temp=48.8/warm bold=-0.11 rng=0.75
+  act[614] Flop bet 20 -> ok temp=47.8/warm bold=-0.08 rng=1.00
+  act[615] Preflop raise 4 -> ok temp=65.9/hot bold=-0.60 rng=1.00
+  telemetry settled 1 hand(s)
+  act[616] Preflop call -> ok temp=37.5/warm bold=+0.21 rng=0.75
+  act[617] Flop raise 40 -> ok temp=42.0/warm bold=+0.09 rng=0.48
+  act[618] Turn raise 300 -> ok temp=42.3/warm bold=+0.08 rng=0.38
+  act[619] River raise 2250 -> ok temp=42.2/warm bold=+0.08 rng=0.31
+  act[620] Preflop raise 14 -> ok temp=53.5/hot bold=-0.24 rng=0.45
+  telemetry settled 1 hand(s)
+  act[621] Preflop fold -> ok temp=41.7/warm bold=+0.09 rng=0.36
+  telemetry settled 1 hand(s)
+  act[622] Preflop raise 9 -> ok temp=47.8/warm bold=-0.08 rng=0.60
+  act[623] Preflop raise 4 -> ok temp=59.4/hot bold=-0.41 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[624] Flop bet 6 -> ok temp=41.4/warm bold=+0.10 rng=1.00
+  act[625] Preflop raise 16 -> ok temp=57.1/hot bold=-0.35 rng=0.60
+  telemetry settled 1 hand(s)
+  act[626] Flop raise 57 -> ok temp=40.9/warm bold=+0.12 rng=0.60
+  act[627] Preflop raise 51 -> ok temp=46.9/warm bold=-0.05 rng=0.36
+  telemetry settled 1 hand(s)
+  act[628] Flop bet 77 -> ok temp=44.6/warm bold=+0.01 rng=1.00
+  act[629] Preflop raise 11 -> ok temp=65.2/hot bold=-0.58 rng=0.45
+  telemetry settled 1 hand(s)
+  act[630] Flop bet 28 -> ok temp=53.8/hot bold=-0.25 rng=1.00
+  act[631] Turn bet 56 -> ok temp=22.8/cold bold=+0.63 rng=1.00
+  act[632] River bet 112 -> ok temp=21.3/cold bold=+0.68 rng=1.00
+  act[633] Preflop raise 4 -> ok temp=59.8/hot bold=-0.42 rng=1.00
+  telemetry settled 1 hand(s)
+  act[634] Flop raise 14 -> ok temp=28.8/warm bold=+0.46 rng=0.75
+  act[635] Turn bet 22 -> ok temp=14.1/cold bold=+0.88 rng=1.00
+  act[636] River bet 44 -> ok temp=11.8/cold bold=+0.95 rng=1.00
+  act[637] Preflop raise 6 -> ok temp=31.7/warm bold=+0.38 rng=1.00 bluff=steal hyper
+  telemetry settled 1 hand(s)
+  act[638] Preflop raise 4 -> ok temp=58.6/hot bold=-0.39 rng=1.00
+  telemetry settled 1 hand(s)
+  act[639] Preflop raise 4 -> ok temp=61.1/hot bold=-0.46 rng=1.00
+  telemetry settled 1 hand(s)
+  act[640] Flop raise 18 -> ok temp=34.3/warm bold=+0.31 rng=0.75
+  act[641] Flop fold -> ok temp=41.6/warm bold=+0.10 rng=0.48
+  act[642] Preflop raise 15 -> ok temp=65.5/hot bold=-0.59 rng=0.45
+  telemetry settled 1 hand(s)
+  act[643] Flop bet 16 -> ok temp=37.4/warm bold=+0.22 rng=1.00
+  act[644] Preflop raise 4 -> ok temp=48.6/warm bold=-0.10 rng=1.00
+  telemetry settled 1 hand(s)
+  act[645] Flop fold -> ok temp=27.3/warm bold=+0.51 rng=0.75
+  telemetry settled 1 hand(s)
+  act[646] Preflop raise 4 -> ok temp=65.9/hot bold=-0.60 rng=1.00
+  act[647] Flop bet 6 -> ok temp=45.6/warm bold=-0.02 rng=1.00
+  act[648] Preflop raise 4 -> ok temp=65.6/hot bold=-0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[649] Preflop fold -> ok temp=50.9/hot bold=-0.17 rng=0.75
+  act[650] Preflop raise 4 -> ok temp=56.7/hot bold=-0.33 rng=1.00
+  telemetry settled 1 hand(s)
+  act[651] Flop raise 11 -> ok temp=41.9/warm bold=+0.09 rng=0.75
+  act[652] Flop fold -> ok temp=44.1/warm bold=+0.03 rng=0.60
+  act[653] Preflop fold -> ok temp=64.7/hot bold=-0.56 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[654] Preflop raise 4 -> ok temp=64.8/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[655] Preflop call -> ok temp=38.3/warm bold=+0.19 rng=0.75
+  act[656] Flop bet 8 -> ok temp=13.0/cold bold=+0.91 rng=1.00
+  act[657] Preflop raise 11 -> ok temp=62.2/hot bold=-0.49 rng=0.45
+  telemetry settled 1 hand(s)
+  act[658] Flop raise 31 -> ok temp=32.6/warm bold=+0.35 rng=0.60
+  act[659] Preflop raise 4 -> ok temp=57.5/hot bold=-0.36 rng=1.00
+  telemetry settled 1 hand(s)
+  act[660] Preflop raise 4 -> ok temp=60.5/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[661] Preflop fold -> ok temp=49.6/warm bold=-0.13 rng=0.45
+  telemetry settled 1 hand(s)
+  act[662] Preflop fold -> ok temp=62.8/hot bold=-0.51 rng=1.00
+  act[663] Preflop raise 4 -> ok temp=59.6/hot bold=-0.42 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[664] Flop bet 8 -> ok temp=51.9/hot bold=-0.20 rng=1.00
+  act[665] Preflop raise 4 -> ok temp=46.2/warm bold=-0.03 rng=1.00
+  telemetry settled 1 hand(s)
+  act[666] Flop raise 11 -> ok temp=38.7/warm bold=+0.18 rng=0.75
+  act[667] Preflop raise 4 -> ok temp=55.0/hot bold=-0.29 rng=1.00
+  telemetry settled 1 hand(s)
+  act[668] Preflop raise 4 -> ok temp=62.8/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[669] Preflop fold -> ok temp=53.6/hot bold=-0.25 rng=0.45
+  act[670] Preflop raise 13 -> ok temp=57.5/hot bold=-0.36 rng=0.75
+  telemetry settled 1 hand(s)
+  act[671] Flop bet 20 -> ok temp=42.6/warm bold=+0.07 rng=1.00
+  act[672] Preflop fold -> ok temp=50.8/hot bold=-0.17 rng=0.45 hyper
+  telemetry settled 1 hand(s)
+  act[673] Preflop raise 13 -> ok temp=43.6/warm bold=+0.04 rng=0.75
+  telemetry settled 1 hand(s)
+  act[674] Preflop fold -> ok temp=59.6/hot bold=-0.42 rng=1.00
+  telemetry settled 1 hand(s)
+  act[675] Preflop raise 4 -> ok temp=65.6/hot bold=-0.59 rng=1.00
+  telemetry settled 1 hand(s)
+  act[676] Preflop raise 6 -> ok temp=49.6/warm bold=-0.13 rng=1.00
+  telemetry settled 1 hand(s)
+  act[677] Flop bet 8 -> ok temp=27.6/warm bold=+0.50 rng=1.00
+  act[678] Preflop call -> ok temp=47.3/warm bold=-0.07 rng=1.00
+  telemetry settled 1 hand(s)
+  act[679] Flop bet 3 -> ok temp=38.3/warm bold=+0.19 rng=1.00
+  act[680] Turn bet 6 -> ok temp=21.2/cold bold=+0.68 rng=1.00
+  act[681] River bet 12 -> ok temp=12.7/cold bold=+0.92 rng=1.00
+  act[682] Preflop raise 39 -> ok temp=44.1/warm bold=+0.03 rng=0.36
+  telemetry settled 1 hand(s)
+  act[683] Preflop call -> ok temp=43.9/warm bold=+0.03 rng=0.38
+  act[684] Flop bet 141 -> ok temp=25.9/warm bold=+0.55 rng=1.00
+  act[685] Preflop fold -> ok temp=47.4/warm bold=-0.07 rng=0.60
+  telemetry settled 1 hand(s)
+  act[686] Preflop fold -> ok temp=53.7/hot bold=-0.25 rng=0.45
+  telemetry settled 1 hand(s)
+  act[687] Preflop raise 4 -> ok temp=62.2/hot bold=-0.49 rng=1.00
+  telemetry settled 1 hand(s)
+  act[688] Preflop call -> ok temp=40.5/warm bold=+0.13 rng=0.45
+  act[689] Flop check -> ok temp=25.1/warm bold=+0.57 rng=1.00
+  act[690] Turn bet 30 -> ok temp=11.0/cold bold=+0.97 rng=1.00
+  act[691] River bet 60 -> ok temp=6.5/cold bold=+1.00 rng=1.00
+  act[692] Preflop raise 7 -> ok temp=46.5/warm bold=-0.04 rng=1.00 bluff=steal
+  telemetry settled 1 hand(s)
+  act[693] Preflop raise 4 -> ok temp=36.1/warm bold=+0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[694] Preflop raise 4 -> ok temp=64.3/hot bold=-0.55 rng=1.00
+  telemetry settled 1 hand(s)
+  act[695] Preflop call -> ok temp=38.0/warm bold=+0.20 rng=0.75
+  act[696] Flop bet 7 -> ok temp=38.7/warm bold=+0.18 rng=1.00
+  act[697] Preflop raise 23 -> ok temp=42.6/warm bold=+0.07 rng=0.45
+  telemetry settled 1 hand(s)
+  act[698] Preflop raise 4 -> ok temp=58.5/hot bold=-0.39 rng=1.00
+  telemetry settled 1 hand(s)
+  act[699] Preflop raise 4 -> ok temp=53.7/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[700] Preflop call -> ok temp=40.2/warm bold=+0.14 rng=0.45
+  act[701] Flop bet 18 -> ok temp=14.7/cold bold=+0.87 rng=1.00
+  act[702] Flop raise 196 -> ok temp=14.5/cold bold=+0.87 rng=0.60
+  act[703] Preflop raise 6 -> ok temp=22.0/cold bold=+0.66 rng=1.00
+  telemetry settled 1 hand(s)
+  act[704] Flop call -> ok temp=17.2/cold bold=+0.79 rng=0.75
+  act[705] Turn raise 45 -> ok temp=15.0/cold bold=+0.86 rng=0.48
+  act[706] Turn raise 329 -> ok temp=15.1/cold bold=+0.85 rng=0.48
+  act[707] Preflop raise 6 -> ok temp=30.1/warm bold=+0.43 rng=1.00 bluff=steal
+  telemetry settled 1 hand(s)
+  act[708] Preflop fold -> ok temp=64.8/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[709] Preflop raise 4 -> ok temp=52.6/hot bold=-0.22 rng=1.00
+  telemetry settled 1 hand(s)
+  act[710] Flop bet 6 -> ok temp=46.0/warm bold=-0.03 rng=1.00
+  act[711] Preflop raise 4 -> ok temp=62.6/hot bold=-0.50 rng=1.00
+  telemetry settled 1 hand(s)
+  act[712] Flop check -> ok temp=27.9/warm bold=+0.49 rng=1.00
+=== session done: 709/712 accepted actions across ~325 observed hand/table ids; chips 2870 -> 8727 (delta 5857) ===
+
+=== session 3 on [Poker] Playground S14 (chips 8727, uptime 9.1h) ===
+policy=learned:candidate-v7-0001c competition=cmsrglcro33ttvijti3slinjh seconds=21600 telemetry=C:\Users\user\Fold-ver-4 (multiway)\.arena-training.jsonl
+already seated or queued (reconnecting), skipping join
+  act[1] Turn check -> ok temp=22.1/cold bold=+0.65 rng=1.00
+  act[2] River check -> ok temp=19.4/cold bold=+0.73 rng=1.00
+  telemetry settled 1 hand(s)
+  idle with no lobby seat; re-joining (1/5)
+  re-joined the lobby
+  act[3] Preflop fold -> ok temp=62.4/hot bold=-0.50 rng=1.00
+  act[4] Preflop raise 4 -> ok temp=44.0/warm bold=+0.03 rng=1.00
+  telemetry settled 1 hand(s)
+  act[5] Preflop raise 4 -> ok temp=53.9/hot bold=-0.25 rng=1.00
+  telemetry settled 1 hand(s)
+  act[6] Preflop call -> ok temp=36.8/warm bold=+0.23 rng=0.60
+  act[7] Flop bet 16 -> ok temp=28.9/warm bold=+0.46 rng=1.00
+  act[8] Preflop raise 702 -> ok temp=62.1/hot bold=-0.49 rng=0.45
+  telemetry settled 1 hand(s)
+  act[9] Flop fold -> ok temp=46.9/warm bold=-0.05 rng=0.36
+  telemetry settled 1 hand(s)
+  act[10] Preflop raise 16 -> ok temp=38.2/warm bold=+0.19 rng=0.75
+  act[11] Preflop call -> ok temp=39.6/warm bold=+0.15 rng=0.48
+  act[12] Flop bet 48 -> ok temp=42.5/warm bold=+0.07 rng=1.00
+  act[13] Flop fold -> ok temp=47.6/warm bold=-0.07 rng=0.38
+  telemetry settled 1 hand(s)
+  act[14] Preflop raise 15 -> ok temp=47.9/warm bold=-0.08 rng=0.60
+  act[15] Flop bet 19 -> ok temp=28.0/warm bold=+0.49 rng=1.00
+  act[16] Turn bet 38 -> ok temp=32.6/warm bold=+0.35 rng=1.00
+  act[17] River bet 76 -> ok temp=33.1/warm bold=+0.34 rng=1.00
+  act[18] River fold -> ok temp=40.9/warm bold=+0.12 rng=0.48
+  act[19] Preflop raise 11 -> ok temp=52.8/hot bold=-0.22 rng=0.45
+  telemetry settled 1 hand(s)
+  act[20] Preflop call -> ok temp=34.1/warm bold=+0.31 rng=0.60
+  act[21] Flop raise 114 -> ok temp=45.4/warm bold=-0.01 rng=0.38
+  act[22] Preflop raise 11 -> ok temp=56.2/hot bold=-0.32 rng=0.75
+  telemetry settled 1 hand(s)
+  act[23] Flop check -> ok temp=35.2/warm bold=+0.28 rng=1.00
+  act[24] Turn check -> ok temp=35.6/warm bold=+0.27 rng=1.00
+  act[25] River check -> ok temp=31.1/warm bold=+0.40 rng=1.00
+  act[26] Preflop raise 4 -> ok temp=63.4/hot bold=-0.53 rng=1.00
+  telemetry settled 1 hand(s)
+  act[27] Preflop raise 22 -> ok temp=37.9/warm bold=+0.20 rng=0.75
+  telemetry settled 1 hand(s)
+  act[28] Flop bet 44 -> ok temp=22.5/cold bold=+0.64 rng=1.00
+  act[29] Preflop raise 11 -> ok temp=59.3/hot bold=-0.41 rng=0.45
+  telemetry settled 1 hand(s)
+  act[30] Flop bet 12 -> ok temp=41.8/warm bold=+0.09 rng=1.00
+  act[31] Preflop raise 11 -> ok temp=47.8/warm bold=-0.08 rng=0.45
+  telemetry settled 1 hand(s)
+  act[32] Flop raise 36 -> ok temp=30.6/warm bold=+0.41 rng=0.60
+  act[33] Turn fold -> ok temp=38.3/warm bold=+0.19 rng=0.23
+  act[34] Preflop raise 4 -> ok temp=60.5/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[35] Flop bet 6 -> ok temp=36.2/warm bold=+0.25 rng=1.00
+  act[36] Turn bet 12 -> ok temp=19.0/cold bold=+0.74 rng=1.00
+  act[37] Turn call -> ok temp=23.5/cold bold=+0.61 rng=0.75
+  act[38] River bet 52 -> ok temp=18.1/cold bold=+0.77 rng=1.00
+  act[39] Preflop raise 6 -> ok temp=52.5/hot bold=-0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[40] Flop raise 27 -> ok temp=23.0/cold bold=+0.63 rng=0.75
+  act[41] Turn raise 215 -> ok temp=5.7/cold bold=+1.00 rng=0.60
+  act[42] River raise 1368 -> ok temp=1.6/cold bold=+1.00 rng=0.48
+  act[43] Preflop raise 13 -> ok temp=44.2/warm bold=+0.02 rng=0.75
+  telemetry settled 1 hand(s)
+  act[44] Flop bet 16 -> ok temp=35.1/warm bold=+0.28 rng=1.00
+  act[45] Preflop raise 17 -> ok temp=49.9/warm bold=-0.14 rng=0.60
+  telemetry settled 1 hand(s)
+  act[46] Preflop fold -> ok temp=49.8/warm bold=-0.14 rng=0.48
+  act[47] Preflop raise 11 -> ok temp=62.7/hot bold=-0.51 rng=0.45
+  telemetry settled 1 hand(s)
+  act[48] Flop raise 75 -> ok temp=52.2/hot bold=-0.21 rng=0.60 hyper
+  act[49] Preflop raise 4 -> ok temp=50.9/hot bold=-0.17 rng=1.00
+  telemetry settled 1 hand(s)
+  act[50] Flop bet 4 -> ok temp=28.2/warm bold=+0.48 rng=1.00
+  act[51] Preflop raise 22 -> ok temp=57.3/hot bold=-0.35 rng=0.45
+  telemetry settled 1 hand(s)
+  act[52] Preflop fold -> ok temp=51.5/hot bold=-0.19 rng=0.48
+  act[53] Preflop raise 4 -> ok temp=65.1/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[54] Flop bet 8 -> ok temp=49.6/warm bold=-0.13 rng=1.00
+  act[55] Preflop raise 11 -> ok temp=39.7/warm bold=+0.15 rng=0.75
+  telemetry settled 1 hand(s)
+  act[56] Flop bet 12 -> ok temp=42.1/warm bold=+0.08 rng=1.00
+  act[57] Preflop raise 17 -> ok temp=47.8/warm bold=-0.08 rng=0.60
+  telemetry settled 1 hand(s)
+  act[58] Flop bet 18 -> ok temp=39.1/warm bold=+0.17 rng=1.00
+  act[59] Preflop raise 4 -> ok temp=65.1/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[60] Preflop call -> ok temp=39.3/warm bold=+0.16 rng=0.75
+  act[61] Flop bet 10 -> ok temp=22.9/cold bold=+0.63 rng=1.00
+  act[62] Preflop raise 11 -> ok temp=55.6/hot bold=-0.30 rng=0.45
+  telemetry settled 1 hand(s)
+  act[63] Flop raise 82 -> ok temp=32.3/warm bold=+0.36 rng=0.60
+  act[64] Turn raise 247 -> ok temp=39.1/warm bold=+0.17 rng=0.48
+  act[65] River fold -> ok temp=41.3/warm bold=+0.11 rng=0.38
+  telemetry settled 1 hand(s)
+  act[66] Preflop raise 4 -> ok temp=48.2/warm bold=-0.09 rng=1.00
+  act[67] Flop raise 18 -> ok temp=43.3/warm bold=+0.05 rng=0.75
+  act[68] Preflop raise 4 -> ok temp=61.4/hot bold=-0.47 rng=1.00
+  telemetry settled 1 hand(s)
+  act[69] Flop fold -> ok temp=45.9/warm bold=-0.03 rng=0.75
+  act[70] Preflop fold -> ok temp=54.7/hot bold=-0.28 rng=0.45
+  telemetry settled 1 hand(s)
+  act[71] Preflop raise 4 -> ok temp=51.1/hot bold=-0.17 rng=1.00
+  telemetry settled 1 hand(s)
+  act[72] Preflop raise 18 -> ok temp=58.8/hot bold=-0.39 rng=0.45
+  telemetry settled 1 hand(s)
+  act[73] Flop bet 22 -> ok temp=35.8/warm bold=+0.26 rng=1.00
+  telemetry settled 1 hand(s)
+  act[74] Preflop raise 18 -> ok temp=53.8/hot bold=-0.25 rng=0.45
+  act[75] Preflop call -> ok temp=35.5/warm bold=+0.27 rng=0.60
+  act[76] Flop bet 34 -> ok temp=39.8/warm bold=+0.15 rng=1.00
+  act[77] Preflop raise 4 -> ok temp=52.3/hot bold=-0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[78] Preflop raise 6 -> ok temp=57.5/hot bold=-0.36 rng=1.00
+  telemetry settled 1 hand(s)
+  act[79] Flop bet 10 -> ok temp=43.2/warm bold=+0.05 rng=1.00 hyper
+  act[80] Turn check -> ok temp=25.8/warm bold=+0.55 rng=1.00
+  act[81] River check -> ok temp=20.0/cold bold=+0.71 rng=1.00
+  act[82] Preflop raise 11 -> ok temp=61.8/hot bold=-0.48 rng=0.45
+  telemetry settled 1 hand(s)
+  act[83] Flop raise 52 -> ok temp=44.9/warm bold=+0.00 rng=0.60
+  act[84] Preflop raise 4 -> ok temp=58.0/hot bold=-0.37 rng=1.00
+  telemetry settled 1 hand(s)
+  act[85] Preflop call -> ok temp=32.4/warm bold=+0.36 rng=0.45
+  act[86] Flop check -> ok temp=33.5/warm bold=+0.33 rng=1.00
+  act[87] Turn check -> ok temp=27.9/warm bold=+0.49 rng=1.00
+  act[88] River check -> ok temp=31.8/warm bold=+0.38 rng=1.00
+  act[89] Preflop fold -> ok temp=48.1/warm bold=-0.09 rng=0.60
+  telemetry settled 1 hand(s)
+  act[90] Preflop raise 4 -> ok temp=57.0/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[91] Flop bet 6 -> ok temp=45.5/warm bold=-0.01 rng=1.00
+  act[92] Turn raise 28 -> ok temp=41.5/warm bold=+0.10 rng=0.75
+  act[93] River bet 40 -> ok temp=12.7/cold bold=+0.92 rng=1.00
+  act[94] Preflop raise 14 -> ok temp=64.7/hot bold=-0.56 rng=0.45
+  telemetry settled 1 hand(s)
+  act[95] Preflop call -> ok temp=41.3/warm bold=+0.11 rng=0.48
+  act[96] Flop raise 246 -> ok temp=21.4/cold bold=+0.67 rng=0.38
+  act[97] Flop raise 2004 -> ok temp=25.3/warm bold=+0.56 rng=0.31
+  act[98] Preflop raise 11 -> ok temp=64.9/hot bold=-0.57 rng=0.45
+  telemetry settled 1 hand(s)
+  act[99] Flop raise 52 -> ok temp=17.5/cold bold=+0.79 rng=0.60
+  act[100] Preflop raise 4 -> ok temp=60.7/hot bold=-0.45 rng=1.00
+  telemetry settled 1 hand(s)
+  act[101] Preflop call -> ok temp=36.1/warm bold=+0.25 rng=0.45
+  act[102] Flop raise 232 -> ok temp=32.0/warm bold=+0.37 rng=0.36
+  act[103] Flop call -> ok temp=33.0/warm bold=+0.34 rng=0.48
+  act[104] Turn raise 3405 -> ok temp=40.3/warm bold=+0.13 rng=0.31
+  act[105] Preflop raise 4 -> ok temp=59.1/hot bold=-0.40 rng=1.00
+  telemetry settled 1 hand(s)
+  act[106] Flop bet 6 -> ok temp=32.7/warm bold=+0.35 rng=1.00
+  act[107] Preflop fold -> ok temp=57.5/hot bold=-0.36 rng=1.00
+  telemetry settled 1 hand(s)
+  act[108] Preflop raise 4 -> ok temp=63.2/hot bold=-0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[109] Flop bet 5 -> ok temp=18.8/cold bold=+0.75 rng=1.00
+  act[110] Preflop raise 4 -> ok temp=65.1/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[111] Preflop fold -> ok temp=49.7/warm bold=-0.13 rng=0.60
+  act[112] Preflop raise 4 -> ok temp=64.4/hot bold=-0.55 rng=1.00
+  telemetry settled 1 hand(s)
+  act[113] Flop bet 8 -> ok temp=53.3/hot bold=-0.24 rng=1.00
+  act[114] Preflop raise 11 -> ok temp=65.7/hot bold=-0.59 rng=0.45
+  telemetry settled 1 hand(s)
+  act[115] Flop raise 31 -> ok temp=25.2/warm bold=+0.57 rng=0.60
+  act[116] Preflop raise 4 -> ok temp=36.1/warm bold=+0.25 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[117] Preflop call -> ok temp=37.6/warm bold=+0.21 rng=0.60
+  act[118] Flop bet 10 -> ok temp=35.6/warm bold=+0.27 rng=1.00
+  act[119] Preflop raise 31 -> ok temp=55.0/hot bold=-0.29 rng=0.48
+  telemetry settled 1 hand(s)
+  act[120] Flop bet 62 -> ok temp=53.6/hot bold=-0.25 rng=1.00
+  act[121] Turn bet 124 -> ok temp=23.1/cold bold=+0.63 rng=1.00
+  act[122] Preflop raise 16 -> ok temp=32.9/warm bold=+0.35 rng=0.75 bluff=steal
+  telemetry settled 1 hand(s)
+  act[123] Flop bet 16 -> ok temp=33.0/warm bold=+0.34 rng=1.00
+  act[124] Preflop raise 160 -> ok temp=59.0/hot bold=-0.40 rng=0.36 hyper
+  telemetry settled 1 hand(s)
+  act[125] Flop raise 939 -> ok temp=31.4/warm bold=+0.39 rng=0.48
+  act[126] Preflop raise 4 -> ok temp=54.5/hot bold=-0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[127] Flop bet 6 -> ok temp=18.6/cold bold=+0.75 rng=1.00
+  act[128] Flop raise 39 -> ok temp=22.2/cold bold=+0.65 rng=0.75
+  act[129] Preflop raise 4 -> ok temp=56.9/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[130] Flop raise 8 -> ok temp=35.1/warm bold=+0.28 rng=0.75
+  act[131] Turn bet 12 -> ok temp=27.8/warm bold=+0.49 rng=1.00
+  act[132] River fold -> ok temp=40.0/warm bold=+0.14 rng=0.60
+  telemetry settled 1 hand(s)
+  act[133] Preflop fold -> ok temp=49.1/warm bold=-0.12 rng=1.00
+  act[134] Preflop raise 11 -> ok temp=60.7/hot bold=-0.45 rng=0.45
+  telemetry settled 1 hand(s)
+  act[135] Preflop call -> ok temp=38.3/warm bold=+0.19 rng=0.60
+  act[136] Flop raise 103 -> ok temp=46.0/warm bold=-0.03 rng=0.48
+  act[137] Preflop fold -> ok temp=56.1/hot bold=-0.32 rng=1.00
+  telemetry settled 1 hand(s)
+  act[138] Preflop fold -> ok temp=52.5/hot bold=-0.21 rng=0.45
+  telemetry settled 1 hand(s)
+  act[139] Preflop raise 4 -> ok temp=60.5/hot bold=-0.44 rng=1.00
+  telemetry settled 1 hand(s)
+  act[140] Preflop raise 11 -> ok temp=55.6/hot bold=-0.30 rng=0.45
+  telemetry settled 1 hand(s)
+  act[141] Flop bet 12 -> ok temp=33.3/warm bold=+0.33 rng=1.00
+  act[142] Preflop raise 4 -> ok temp=65.2/hot bold=-0.58 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[143] Preflop call -> ok temp=31.1/warm bold=+0.40 rng=0.75
+  act[144] Flop check -> ok temp=28.3/warm bold=+0.48 rng=1.00
+  telemetry settled 1 hand(s)
+  act[145] Turn check -> ok temp=24.0/cold bold=+0.60 rng=1.00
+  act[146] Turn fold -> ok temp=42.2/warm bold=+0.08 rng=0.36
+  telemetry settled 1 hand(s)
+  act[147] Preflop raise 11 -> ok temp=59.2/hot bold=-0.41 rng=0.45
+  act[148] Flop bet 12 -> ok temp=29.8/warm bold=+0.43 rng=1.00
+  act[149] Preflop raise 14 -> ok temp=61.2/hot bold=-0.46 rng=0.45
+  telemetry settled 1 hand(s)
+  act[150] Flop bet 16 -> ok temp=21.8/cold bold=+0.66 rng=1.00
+  act[151] Preflop fold -> ok temp=55.8/hot bold=-0.31 rng=1.00
+  telemetry settled 1 hand(s)
+  act[152] Preflop raise 4 -> ok temp=43.4/warm bold=+0.05 rng=1.00
+  telemetry settled 1 hand(s)
+  act[153] Preflop fold -> ok temp=54.3/hot bold=-0.27 rng=0.45
+  telemetry settled 1 hand(s)
+  act[154] Preflop raise 4 -> ok temp=64.1/hot bold=-0.55 rng=1.00
+  telemetry settled 1 hand(s)
+  act[155] Preflop call -> ok temp=41.6/warm bold=+0.10 rng=0.60
+  act[156] Flop check -> ok temp=36.8/warm bold=+0.23 rng=1.00
+  act[157] Turn check -> ok temp=36.2/warm bold=+0.25 rng=1.00
+  act[158] River fold -> ok temp=40.1/warm bold=+0.14 rng=0.29
+  telemetry settled 1 hand(s)
+  act[159] Preflop raise 16 -> ok temp=33.8/warm bold=+0.32 rng=0.75 bluff=steal
+  act[160] Flop bet 16 -> ok temp=31.5/warm bold=+0.39 rng=1.00
+  act[161] Preflop raise 11 -> ok temp=66.6/hot bold=-0.62 rng=0.45
+  telemetry settled 1 hand(s)
+  act[162] Preflop fold -> ok temp=43.8/warm bold=+0.03 rng=0.36
+  telemetry settled 1 hand(s)
+  act[163] Preflop raise 4 -> ok temp=52.3/hot bold=-0.21 rng=1.00
+  act[164] Flop bet 6 -> ok temp=33.4/warm bold=+0.33 rng=1.00
+  act[165] Preflop raise 11 -> ok temp=61.8/hot bold=-0.48 rng=0.45
+  telemetry settled 1 hand(s)
+  act[166] Flop raise 83 -> ok temp=44.8/warm bold=+0.01 rng=0.60
+  act[167] Preflop raise 11 -> ok temp=64.3/hot bold=-0.55 rng=0.45 hyper
+  telemetry settled 1 hand(s)
+  act[168] Flop raise 52 -> ok temp=43.5/warm bold=+0.04 rng=0.60
+  act[169] Preflop raise 4 -> ok temp=33.2/warm bold=+0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[170] Preflop raise 11 -> ok temp=56.0/hot bold=-0.31 rng=0.45
+  telemetry settled 1 hand(s)
+  act[171] Flop raise 37 -> ok temp=42.3/warm bold=+0.08 rng=0.60
+  act[172] Preflop raise 13 -> ok temp=46.5/warm bold=-0.04 rng=0.75
+  telemetry settled 1 hand(s)
+  act[173] Flop bet 20 -> ok temp=42.2/warm bold=+0.08 rng=1.00
+  act[174] Turn bet 40 -> ok temp=25.4/warm bold=+0.56 rng=1.00
+  act[175] River check -> ok temp=22.5/cold bold=+0.64 rng=1.00
+  act[176] River fold -> ok temp=40.2/warm bold=+0.14 rng=0.36
+  telemetry settled 1 hand(s)
+  act[177] Preflop raise 9 -> ok temp=42.7/warm bold=+0.07 rng=0.60
+  act[178] Flop bet 14 -> ok temp=39.0/warm bold=+0.17 rng=1.00
+  act[179] Preflop raise 4 -> ok temp=40.3/warm bold=+0.13 rng=1.00
+  telemetry settled 1 hand(s)
+  act[180] Preflop raise 14 -> ok temp=61.2/hot bold=-0.46 rng=0.60
+  telemetry settled 1 hand(s)
+  act[181] Flop bet 22 -> ok temp=38.9/warm bold=+0.17 rng=1.00
+  act[182] Preflop raise 13 -> ok temp=56.2/hot bold=-0.32 rng=0.75
+  telemetry settled 1 hand(s)
+  act[183] Flop bet 16 -> ok temp=26.0/warm bold=+0.54 rng=1.00
+  act[184] Preflop call -> ok temp=38.4/warm bold=+0.19 rng=0.75
+  act[185] Flop bet 6 -> ok temp=35.7/warm bold=+0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[186] Preflop raise 4 -> ok temp=61.1/hot bold=-0.46 rng=1.00
+  telemetry settled 1 hand(s)
+  act[187] Flop check -> ok temp=32.3/warm bold=+0.36 rng=1.00
+  act[188] Turn check -> ok temp=23.6/cold bold=+0.61 rng=1.00
+  act[189] River check -> ok temp=22.5/cold bold=+0.64 rng=1.00
+  act[190] Preflop raise 4 -> ok temp=55.5/hot bold=-0.30 rng=1.00
+  telemetry settled 1 hand(s)
+  act[191] Preflop raise 4 -> ok temp=64.8/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[192] Preflop raise 10 -> ok temp=48.0/warm bold=-0.09 rng=0.75
+  telemetry settled 1 hand(s)
+  act[193] Preflop call -> ok temp=48.3/warm bold=-0.09 rng=0.60
+  act[194] Flop bet 27 -> ok temp=51.3/hot bold=-0.18 rng=1.00
+  act[195] Turn bet 54 -> ok temp=41.5/warm bold=+0.10 rng=1.00
+  act[196] Turn fold -> ok temp=45.6/warm bold=-0.02 rng=0.38
+  act[197] Preflop raise 4 -> ok temp=54.8/hot bold=-0.28 rng=1.00
+  telemetry settled 1 hand(s)
+  act[198] Preflop call -> ok temp=36.7/warm bold=+0.24 rng=0.45
+  act[199] Flop bet 18 -> ok temp=39.0/warm bold=+0.17 rng=1.00
+  act[200] Preflop fold -> ok temp=51.2/hot bold=-0.18 rng=1.00
+  telemetry settled 1 hand(s)
+  act[201] Preflop raise 11 -> ok temp=35.9/warm bold=+0.26 rng=0.75 hyper
+  telemetry settled 1 hand(s)
+  act[202] Flop check -> ok temp=37.1/warm bold=+0.23 rng=1.00
+  act[203] Turn check -> ok temp=32.7/warm bold=+0.35 rng=1.00
+  act[204] River check -> ok temp=27.7/warm bold=+0.49 rng=1.00
+  act[205] Preflop raise 4 -> ok temp=59.4/hot bold=-0.41 rng=1.00
+  telemetry settled 1 hand(s)
+  act[206] Flop check -> ok temp=40.0/warm bold=+0.14 rng=1.00
+  act[207] Turn bet 6 -> ok temp=28.9/warm bold=+0.46 rng=1.00
+  act[208] Preflop raise 18 -> ok temp=38.1/warm bold=+0.20 rng=0.45
+  telemetry settled 1 hand(s)
+  act[209] Preflop raise 273 -> ok temp=29.5/warm bold=+0.44 rng=0.60
+  act[210] Preflop raise 4 -> ok temp=33.9/warm bold=+0.32 rng=1.00
+  telemetry settled 2 hand(s)
+  act[211] Preflop raise 4 -> ok temp=57.3/hot bold=-0.35 rng=1.00
+  act[212] Flop bet 4 -> ok temp=27.5/warm bold=+0.50 rng=1.00
+  act[213] Preflop raise 11 -> ok temp=40.2/warm bold=+0.14 rng=0.75
+  telemetry settled 1 hand(s)
+  act[214] Flop bet 12 -> ok temp=20.8/cold bold=+0.69 rng=1.00
+  act[215] Flop call -> ok temp=25.0/warm bold=+0.57 rng=0.60
+  act[216] Turn bet 46 -> ok temp=21.1/cold bold=+0.68 rng=1.00
+  act[217] Turn call -> ok temp=32.2/warm bold=+0.37 rng=0.48
+  act[218] River bet 180 -> ok temp=19.6/cold bold=+0.73 rng=1.00
+  act[219] Preflop raise 11 -> ok temp=58.1/hot bold=-0.37 rng=0.45
+  telemetry settled 1 hand(s)
+  act[220] Flop raise 31 -> ok temp=39.4/warm bold=+0.16 rng=0.60
+  act[221] Preflop check -> ok temp=41.5/warm bold=+0.10 rng=1.00
+  act[222] Flop bet 2 -> ok temp=42.6/warm bold=+0.07 rng=1.00
+  telemetry settled 1 hand(s)
+  act[223] Preflop raise 4 -> ok temp=63.8/hot bold=-0.54 rng=1.00
+  telemetry settled 1 hand(s)
+  act[224] Preflop fold -> ok temp=46.5/warm bold=-0.04 rng=0.45
+  act[225] Preflop raise 4 -> ok temp=50.6/hot bold=-0.16 rng=1.00
+  telemetry settled 1 hand(s)
+  act[226] Preflop call -> ok temp=36.9/warm bold=+0.23 rng=0.60
+  act[227] Flop raise 80 -> ok temp=42.2/warm bold=+0.08 rng=0.48
+  act[228] Turn raise 585 -> ok temp=44.0/warm bold=+0.03 rng=0.38
+  act[229] Preflop fold -> ok temp=54.5/hot bold=-0.27 rng=0.45 hyper
+  telemetry settled 1 hand(s)
+  act[230] Preflop fold -> ok temp=51.6/hot bold=-0.19 rng=0.60 hyper
+  telemetry settled 1 hand(s)
+  act[231] Preflop fold -> ok
+  telemetry settled 1 hand(s)
+  act[232] Preflop raise 4 -> ok temp=51.5/hot bold=-0.19 rng=1.00
+  telemetry settled 1 hand(s)
+  act[233] Preflop call -> ok temp=40.3/warm bold=+0.13 rng=0.60
+  act[234] Flop raise 35 -> ok temp=30.3/warm bold=+0.42 rng=0.60
+  act[235] Preflop raise 4 -> ok temp=58.0/hot bold=-0.37 rng=1.00
+  telemetry settled 1 hand(s)
+  act[236] Flop bet 6 -> ok temp=26.6/warm bold=+0.53 rng=1.00
+  act[237] Preflop raise 13 -> ok temp=47.3/warm bold=-0.07 rng=0.75
+  telemetry settled 1 hand(s)
+  act[238] Preflop call -> ok temp=47.0/warm bold=-0.06 rng=0.60
+  act[239] Flop check -> ok temp=49.8/warm bold=-0.14 rng=1.00
+  act[240] Turn check -> ok temp=46.1/warm bold=-0.03 rng=1.00
+  act[241] River check -> ok temp=43.5/warm bold=+0.04 rng=1.00
+  act[242] Preflop raise 18 -> ok temp=57.3/hot bold=-0.35 rng=0.45
+  telemetry settled 1 hand(s)
+  act[243] Preflop raise 11 -> ok temp=62.3/hot bold=-0.49 rng=0.45
+  telemetry settled 1 hand(s)
+  act[244] Flop raise 31 -> ok temp=35.5/warm bold=+0.27 rng=0.60
+  act[245] Preflop raise 4 -> ok temp=56.8/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[246] Preflop call -> ok temp=30.0/warm bold=+0.43 rng=0.45
+  act[247] Flop check -> ok temp=26.3/warm bold=+0.53 rng=1.00
+  act[248] Turn check -> ok temp=18.1/cold bold=+0.77 rng=1.00
+  act[249] River check -> ok temp=21.0/cold bold=+0.69 rng=1.00
+  act[250] Preflop raise 4 -> ok temp=53.0/hot bold=-0.23 rng=1.00
+  telemetry settled 1 hand(s)
+  act[251] Flop fold -> ok temp=43.6/warm bold=+0.04 rng=0.45
+  telemetry settled 1 hand(s)
+  act[252] Preflop raise 4 -> ok temp=47.7/warm bold=-0.08 rng=1.00
+  act[253] Preflop raise 4 -> ok temp=41.6/warm bold=+0.10 rng=1.00
+  telemetry settled 1 hand(s)
+  act[254] Flop bet 4 -> ok temp=23.9/cold bold=+0.60 rng=1.00
+  act[255] Preflop raise 11 -> ok temp=60.3/hot bold=-0.44 rng=0.45
+  telemetry settled 1 hand(s)
+  act[256] Flop raise 43 -> ok temp=43.3/warm bold=+0.05 rng=0.60
+  act[257] Preflop fold -> ok temp=63.4/hot bold=-0.53 rng=1.00
+  telemetry settled 1 hand(s)
+  act[258] Preflop raise 7 -> ok temp=39.7/warm bold=+0.15 rng=1.00
+  telemetry settled 1 hand(s)
+  act[259] Preflop fold -> ok temp=45.0/warm bold=+0.00 rng=0.60
+  telemetry settled 1 hand(s)
+  act[260] Preflop raise 59 -> ok temp=58.2/hot bold=-0.38 rng=0.36
+  telemetry settled 1 hand(s)
+  act[261] Flop check -> ok temp=52.5/hot bold=-0.21 rng=1.00
+  act[262] Turn check -> ok temp=48.4/warm bold=-0.10 rng=1.00
+  act[263] River check -> ok temp=47.1/warm bold=-0.06 rng=1.00
+  telemetry settled 1 hand(s)
+  act[264] Preflop raise 11 -> ok temp=48.9/warm bold=-0.11 rng=0.45
+  act[265] Flop raise 74 -> ok temp=35.0/warm bold=+0.29 rng=0.60 bluff=raise_bluff
+  act[266] Preflop fold -> ok temp=51.0/hot bold=-0.17 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[267] Preflop fold -> ok temp=55.8/hot bold=-0.31 rng=1.00
+  telemetry settled 1 hand(s)
+  act[268] Preflop raise 4 -> ok temp=59.8/hot bold=-0.42 rng=1.00
+  telemetry settled 1 hand(s)
+  act[269] Flop bet 6 -> ok temp=24.6/cold bold=+0.58 rng=1.00
+  act[270] Preflop raise 4 -> ok temp=52.8/hot bold=-0.22 rng=1.00
+  telemetry settled 1 hand(s)
+  act[271] Flop bet 6 -> ok temp=14.7/cold bold=+0.87 rng=1.00
+  act[272] Preflop raise 11 -> ok temp=54.5/hot bold=-0.27 rng=0.45
+  telemetry settled 1 hand(s)
+  act[273] Flop bet 23 -> ok temp=49.6/warm bold=-0.13 rng=1.00
+  act[274] Preflop raise 11 -> ok temp=38.0/warm bold=+0.20 rng=0.75
+  telemetry settled 1 hand(s)
+  act[275] Flop check -> ok temp=37.8/warm bold=+0.21 rng=1.00
+  act[276] Turn check -> ok temp=36.2/warm bold=+0.25 rng=1.00
+  act[277] River check -> ok temp=28.9/warm bold=+0.46 rng=1.00
+  act[278] Preflop raise 4 -> ok temp=35.6/warm bold=+0.27 rng=1.00
+  telemetry settled 1 hand(s)
+  act[279] Flop bet 4 -> ok temp=30.8/warm bold=+0.41 rng=1.00
+  act[280] Preflop raise 17 -> ok temp=47.2/warm bold=-0.06 rng=0.60
+  telemetry settled 1 hand(s)
+  act[281] Flop check -> ok temp=36.3/warm bold=+0.25 rng=1.00
+  act[282] Turn check -> ok temp=33.3/warm bold=+0.33 rng=1.00
+  act[283] River check -> ok temp=28.8/warm bold=+0.46 rng=1.00
+  telemetry settled 1 hand(s)
+  act[284] Preflop raise 17 -> ok temp=47.8/warm bold=-0.08 rng=0.60
+  act[285] Preflop call -> ok temp=40.3/warm bold=+0.13 rng=0.48 hyper
+  act[286] Flop bet 52 -> ok temp=18.2/cold bold=+0.77 rng=1.00
+  act[287] Turn bet 104 -> ok temp=18.3/cold bold=+0.76 rng=1.00
+  act[288] River bet 208 -> ok temp=14.1/cold bold=+0.88 rng=1.00
+  act[289] Preflop fold -> ok temp=62.0/hot bold=-0.49 rng=1.00
+  telemetry settled 1 hand(s)
+  act[290] Preflop raise 4 -> ok temp=65.0/hot bold=-0.57 rng=1.00
+  telemetry settled 1 hand(s)
+  act[291] Flop check -> ok temp=33.0/warm bold=+0.34 rng=1.00
+  act[292] Turn check -> ok temp=31.3/warm bold=+0.39 rng=1.00
+  act[293] River check -> ok temp=30.8/warm bold=+0.41 rng=1.00
+  act[294] River fold -> ok temp=40.0/warm bold=+0.14 rng=0.27
+  telemetry settled 1 hand(s)
+  act[295] Preflop raise 13 -> ok temp=48.5/warm bold=-0.10 rng=0.75
+  act[296] Preflop call -> ok temp=48.9/warm bold=-0.11 rng=0.60
+  act[297] Flop bet 58 -> ok temp=39.9/warm bold=+0.15 rng=1.00
+  act[298] Preflop raise 17 -> ok temp=48.6/warm bold=-0.10 rng=0.60
+  telemetry settled 1 hand(s)
+  act[299] Preflop raise 11 -> ok temp=39.2/warm bold=+0.17 rng=0.60
+  telemetry settled 1 hand(s)
+  act[300] Preflop call -> ok temp=30.7/warm bold=+0.41 rng=0.48
+  act[301] Flop bet 36 -> ok temp=28.5/warm bold=+0.47 rng=1.00
+  act[302] Turn bet 72 -> ok temp=29.5/warm bold=+0.44 rng=1.00
+  act[303] River bet 144 -> ok temp=27.9/warm bold=+0.49 rng=1.00
+  act[304] Preflop raise 4 -> ok temp=59.4/hot bold=-0.41 rng=1.00
+  telemetry settled 1 hand(s)
+  act[305] Flop check -> ok temp=40.5/warm bold=+0.13 rng=1.00 hyper
+  act[306] Turn check -> ok temp=35.2/warm bold=+0.28 rng=1.00
+  act[307] River fold -> ok temp=40.0/warm bold=+0.14 rng=0.45
+  act[308] Preflop raise 4 -> ok temp=57.0/hot bold=-0.34 rng=1.00
+  telemetry settled 1 hand(s)
+  act[309] Preflop fold -> ok temp=57.1/hot bold=-0.35 rng=0.60
+  telemetry settled 1 hand(s)
+  act[310] Preflop raise 4 -> ok temp=47.8/warm bold=-0.08 rng=1.00
+  telemetry settled 1 hand(s)
+  act[311] Preflop raise 4 -> ok temp=35.3/warm bold=+0.28 rng=1.00
+  telemetry settled 1 hand(s)
+  act[312] Flop bet 4 -> ok temp=14.1/cold bold=+0.88 rng=1.00
+  act[313] Preflop raise 16 -> ok temp=38.9/warm bold=+0.17 rng=0.75
+  telemetry settled 1 hand(s)
+  act[314] Flop bet 16 -> ok temp=36.1/warm bold=+0.25 rng=1.00
+  act[315] Turn bet 32 -> ok temp=35.5/warm bold=+0.27 rng=1.00
+  act[316] Preflop raise 22 -> ok temp=42.1/warm bold=+0.08 rng=0.60
+  telemetry settled 1 hand(s)
+  act[317] Preflop fold -> ok temp=56.2/hot bold=-0.32 rng=0.45
+  telemetry settled 1 hand(s)
+  act[318] Preflop raise 4 -> ok temp=53.0/hot bold=-0.23 rng=1.00
+  telemetry settled 1 hand(s)
+  act[319] Preflop call -> ok temp=34.0/warm bold=+0.31 rng=0.75
+  act[320] Flop bet 6 -> ok temp=37.2/warm bold=+0.22 rng=1.00
+  act[321] Turn raise 61 -> ok temp=42.8/warm bold=+0.06 rng=0.60
+  act[322] Turn fold -> ok temp=43.4/warm bold=+0.05 rng=0.48
+  act[323] Preflop fold -> ok temp=63.1/hot bold=-0.52 rng=1.00
+  telemetry settled 1 hand(s)
+  act[324] Preflop raise 53 -> ok temp=58.9/hot bold=-0.40 rng=0.36
+  telemetry settled 1 hand(s)
+  act[325] Preflop call -> ok temp=39.7/warm bold=+0.15 rng=0.48
+  act[326] Flop raise 996 -> ok temp=46.7/warm bold=-0.05 rng=0.23
+  act[327] Flop fold -> ok temp=44.7/warm bold=+0.01 rng=0.31
+  act[328] Preflop fold -> ok temp=60.5/hot bold=-0.44 rng=0.45
+  telemetry settled 1 hand(s)
+  act[329] Preflop raise 14 -> ok temp=39.9/warm bold=+0.15 rng=0.45
+  telemetry settled 1 hand(s)
+  act[330] Preflop raise 58 -> ok temp=23.1/cold bold=+0.63 rng=0.60
+  act[331] Preflop raise 211 -> ok temp=25.8/warm bold=+0.55 rng=0.48
+  act[332] Preflop raise 743 -> ok temp=27.3/warm bold=+0.51 rng=0.38
+  act[333] Preflop raise 2670 -> ok temp=27.7/warm bold=+0.49 rng=0.31
+  act[334] Preflop raise 4 -> ok temp=50.0/hot bold=-0.14 rng=1.00
+  telemetry settled 1 hand(s)
+  act[335] Flop raise 18 -> ok temp=13.8/cold bold=+0.89 rng=0.75
+  act[336] Preflop raise 4 -> ok temp=67.0/hot bold=-0.63 rng=1.00
+  telemetry settled 1 hand(s)
+  act[337] Preflop fold -> ok temp=41.2/warm bold=+0.11 rng=0.45
+  telemetry settled 1 hand(s)
+  act[338] Preflop raise 8 -> ok temp=39.7/warm bold=+0.15 rng=0.75
+  act[339] Preflop call -> ok temp=41.7/warm bold=+0.09 rng=0.60
+  act[340] Flop bet 12 -> ok temp=24.1/cold bold=+0.60 rng=1.00
+  act[341] Turn bet 24 -> ok temp=16.5/cold bold=+0.81 rng=1.00
+  act[342] River bet 97 -> ok temp=7.9/cold bold=+1.00 rng=1.00
+  act[343] Preflop raise 11 -> ok temp=60.8/hot bold=-0.45 rng=0.45
+  telemetry settled 1 hand(s)
+  act[344] Flop bet 15 -> ok temp=15.8/cold bold=+0.83 rng=1.00
+  act[345] Preflop fold -> ok temp=52.4/hot bold=-0.21 rng=0.45
+  telemetry settled 1 hand(s)
+  act[346] Preflop raise 4 -> ok temp=51.1/hot bold=-0.17 rng=1.00
+  telemetry settled 1 hand(s)
+  act[347] Preflop call -> ok temp=34.9/warm bold=+0.29 rng=0.45 hyper
+  act[348] Flop raise 57 -> ok temp=17.5/cold bold=+0.79 rng=0.60
+  act[349] Preflop raise 4 -> ok temp=52.4/hot bold=-0.21 rng=1.00
+  telemetry settled 1 hand(s)
+  act[350] Flop raise 8 -> ok temp=39.9/warm bold=+0.15 rng=0.75
+  act[351] Turn bet 12 -> ok temp=32.3/warm bold=+0.36 rng=1.00
+  act[352] River bet 24 -> ok temp=31.6/warm bold=+0.38 rng=1.00
+  act[353] Preflop raise 11 -> ok temp=45.0/warm bold=+0.00 rng=0.60
+  telemetry settled 1 hand(s)
+  act[354] Preflop call -> ok temp=46.8/warm bold=-0.05 rng=0.48
+  act[355] Flop bet 38 -> ok temp=20.4/cold bold=+0.70 rng=1.00
+  act[356] Preflop raise 4 -> ok temp=62.9/hot bold=-0.51 rng=1.00
+  telemetry settled 1 hand(s)
+  act[357] Flop bet 8 -> ok temp=48.2/warm bold=-0.09 rng=1.00
+  act[358] Turn bet 20 -> ok temp=47.8/warm bold=-0.08 rng=1.00
+  act[359] River bet 40 -> ok temp=36.5/warm bold=+0.24 rng=1.00
+  telemetry settled 1 hand(s)
+  act[360] Preflop raise 4 -> ok temp=46.7/warm bold=-0.05 rng=1.00
+  act[361] Flop check -> ok temp=40.4/warm bold=+0.13 rng=1.00
+  act[362] Turn check -> ok temp=39.1/warm bold=+0.17 rng=1.00
+  act[363] River check -> ok temp=38.1/warm bold=+0.20 rng=1.00
+  telemetry settled 1 hand(s)
+  act[364] Preflop raise 11 -> ok temp=41.6/warm bold=+0.10 rng=0.75 hyper
+  act[365] Preflop fold -> ok temp=43.2/warm bold=+0.05 rng=0.36
+  act[366] Preflop raise 4 -> ok temp=59.3/hot bold=-0.41 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[367] Flop bet 4 -> ok temp=21.6/cold bold=+0.67 rng=1.00
+  act[368] Preflop raise 11 -> ok temp=50.4/hot bold=-0.15 rng=0.60
+  telemetry settled 1 hand(s)
+  act[369] Flop bet 12 -> ok temp=29.2/warm bold=+0.45 rng=1.00
+  act[370] Preflop raise 11 -> ok temp=38.4/warm bold=+0.19 rng=0.75
+  telemetry settled 1 hand(s)
+  act[371] Flop bet 12 -> ok temp=27.5/warm bold=+0.50 rng=1.00
+  act[372] Preflop call -> ok temp=39.1/warm bold=+0.17 rng=1.00
+  telemetry settled 1 hand(s)
+  act[373] Preflop raise 30 -> ok temp=37.2/warm bold=+0.22 rng=0.45
+  act[374] Preflop call -> ok temp=41.0/warm bold=+0.11 rng=0.60
+  act[375] Flop check -> ok temp=42.0/warm bold=+0.09 rng=1.00
+  act[376] Flop fold -> ok temp=48.0/warm bold=-0.09 rng=0.29
+  telemetry settled 1 hand(s)
+  act[377] Preflop raise 16 -> ok temp=25.6/warm bold=+0.55 rng=0.75
+  act[378] Preflop raise 16 -> ok temp=41.1/warm bold=+0.11 rng=0.75
+  telemetry settled 1 hand(s)
+  act[379] Preflop raise 4 -> ok temp=56.1/hot bold=-0.32 rng=1.00
+  telemetry settled 1 hand(s)
+  act[380] Flop raise 11 -> ok temp=26.6/warm bold=+0.53 rng=0.75
+  act[381] Turn raise 38 -> ok temp=19.3/cold bold=+0.73 rng=0.60
+  act[382] River bet 54 -> ok temp=8.4/cold bold=+1.00 rng=1.00
+  act[383] Preflop raise 4 -> ok temp=32.2/warm bold=+0.37 rng=1.00 hyper
+  telemetry settled 1 hand(s)
+  act[384] Flop raise 17 -> ok temp=29.3/warm bold=+0.45 rng=0.75
+  act[385] Turn raise 51 -> ok temp=35.8/warm bold=+0.26 rng=0.60
+  act[386] River fold -> ok temp=40.2/warm bold=+0.14 rng=0.48
+  telemetry settled 1 hand(s)
+  act[387] Preflop raise 11 -> ok temp=53.1/hot bold=-0.23 rng=0.45
+  act[388] Preflop call -> ok temp=36.3/warm bold=+0.25 rng=0.60
+  act[389] Flop check -> ok temp=35.5/warm bold=+0.27 rng=1.00
+  act[390] Turn check -> ok temp=34.0/warm bold=+0.31 rng=1.00
+  act[391] River check -> ok temp=31.4/warm bold=+0.39 rng=1.00

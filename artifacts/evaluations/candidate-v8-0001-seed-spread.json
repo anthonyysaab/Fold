@@ -1,0 +1,361 @@
+{
+  "battery_summary": {
+    "101": {
+      "broken": 6,
+      "held": 0
+    },
+    "202": {
+      "broken": 6,
+      "held": 0
+    },
+    "303": {
+      "broken": 6,
+      "held": 0
+    }
+  },
+  "incumbent": "candidate-v7-0001c",
+  "init_seeds": [
+    101,
+    202,
+    303
+  ],
+  "paired_cross_seed_contrasts": {
+    "101_minus_202": {
+      "mde_2se": 6.59,
+      "mean": 0.84,
+      "n": 16,
+      "sd": 13.17,
+      "se": 3.29,
+      "t": 0.26
+    },
+    "101_minus_303": {
+      "mde_2se": 8.86,
+      "mean": 9.71,
+      "n": 16,
+      "sd": 17.72,
+      "se": 4.43,
+      "t": 2.19
+    },
+    "202_minus_303": {
+      "mde_2se": 7.93,
+      "mean": 8.86,
+      "n": 16,
+      "sd": 15.85,
+      "se": 3.96,
+      "t": 2.24
+    }
+  },
+  "per_seed": {
+    "101": {
+      "artifact": "candidate-v8-0001a",
+      "battery": {
+        "broken": 6,
+        "channels": {
+          "five-max-lineup": {
+            "bb_per_100": 78.91,
+            "champion_mean_bb_per_100": 214.93,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -127.64,
+            "paired_sd": 115.17,
+            "paired_t": -3.13,
+            "published_mde_bb_per_100": 40.67
+          },
+          "vs-median": {
+            "bb_per_100": 107.52,
+            "champion_mean_bb_per_100": 149.72,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -39.33,
+            "paired_sd": 29.42,
+            "paired_t": -3.78,
+            "published_mde_bb_per_100": 17.06
+          },
+          "vs-nit": {
+            "bb_per_100": 69.65,
+            "champion_mean_bb_per_100": 79.72,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -10.32,
+            "paired_sd": 9.74,
+            "paired_t": -3.0,
+            "published_mde_bb_per_100": 3.22
+          },
+          "vs-shover": {
+            "bb_per_100": -3.86,
+            "champion_mean_bb_per_100": 158.29,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -164.89,
+            "paired_sd": 42.43,
+            "paired_t": -10.99,
+            "published_mde_bb_per_100": 46.58
+          },
+          "vs-station": {
+            "bb_per_100": -8.68,
+            "champion_mean_bb_per_100": 311.54,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -320.18,
+            "paired_sd": 17.43,
+            "paired_t": -51.95,
+            "published_mde_bb_per_100": 42.13
+          },
+          "vs-textured": {
+            "bb_per_100": 97.66,
+            "champion_mean_bb_per_100": 165.61,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -70.31,
+            "paired_sd": 25.8,
+            "paired_t": -7.71,
+            "published_mde_bb_per_100": 17.13
+          }
+        },
+        "held": 0
+      },
+      "duel": {
+        "empirical_mde_bb_per_100": 9.2,
+        "hands_per_seed": 2000,
+        "margin_bb_per_100": 10.61,
+        "per_seed_diffs": [
+          14.87,
+          41.64,
+          -4.8,
+          9.57,
+          21.46,
+          32.98,
+          -0.75,
+          -5.61,
+          21.05,
+          -0.25,
+          -15.96,
+          -14.3,
+          45.62,
+          2.16,
+          10.92,
+          11.13
+        ],
+        "sd": 18.4,
+        "se": 4.6,
+        "seeds": 16,
+        "t": 2.31,
+        "verdict": "UNRESOLVED"
+      },
+      "init_seed_recorded": 101,
+      "manifest": "artifacts/candidates/candidate-v8-0001a.manifest.json",
+      "nullcheck_mirror_exact": true
+    },
+    "202": {
+      "artifact": "candidate-v8-0001",
+      "battery": {
+        "broken": 6,
+        "channels": {
+          "five-max-lineup": {
+            "bb_per_100": 92.62,
+            "champion_mean_bb_per_100": 214.93,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -113.93,
+            "paired_sd": 31.28,
+            "paired_t": -10.3,
+            "published_mde_bb_per_100": 40.67
+          },
+          "vs-median": {
+            "bb_per_100": 114.76,
+            "champion_mean_bb_per_100": 149.72,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -32.09,
+            "paired_sd": 33.53,
+            "paired_t": -2.71,
+            "published_mde_bb_per_100": 17.06
+          },
+          "vs-nit": {
+            "bb_per_100": 70.01,
+            "champion_mean_bb_per_100": 79.72,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -9.96,
+            "paired_sd": 9.68,
+            "paired_t": -2.91,
+            "published_mde_bb_per_100": 3.22
+          },
+          "vs-shover": {
+            "bb_per_100": -3.19,
+            "champion_mean_bb_per_100": 158.29,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -164.23,
+            "paired_sd": 39.11,
+            "paired_t": -11.88,
+            "published_mde_bb_per_100": 46.58
+          },
+          "vs-station": {
+            "bb_per_100": -20.59,
+            "champion_mean_bb_per_100": 311.54,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -332.09,
+            "paired_sd": 64.66,
+            "paired_t": -14.53,
+            "published_mde_bb_per_100": 42.13
+          },
+          "vs-textured": {
+            "bb_per_100": 105.67,
+            "champion_mean_bb_per_100": 165.61,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -62.3,
+            "paired_sd": 22.32,
+            "paired_t": -7.9,
+            "published_mde_bb_per_100": 17.13
+          }
+        },
+        "held": 0
+      },
+      "duel": {
+        "empirical_mde_bb_per_100": 8.61,
+        "hands_per_seed": 2000,
+        "margin_bb_per_100": 9.77,
+        "per_seed_diffs": [
+          18.22,
+          37.97,
+          1.93,
+          1.95,
+          30.37,
+          -3.14,
+          -2.9,
+          15.96,
+          19.56,
+          -19.82,
+          -1.84,
+          -12.09,
+          42.54,
+          7.69,
+          9.15,
+          10.73
+        ],
+        "sd": 17.21,
+        "se": 4.3,
+        "seeds": 16,
+        "t": 2.27,
+        "verdict": "UNRESOLVED"
+      },
+      "init_seed_recorded": 202,
+      "manifest": "artifacts/candidates/candidate-v8-0001.manifest.json",
+      "nullcheck_mirror_exact": true
+    },
+    "303": {
+      "artifact": "candidate-v8-0001c",
+      "battery": {
+        "broken": 6,
+        "channels": {
+          "five-max-lineup": {
+            "bb_per_100": 102.15,
+            "champion_mean_bb_per_100": 214.93,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -104.4,
+            "paired_sd": 64.03,
+            "paired_t": -4.61,
+            "published_mde_bb_per_100": 40.67
+          },
+          "vs-median": {
+            "bb_per_100": 105.47,
+            "champion_mean_bb_per_100": 149.72,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -41.39,
+            "paired_sd": 34.47,
+            "paired_t": -3.4,
+            "published_mde_bb_per_100": 17.06
+          },
+          "vs-nit": {
+            "bb_per_100": 69.26,
+            "champion_mean_bb_per_100": 79.72,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -10.71,
+            "paired_sd": 5.67,
+            "paired_t": -5.34,
+            "published_mde_bb_per_100": 3.22
+          },
+          "vs-shover": {
+            "bb_per_100": 4.43,
+            "champion_mean_bb_per_100": 158.29,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -156.6,
+            "paired_sd": 50.9,
+            "paired_t": -8.7,
+            "published_mde_bb_per_100": 46.58
+          },
+          "vs-station": {
+            "bb_per_100": 19.85,
+            "champion_mean_bb_per_100": 311.54,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -291.65,
+            "paired_sd": 49.04,
+            "paired_t": -16.82,
+            "published_mde_bb_per_100": 42.13
+          },
+          "vs-textured": {
+            "bb_per_100": 101.1,
+            "champion_mean_bb_per_100": 165.61,
+            "held_within_mde": false,
+            "paired_diff_bb_per_100": -66.87,
+            "paired_sd": 20.22,
+            "paired_t": -9.35,
+            "published_mde_bb_per_100": 17.13
+          }
+        },
+        "held": 0
+      },
+      "duel": {
+        "empirical_mde_bb_per_100": 4.49,
+        "hands_per_seed": 2000,
+        "margin_bb_per_100": 0.9,
+        "per_seed_diffs": [
+          0.66,
+          20.36,
+          7.47,
+          -17.81,
+          6.45,
+          7.68,
+          -1.0,
+          -2.98,
+          3.17,
+          -11.27,
+          7.67,
+          -1.83,
+          -2.58,
+          -4.89,
+          -4.97,
+          8.31
+        ],
+        "sd": 8.98,
+        "se": 2.24,
+        "seeds": 16,
+        "t": 0.4,
+        "verdict": "UNRESOLVED"
+      },
+      "init_seed_recorded": 303,
+      "manifest": "artifacts/candidates/candidate-v8-0001c.manifest.json",
+      "nullcheck_mirror_exact": true
+    }
+  },
+  "reading": {
+    "all_unresolved": true,
+    "bonferroni_t_threshold_df15": 2.69,
+    "max_margin_bb_per_100": 10.61,
+    "mean_margin_bb_per_100": 7.09,
+    "min_margin_bb_per_100": 0.9,
+    "seeds_clearing_own_mde": 2,
+    "spread_over_mean_margin": 1.37,
+    "total_channels": 18,
+    "total_channels_broken": 18
+  },
+  "spread": {
+    "all_per_seed_duels_unresolved": true,
+    "best_seed": 101,
+    "duel_margins_bb_per_100": {
+      "101": 10.61,
+      "202": 9.77,
+      "303": 0.9
+    },
+    "exceeds_reference_spread": false,
+    "max_minus_min_bb_per_100": 9.71,
+    "reference_provenance": "v7-0002 three-init-seed duel spread (a -7.06, b -1.88, c +9.72) on this instrument; DECISIONS.md \u00a74.7",
+    "reference_spread_bb_per_100": 16.78,
+    "sign_agreement_across_seeds": true,
+    "verdict": "UNRESOLVED",
+    "verdict_rule": "SEED-DEPENDENT if the init-seed spread reaches the 16.78 reference; SEED-ROBUST only if every seed's margin shares a sign and clears its own empirical MDE; UNRESOLVED otherwise",
+    "worst_seed": 303
+  },
+  "study": "candidate-v8-0001-seed-spread"
+}

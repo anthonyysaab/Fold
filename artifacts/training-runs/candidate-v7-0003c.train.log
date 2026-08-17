@@ -1,0 +1,18 @@
+MODE: train-only (--examples-in; no harvest)
+SEED INDEX: 2 of three  ->  suffix c, --init-seed 91  (recipe seeds: a=89, b=90, c=91)
+COMMAND: python -m tools.self_play_cycle --model-version candidate-v7-0003c --init-seed 91 --examples-in artifacts/corpora/candidate-v7-0003.corpus --architecture v7 --device cuda --batch-size 256 --epochs 40 --learning-rate 0.001 --reinforcement-multiplier 1.0 --behavior-warmup-epochs 0 --return-scale-pct 50 --split-seed 17 --equity-trials 80 --starting-stack 6000
+----------------------------------------------------------------------
+training device: cuda (Quadro RTX 3000)
+loaded 503342 corpus examples from artifacts/corpora/candidate-v7-0003.corpus
+counterfactual reward examples: 117447; behavior-only examples: 385895
+examples: 503342
+train_loss: 0.046784
+validation_loss: 0.052205
+validation_degenerate_group_fraction: 0.141860
+  (accuracy and regret below exclude those groups; every branch ties there, so no predictor can be wrong)
+validation_best_action_accuracy: 0.406203
+validation_mean_regret_pct: 7.409395
+validation_action_value_mae_pct: 6.069427
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v7-0003c.manifest.json
+state: candidate (promotion requires the evaluation gate)
+EXIT=0

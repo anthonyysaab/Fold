@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import io
 import json
 import math
 import random
 import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
 
 from devfun_poker_playground.learning_contract import (
     BRANCH_FAMILIES,
@@ -23,6 +26,8 @@ from devfun_poker_playground.offline_trainer import (
     _layer_norm,
     _margin_quantiles_v7,
     _round9,
+    print_branch_summary,
+    TrainingSummary,
 )
 from devfun_poker_playground.training_telemetry import TrainingExample
 
@@ -229,10 +234,12 @@ class BranchMetricsTests(unittest.TestCase):
         # Model ranks the half-pot branch highest: zero regret.
         scores = [[0.0, -0.1, 0.9, -0.5]] * 4
 
-        accuracy, regret, _ = _branch_metrics_v7(examples, scores)
+        metrics = _branch_metrics_v7(examples, scores)
 
-        self.assertEqual(accuracy, 1.0)
-        self.assertEqual(regret, 0.0)
+        self.assertEqual(metrics.best_action_accuracy, 1.0)
+        self.assertEqual(metrics.mean_regret_pct, 0.0)
+        self.assertEqual(metrics.degenerate_groups, 0)
+        self.assertEqual(metrics.scored_groups, 1)
 
     def test_regret_measures_the_gap_to_the_best_branch(self) -> None:
         examples = [
@@ -241,10 +248,69 @@ class BranchMetricsTests(unittest.TestCase):
         ]
         scores = [[0.9, 0.0, 0.0, 0.1]] * 2
 
-        accuracy, regret, _ = _branch_metrics_v7(examples, scores)
+        metrics = _branch_metrics_v7(examples, scores)
 
-        self.assertEqual(accuracy, 0.0)
-        self.assertAlmostEqual(regret, 100.0 * (5.0 / 100.0), places=9)
+        self.assertEqual(metrics.best_action_accuracy, 0.0)
+        self.assertAlmostEqual(metrics.mean_regret_pct, 100.0 * (5.0 / 100.0), places=9)
+
+    def test_a_degenerate_group_is_excluded_rather_than_scored_correct(self) -> None:
+        # Every branch returns the same value, so no predictor can be wrong.
+        degenerate = [
+            _example("d1", branch, 2.0)
+            for branch in ("fold", "check_call", "aggress_half_pot", "aggress_pot")
+        ]
+        # A group that does discriminate, and the model gets it wrong.
+        real = [
+            _example("d2", "fold", 0.0),
+            _example("d2", "check_call", 0.0),
+            _example("d2", "aggress_half_pot", 0.0),
+            _example("d2", "aggress_pot", 4.0),
+        ]
+        scores = [[0.9, 0.0, 0.0, 0.1]] * 8
+
+        metrics = _branch_metrics_v7([*degenerate, *real], scores)
+
+        self.assertEqual(metrics.total_groups, 2)
+        self.assertEqual(metrics.degenerate_groups, 1)
+        self.assertEqual(metrics.scored_groups, 1)
+        self.assertEqual(metrics.degenerate_group_fraction, 0.5)
+        # Scored on the one group that carries signal: wrong, so 0%.
+        self.assertEqual(metrics.best_action_accuracy, 0.0)
+        self.assertAlmostEqual(metrics.mean_regret_pct, 4.0, places=9)
+        # The tie-credited figures the fix replaces stay visible for audit.
+        self.assertEqual(metrics.best_action_accuracy_all_groups, 0.5)
+        self.assertAlmostEqual(metrics.mean_regret_pct_all_groups, 2.0, places=9)
+
+    def test_a_partial_tie_for_best_still_counts_as_a_scored_group(self) -> None:
+        examples = [
+            _example("d1", "fold", 3.0),
+            _example("d1", "check_call", 3.0),
+            _example("d1", "aggress_half_pot", 1.0),
+            _example("d1", "aggress_pot", 0.0),
+        ]
+        scores = [[0.0, 0.9, 0.1, 0.2]] * 4
+
+        metrics = _branch_metrics_v7(examples, scores)
+
+        self.assertEqual(metrics.degenerate_groups, 0)
+        self.assertEqual(metrics.best_action_accuracy, 1.0)
+        # Two of four branches are optimal, so a coin flip scores 50%.
+        self.assertEqual(metrics.chance_accuracy, 0.5)
+
+    def test_metrics_mapping_carries_the_degenerate_share(self) -> None:
+        examples = [
+            _example("d1", branch, 2.0)
+            for branch in ("fold", "check_call", "aggress_half_pot", "aggress_pot")
+        ]
+        scores = [[0.1, 0.2, 0.3, 0.4]] * 4
+
+        payload = _branch_metrics_v7(examples, scores).to_mapping()
+
+        self.assertEqual(payload["degenerate_group_fraction"], 1.0)
+        self.assertEqual(payload["scored_groups"], 0)
+        self.assertIsNone(payload["best_action_accuracy"])
+        self.assertIsNone(payload["mean_regret_pct"])
+        self.assertEqual(payload["all_groups"]["best_action_accuracy"], 1.0)
 
     def test_baseline_floor_reports_every_trivial_policy(self) -> None:
         examples = [
@@ -257,7 +323,7 @@ class BranchMetricsTests(unittest.TestCase):
         table = _baseline_floor_v7(examples, seed=1)
 
         self.assertEqual(
-            set(table),
+            set(table["policies"]),
             {
                 "always_fold",
                 "always_check_call",
@@ -266,7 +332,55 @@ class BranchMetricsTests(unittest.TestCase):
                 "uniform_random_legal",
             },
         )
-        self.assertEqual(table["always_fold"]["best_action_accuracy"], 0.0)
+        self.assertEqual(table["policies"]["always_fold"]["best_action_accuracy"], 0.0)
+        self.assertEqual(table["degenerate_groups"], 0)
+        self.assertEqual(table["scored_groups"], 2)
+
+    def test_baseline_floor_excludes_degenerate_groups_too(self) -> None:
+        examples = [
+            _example("d1", "fold", 0.0),
+            _example("d1", "aggress_pot", 5.0),
+            *[_example("d2", branch, 1.0) for branch in ("fold", "aggress_pot")],
+        ]
+
+        table = _baseline_floor_v7(examples, seed=1)
+
+        self.assertEqual(table["degenerate_groups"], 1)
+        self.assertEqual(table["scored_groups"], 1)
+        policies = table["policies"]
+        # always_fold is wrong on the only group that discriminates.
+        self.assertEqual(policies["always_fold"]["best_action_accuracy"], 0.0)
+        # The tie-credited figure it replaces would have read 50%.
+        self.assertEqual(
+            policies["always_fold"]["best_action_accuracy_all_groups"], 0.5
+        )
+
+    def test_summary_printer_survives_an_all_degenerate_split(self) -> None:
+        # A corpus with nothing but ties leaves accuracy and regret undefined.
+        # The printer must say so rather than crash on a None format spec.
+        summary = TrainingSummary(
+            examples=4,
+            train_examples=4,
+            validation_examples=4,
+            train_loss=0.0,
+            validation_loss=0.0,
+            validation_best_action_accuracy=None,
+            validation_mean_regret_pct=None,
+            validation_action_value_mae_pct=0.0,
+            weights_sha256="0" * 64,
+            manifest_path=Path("manifest.json"),
+            weights_path=Path("weights.json"),
+            validation_degenerate_group_fraction=1.0,
+        )
+        buffer = io.StringIO()
+
+        with redirect_stdout(buffer):
+            print_branch_summary(summary)
+
+        printed = buffer.getvalue()
+        self.assertIn("validation_degenerate_group_fraction: 1.000000", printed)
+        self.assertIn("validation_best_action_accuracy: n/a", printed)
+        self.assertIn("validation_mean_regret_pct: n/a", printed)
 
     def test_margin_quantiles_are_monotone(self) -> None:
         examples = []

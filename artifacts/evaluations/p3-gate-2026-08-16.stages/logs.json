@@ -1,0 +1,2127 @@
+{
+  "hands_per_seed": 1000,
+  "metric": "strength_metric.strength_percentile (canonical, V8_DESIGN \u00a72)",
+  "opponent_behaviour": {
+    "vs-median": {
+      "candidate-v7-0001c": {
+        "aggression_rate": 0.1467,
+        "check_call_rate": 0.5016,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.016,
+            0.0113
+          ],
+          "mean_strength_continue": 0.4921,
+          "mean_strength_fold": 0.4944,
+          "n_continue": 4979,
+          "n_fold": 2701,
+          "realized_fold_rate": 0.3517,
+          "se": 0.007,
+          "t": -0.34,
+          "value": -0.0023
+        },
+        "counts": {
+          "aggress": 1127,
+          "check_call": 3852,
+          "fold": 2701
+        },
+        "decisions": 7680,
+        "fold_rate": 0.3517,
+        "median_wager_pot_fraction": 2.33,
+        "sized_aggressions": 1127,
+        "wager_pot_fraction_quartiles": [
+          0.8125,
+          2.33,
+          5.1175
+        ]
+      },
+      "candidate-v8-0001": {
+        "aggression_rate": 0.1306,
+        "check_call_rate": 0.4761,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0127,
+            0.0145
+          ],
+          "mean_strength_continue": 0.5027,
+          "mean_strength_fold": 0.5018,
+          "n_continue": 4498,
+          "n_fold": 2916,
+          "realized_fold_rate": 0.3933,
+          "se": 0.0069,
+          "t": 0.14,
+          "value": 0.0009
+        },
+        "counts": {
+          "aggress": 968,
+          "check_call": 3530,
+          "fold": 2916
+        },
+        "decisions": 7414,
+        "fold_rate": 0.3933,
+        "median_wager_pot_fraction": 0.9694,
+        "sized_aggressions": 968,
+        "wager_pot_fraction_quartiles": [
+          0.4128,
+          0.9694,
+          2.665
+        ]
+      },
+      "heuristic-aggressive-v6": {
+        "aggression_rate": 0.1575,
+        "check_call_rate": 0.5286,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0131,
+            0.0134
+          ],
+          "mean_strength_continue": 0.4972,
+          "mean_strength_fold": 0.497,
+          "n_continue": 5856,
+          "n_fold": 2680,
+          "realized_fold_rate": 0.314,
+          "se": 0.0068,
+          "t": 0.03,
+          "value": 0.0002
+        },
+        "counts": {
+          "aggress": 1344,
+          "check_call": 4512,
+          "fold": 2680
+        },
+        "decisions": 8536,
+        "fold_rate": 0.314,
+        "median_wager_pot_fraction": 1.835,
+        "sized_aggressions": 1344,
+        "wager_pot_fraction_quartiles": [
+          0.6722,
+          1.835,
+          4.6699
+        ]
+      },
+      "trivial-always_aggress_large": {
+        "aggression_rate": 0.1158,
+        "check_call_rate": 0.4479,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0099,
+            0.0166
+          ],
+          "mean_strength_continue": 0.5006,
+          "mean_strength_fold": 0.4973,
+          "n_continue": 4348,
+          "n_fold": 3366,
+          "realized_fold_rate": 0.4363,
+          "se": 0.0067,
+          "t": 0.5,
+          "value": 0.0034
+        },
+        "counts": {
+          "aggress": 893,
+          "check_call": 3455,
+          "fold": 3366
+        },
+        "decisions": 7714,
+        "fold_rate": 0.4363,
+        "median_wager_pot_fraction": 0.7883,
+        "sized_aggressions": 893,
+        "wager_pot_fraction_quartiles": [
+          0.3275,
+          0.7883,
+          2.15
+        ]
+      },
+      "trivial-always_check_call": {
+        "aggression_rate": 0.2056,
+        "check_call_rate": 0.7153,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0382,
+            -0.0009
+          ],
+          "mean_strength_continue": 0.4947,
+          "mean_strength_fold": 0.5142,
+          "n_continue": 11672,
+          "n_fold": 1002,
+          "realized_fold_rate": 0.0791,
+          "se": 0.0095,
+          "t": -2.06,
+          "value": -0.0195
+        },
+        "counts": {
+          "aggress": 2606,
+          "check_call": 9066,
+          "fold": 1002
+        },
+        "decisions": 12674,
+        "fold_rate": 0.0791,
+        "median_wager_pot_fraction": 1.77,
+        "sized_aggressions": 2606,
+        "wager_pot_fraction_quartiles": [
+          0.55,
+          1.77,
+          4.93
+        ]
+      }
+    },
+    "vs-p3": {
+      "candidate-v7-0001c": {
+        "aggression_rate": 0.12,
+        "check_call_rate": 0.4346,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            0.2639,
+            0.2871
+          ],
+          "mean_strength_continue": 0.6873,
+          "mean_strength_fold": 0.4118,
+          "n_continue": 3809,
+          "n_fold": 3060,
+          "realized_fold_rate": 0.4455,
+          "se": 0.0059,
+          "t": 46.66,
+          "value": 0.2755
+        },
+        "counts": {
+          "aggress": 824,
+          "check_call": 2985,
+          "fold": 3060
+        },
+        "decisions": 6869,
+        "fold_rate": 0.4455,
+        "median_wager_pot_fraction": 2.0375,
+        "sized_aggressions": 824,
+        "wager_pot_fraction_quartiles": [
+          0.755,
+          2.0375,
+          4.5975
+        ]
+      },
+      "candidate-v8-0001": {
+        "aggression_rate": 0.1052,
+        "check_call_rate": 0.3999,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            0.2761,
+            0.299
+          ],
+          "mean_strength_continue": 0.7056,
+          "mean_strength_fold": 0.4181,
+          "n_continue": 3357,
+          "n_fold": 3289,
+          "realized_fold_rate": 0.4949,
+          "se": 0.0058,
+          "t": 49.15,
+          "value": 0.2875
+        },
+        "counts": {
+          "aggress": 699,
+          "check_call": 2658,
+          "fold": 3289
+        },
+        "decisions": 6646,
+        "fold_rate": 0.4949,
+        "median_wager_pot_fraction": 1.115,
+        "sized_aggressions": 699,
+        "wager_pot_fraction_quartiles": [
+          0.51,
+          1.115,
+          3.1167
+        ]
+      },
+      "heuristic-aggressive-v6": {
+        "aggression_rate": 0.1429,
+        "check_call_rate": 0.4831,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            0.2145,
+            0.238
+          ],
+          "mean_strength_continue": 0.6349,
+          "mean_strength_fold": 0.4087,
+          "n_continue": 4841,
+          "n_fold": 2893,
+          "realized_fold_rate": 0.3741,
+          "se": 0.006,
+          "t": 37.74,
+          "value": 0.2262
+        },
+        "counts": {
+          "aggress": 1105,
+          "check_call": 3736,
+          "fold": 2893
+        },
+        "decisions": 7734,
+        "fold_rate": 0.3741,
+        "median_wager_pot_fraction": 2.205,
+        "sized_aggressions": 1105,
+        "wager_pot_fraction_quartiles": [
+          0.79,
+          2.205,
+          5.485
+        ]
+      },
+      "trivial-always_aggress_large": {
+        "aggression_rate": 0.1023,
+        "check_call_rate": 0.4098,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            0.2811,
+            0.303
+          ],
+          "mean_strength_continue": 0.717,
+          "mean_strength_fold": 0.4249,
+          "n_continue": 3679,
+          "n_fold": 3505,
+          "realized_fold_rate": 0.4879,
+          "se": 0.0056,
+          "t": 52.16,
+          "value": 0.2921
+        },
+        "counts": {
+          "aggress": 735,
+          "check_call": 2944,
+          "fold": 3505
+        },
+        "decisions": 7184,
+        "fold_rate": 0.4879,
+        "median_wager_pot_fraction": 0.9917,
+        "sized_aggressions": 735,
+        "wager_pot_fraction_quartiles": [
+          0.3272,
+          0.9917,
+          3.04
+        ]
+      },
+      "trivial-always_check_call": {
+        "aggression_rate": 0.2061,
+        "check_call_rate": 0.7055,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            0.172,
+            0.2012
+          ],
+          "mean_strength_continue": 0.5301,
+          "mean_strength_fold": 0.3435,
+          "n_continue": 11290,
+          "n_fold": 1095,
+          "realized_fold_rate": 0.0884,
+          "se": 0.0075,
+          "t": 25.04,
+          "value": 0.1866
+        },
+        "counts": {
+          "aggress": 2553,
+          "check_call": 8737,
+          "fold": 1095
+        },
+        "decisions": 12385,
+        "fold_rate": 0.0884,
+        "median_wager_pot_fraction": 1.68,
+        "sized_aggressions": 2553,
+        "wager_pot_fraction_quartiles": [
+          0.53,
+          1.68,
+          4.985
+        ]
+      }
+    },
+    "vs-station": {
+      "candidate-v7-0001c": {
+        "aggression_rate": 0.1383,
+        "check_call_rate": 0.8293,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0169,
+            0.0351
+          ],
+          "mean_strength_continue": 0.4919,
+          "mean_strength_fold": 0.4829,
+          "n_continue": 14561,
+          "n_fold": 488,
+          "realized_fold_rate": 0.0324,
+          "se": 0.0133,
+          "t": 0.69,
+          "value": 0.0091
+        },
+        "counts": {
+          "aggress": 2081,
+          "check_call": 12480,
+          "fold": 488
+        },
+        "decisions": 15049,
+        "fold_rate": 0.0324,
+        "median_wager_pot_fraction": 1.6958,
+        "sized_aggressions": 2081,
+        "wager_pot_fraction_quartiles": [
+          0.6109,
+          1.6958,
+          4.355
+        ]
+      },
+      "candidate-v8-0001": {
+        "aggression_rate": 0.1379,
+        "check_call_rate": 0.8285,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0198,
+            0.0311
+          ],
+          "mean_strength_continue": 0.497,
+          "mean_strength_fold": 0.4914,
+          "n_continue": 15112,
+          "n_fold": 525,
+          "realized_fold_rate": 0.0336,
+          "se": 0.013,
+          "t": 0.43,
+          "value": 0.0056
+        },
+        "counts": {
+          "aggress": 2156,
+          "check_call": 12956,
+          "fold": 525
+        },
+        "decisions": 15637,
+        "fold_rate": 0.0336,
+        "median_wager_pot_fraction": 1.07,
+        "sized_aggressions": 2156,
+        "wager_pot_fraction_quartiles": [
+          0.38,
+          1.07,
+          3.3482
+        ]
+      },
+      "heuristic-aggressive-v6": {
+        "aggression_rate": 0.1413,
+        "check_call_rate": 0.8297,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0232,
+            0.031
+          ],
+          "mean_strength_continue": 0.5015,
+          "mean_strength_fold": 0.4977,
+          "n_continue": 15362,
+          "n_fold": 458,
+          "realized_fold_rate": 0.029,
+          "se": 0.0138,
+          "t": 0.28,
+          "value": 0.0039
+        },
+        "counts": {
+          "aggress": 2236,
+          "check_call": 13126,
+          "fold": 458
+        },
+        "decisions": 15820,
+        "fold_rate": 0.029,
+        "median_wager_pot_fraction": 1.949,
+        "sized_aggressions": 2236,
+        "wager_pot_fraction_quartiles": [
+          0.7317,
+          1.949,
+          4.9656
+        ]
+      },
+      "trivial-always_aggress_large": {
+        "aggression_rate": 0.1344,
+        "check_call_rate": 0.831,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0118,
+            0.0334
+          ],
+          "mean_strength_continue": 0.5039,
+          "mean_strength_fold": 0.4931,
+          "n_continue": 19331,
+          "n_fold": 692,
+          "realized_fold_rate": 0.0346,
+          "se": 0.0115,
+          "t": 0.94,
+          "value": 0.0108
+        },
+        "counts": {
+          "aggress": 2691,
+          "check_call": 16640,
+          "fold": 692
+        },
+        "decisions": 20023,
+        "fold_rate": 0.0346,
+        "median_wager_pot_fraction": 0.5733,
+        "sized_aggressions": 2691,
+        "wager_pot_fraction_quartiles": [
+          0.1864,
+          0.5733,
+          2.0289
+        ]
+      },
+      "trivial-always_check_call": {
+        "aggression_rate": 0.1461,
+        "check_call_rate": 0.8482,
+        "continue_minus_fold_strength": {
+          "ci95": [
+            -0.0464,
+            0.0738
+          ],
+          "mean_strength_continue": 0.4996,
+          "mean_strength_fold": 0.4858,
+          "n_continue": 15299,
+          "n_fold": 88,
+          "realized_fold_rate": 0.0057,
+          "se": 0.0307,
+          "t": 0.45,
+          "value": 0.0137
+        },
+        "counts": {
+          "aggress": 2248,
+          "check_call": 13051,
+          "fold": 88
+        },
+        "decisions": 15387,
+        "fold_rate": 0.0057,
+        "median_wager_pot_fraction": 2.115,
+        "sized_aggressions": 2248,
+        "wager_pot_fraction_quartiles": [
+          0.69,
+          2.115,
+          5.89
+        ]
+      }
+    }
+  },
+  "policies": {
+    "candidate-v7-0001c": {
+      "vs-median": {
+        "aggression_rate": 0.6454,
+        "check_call_rate": 0.1847,
+        "counts": {
+          "aggress": 3820,
+          "check_call": 1093,
+          "fold": 1006
+        },
+        "decisions": 5919,
+        "fold_rate": 0.17,
+        "median_wager_pot_fraction": 0.5,
+        "sized_aggressions": 3820,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.2055,
+              0.2422
+            ],
+            "decisions": 5919,
+            "families": {
+              "aggress": {
+                "count": 3820,
+                "mean_strength": 0.5816
+              },
+              "check_call": {
+                "count": 1093,
+                "mean_strength": 0.3648
+              },
+              "fold": {
+                "count": 1006,
+                "mean_strength": 0.3577
+              }
+            },
+            "se": 0.0094,
+            "separation_aggress_minus_fold": 0.2239
+          },
+          "flop": {
+            "ci95": [
+              0.1359,
+              0.207
+            ],
+            "decisions": 1475,
+            "families": {
+              "aggress": {
+                "count": 929,
+                "mean_strength": 0.5769
+              },
+              "check_call": {
+                "count": 281,
+                "mean_strength": 0.4078
+              },
+              "fold": {
+                "count": 265,
+                "mean_strength": 0.4054
+              }
+            },
+            "se": 0.0181,
+            "separation_aggress_minus_fold": 0.1715
+          },
+          "preflop": {
+            "ci95": [
+              0.1875,
+              0.2373
+            ],
+            "decisions": 3338,
+            "families": {
+              "aggress": {
+                "count": 2330,
+                "mean_strength": 0.5657
+              },
+              "check_call": {
+                "count": 429,
+                "mean_strength": 0.3684
+              },
+              "fold": {
+                "count": 579,
+                "mean_strength": 0.3533
+              }
+            },
+            "se": 0.0127,
+            "separation_aggress_minus_fold": 0.2124
+          },
+          "river": {
+            "ci95": [
+              0.3436,
+              0.4576
+            ],
+            "decisions": 402,
+            "families": {
+              "aggress": {
+                "count": 189,
+                "mean_strength": 0.6621
+              },
+              "check_call": {
+                "count": 150,
+                "mean_strength": 0.3006
+              },
+              "fold": {
+                "count": 63,
+                "mean_strength": 0.2615
+              }
+            },
+            "se": 0.0291,
+            "separation_aggress_minus_fold": 0.4006
+          },
+          "turn": {
+            "ci95": [
+              0.2835,
+              0.3869
+            ],
+            "decisions": 704,
+            "families": {
+              "aggress": {
+                "count": 372,
+                "mean_strength": 0.6527
+              },
+              "check_call": {
+                "count": 233,
+                "mean_strength": 0.3473
+              },
+              "fold": {
+                "count": 99,
+                "mean_strength": 0.3175
+              }
+            },
+            "se": 0.0264,
+            "separation_aggress_minus_fold": 0.3352
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "vs-p3": {
+        "aggression_rate": 0.6831,
+        "check_call_rate": 0.1768,
+        "counts": {
+          "aggress": 3515,
+          "check_call": 910,
+          "fold": 721
+        },
+        "decisions": 5146,
+        "fold_rate": 0.1401,
+        "median_wager_pot_fraction": 0.5,
+        "sized_aggressions": 3515,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.1808,
+              0.223
+            ],
+            "decisions": 5146,
+            "families": {
+              "aggress": {
+                "count": 3515,
+                "mean_strength": 0.5595
+              },
+              "check_call": {
+                "count": 910,
+                "mean_strength": 0.3265
+              },
+              "fold": {
+                "count": 721,
+                "mean_strength": 0.3576
+              }
+            },
+            "se": 0.0108,
+            "separation_aggress_minus_fold": 0.2019
+          },
+          "flop": {
+            "ci95": [
+              0.1327,
+              0.2183
+            ],
+            "decisions": 1210,
+            "families": {
+              "aggress": {
+                "count": 819,
+                "mean_strength": 0.5643
+              },
+              "check_call": {
+                "count": 232,
+                "mean_strength": 0.3515
+              },
+              "fold": {
+                "count": 159,
+                "mean_strength": 0.3888
+              }
+            },
+            "se": 0.0218,
+            "separation_aggress_minus_fold": 0.1755
+          },
+          "preflop": {
+            "ci95": [
+              0.1597,
+              0.2147
+            ],
+            "decisions": 3185,
+            "families": {
+              "aggress": {
+                "count": 2349,
+                "mean_strength": 0.5468
+              },
+              "check_call": {
+                "count": 380,
+                "mean_strength": 0.3596
+              },
+              "fold": {
+                "count": 456,
+                "mean_strength": 0.3596
+              }
+            },
+            "se": 0.014,
+            "separation_aggress_minus_fold": 0.1872
+          },
+          "river": {
+            "ci95": [
+              0.323,
+              0.465
+            ],
+            "decisions": 288,
+            "families": {
+              "aggress": {
+                "count": 129,
+                "mean_strength": 0.6586
+              },
+              "check_call": {
+                "count": 121,
+                "mean_strength": 0.2414
+              },
+              "fold": {
+                "count": 38,
+                "mean_strength": 0.2646
+              }
+            },
+            "se": 0.0362,
+            "separation_aggress_minus_fold": 0.394
+          },
+          "turn": {
+            "ci95": [
+              0.2323,
+              0.3606
+            ],
+            "decisions": 463,
+            "families": {
+              "aggress": {
+                "count": 218,
+                "mean_strength": 0.6196
+              },
+              "check_call": {
+                "count": 177,
+                "mean_strength": 0.2809
+              },
+              "fold": {
+                "count": 68,
+                "mean_strength": 0.3231
+              }
+            },
+            "se": 0.0327,
+            "separation_aggress_minus_fold": 0.2964
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      "vs-station": {
+        "aggression_rate": 0.6305,
+        "check_call_rate": 0.2434,
+        "counts": {
+          "aggress": 7853,
+          "check_call": 3032,
+          "fold": 1570
+        },
+        "decisions": 12455,
+        "fold_rate": 0.1261,
+        "median_wager_pot_fraction": 0.5,
+        "sized_aggressions": 7853,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.1911,
+              0.2191
+            ],
+            "decisions": 12455,
+            "families": {
+              "aggress": {
+                "count": 7853,
+                "mean_strength": 0.5869
+              },
+              "check_call": {
+                "count": 3032,
+                "mean_strength": 0.3334
+              },
+              "fold": {
+                "count": 1570,
+                "mean_strength": 0.3818
+              }
+            },
+            "se": 0.0071,
+            "separation_aggress_minus_fold": 0.2051
+          },
+          "flop": {
+            "ci95": [
+              0.1121,
+              0.1662
+            ],
+            "decisions": 3349,
+            "families": {
+              "aggress": {
+                "count": 2255,
+                "mean_strength": 0.5561
+              },
+              "check_call": {
+                "count": 693,
+                "mean_strength": 0.389
+              },
+              "fold": {
+                "count": 401,
+                "mean_strength": 0.417
+              }
+            },
+            "se": 0.0138,
+            "separation_aggress_minus_fold": 0.1391
+          },
+          "preflop": {
+            "ci95": [
+              0.1476,
+              0.193
+            ],
+            "decisions": 4362,
+            "families": {
+              "aggress": {
+                "count": 3144,
+                "mean_strength": 0.5471
+              },
+              "check_call": {
+                "count": 526,
+                "mean_strength": 0.3919
+              },
+              "fold": {
+                "count": 692,
+                "mean_strength": 0.3769
+              }
+            },
+            "se": 0.0116,
+            "separation_aggress_minus_fold": 0.1703
+          },
+          "river": {
+            "ci95": [
+              0.337,
+              0.4006
+            ],
+            "decisions": 2088,
+            "families": {
+              "aggress": {
+                "count": 1055,
+                "mean_strength": 0.6793
+              },
+              "check_call": {
+                "count": 833,
+                "mean_strength": 0.2751
+              },
+              "fold": {
+                "count": 200,
+                "mean_strength": 0.3105
+              }
+            },
+            "se": 0.0162,
+            "separation_aggress_minus_fold": 0.3688
+          },
+          "turn": {
+            "ci95": [
+              0.2316,
+              0.2914
+            ],
+            "decisions": 2656,
+            "families": {
+              "aggress": {
+                "count": 1399,
+                "mean_strength": 0.6562
+              },
+              "check_call": {
+                "count": 980,
+                "mean_strength": 0.3123
+              },
+              "fold": {
+                "count": 277,
+                "mean_strength": 0.3947
+              }
+            },
+            "se": 0.0153,
+            "separation_aggress_minus_fold": 0.2615
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.5,
+          0.5,
+          1.0
+        ]
+      }
+    },
+    "candidate-v8-0001": {
+      "vs-median": {
+        "aggression_rate": 0.7429,
+        "check_call_rate": 0.1218,
+        "counts": {
+          "aggress": 4277,
+          "check_call": 701,
+          "fold": 779
+        },
+        "decisions": 5757,
+        "fold_rate": 0.1353,
+        "median_wager_pot_fraction": 1.0,
+        "sized_aggressions": 4277,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.093,
+              0.1334
+            ],
+            "decisions": 5757,
+            "families": {
+              "aggress": {
+                "count": 4277,
+                "mean_strength": 0.5358
+              },
+              "check_call": {
+                "count": 701,
+                "mean_strength": 0.4363
+              },
+              "fold": {
+                "count": 779,
+                "mean_strength": 0.4226
+              }
+            },
+            "se": 0.0103,
+            "separation_aggress_minus_fold": 0.1132
+          },
+          "flop": {
+            "ci95": [
+              0.0945,
+              0.1778
+            ],
+            "decisions": 1359,
+            "families": {
+              "aggress": {
+                "count": 1013,
+                "mean_strength": 0.5557
+              },
+              "check_call": {
+                "count": 176,
+                "mean_strength": 0.4261
+              },
+              "fold": {
+                "count": 170,
+                "mean_strength": 0.4195
+              }
+            },
+            "se": 0.0212,
+            "separation_aggress_minus_fold": 0.1362
+          },
+          "preflop": {
+            "ci95": [
+              0.0392,
+              0.0918
+            ],
+            "decisions": 3324,
+            "families": {
+              "aggress": {
+                "count": 2592,
+                "mean_strength": 0.5063
+              },
+              "check_call": {
+                "count": 238,
+                "mean_strength": 0.5591
+              },
+              "fold": {
+                "count": 494,
+                "mean_strength": 0.4408
+              }
+            },
+            "se": 0.0134,
+            "separation_aggress_minus_fold": 0.0655
+          },
+          "river": {
+            "ci95": [
+              0.193,
+              0.337
+            ],
+            "decisions": 399,
+            "families": {
+              "aggress": {
+                "count": 232,
+                "mean_strength": 0.6372
+              },
+              "check_call": {
+                "count": 130,
+                "mean_strength": 0.2969
+              },
+              "fold": {
+                "count": 37,
+                "mean_strength": 0.3722
+              }
+            },
+            "se": 0.0367,
+            "separation_aggress_minus_fold": 0.265
+          },
+          "turn": {
+            "ci95": [
+              0.218,
+              0.327
+            ],
+            "decisions": 675,
+            "families": {
+              "aggress": {
+                "count": 440,
+                "mean_strength": 0.6099
+              },
+              "check_call": {
+                "count": 157,
+                "mean_strength": 0.377
+              },
+              "fold": {
+                "count": 78,
+                "mean_strength": 0.3374
+              }
+            },
+            "se": 0.0278,
+            "separation_aggress_minus_fold": 0.2725
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.5,
+          1.0,
+          1.0
+        ]
+      },
+      "vs-p3": {
+        "aggression_rate": 0.7939,
+        "check_call_rate": 0.1006,
+        "counts": {
+          "aggress": 3859,
+          "check_call": 489,
+          "fold": 513
+        },
+        "decisions": 4861,
+        "fold_rate": 0.1055,
+        "median_wager_pot_fraction": 1.0,
+        "sized_aggressions": 3859,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.0685,
+              0.1185
+            ],
+            "decisions": 4861,
+            "families": {
+              "aggress": {
+                "count": 3859,
+                "mean_strength": 0.5226
+              },
+              "check_call": {
+                "count": 489,
+                "mean_strength": 0.4369
+              },
+              "fold": {
+                "count": 513,
+                "mean_strength": 0.4291
+              }
+            },
+            "se": 0.0128,
+            "separation_aggress_minus_fold": 0.0935
+          },
+          "flop": {
+            "ci95": [
+              0.0825,
+              0.1827
+            ],
+            "decisions": 1114,
+            "families": {
+              "aggress": {
+                "count": 877,
+                "mean_strength": 0.5358
+              },
+              "check_call": {
+                "count": 129,
+                "mean_strength": 0.4364
+              },
+              "fold": {
+                "count": 108,
+                "mean_strength": 0.4032
+              }
+            },
+            "se": 0.0256,
+            "separation_aggress_minus_fold": 0.1326
+          },
+          "preflop": {
+            "ci95": [
+              0.021,
+              0.0852
+            ],
+            "decisions": 3133,
+            "families": {
+              "aggress": {
+                "count": 2607,
+                "mean_strength": 0.5064
+              },
+              "check_call": {
+                "count": 195,
+                "mean_strength": 0.5249
+              },
+              "fold": {
+                "count": 331,
+                "mean_strength": 0.4533
+              }
+            },
+            "se": 0.0164,
+            "separation_aggress_minus_fold": 0.0531
+          },
+          "river": {
+            "ci95": [
+              0.2038,
+              0.3797
+            ],
+            "decisions": 263,
+            "families": {
+              "aggress": {
+                "count": 153,
+                "mean_strength": 0.6208
+              },
+              "check_call": {
+                "count": 74,
+                "mean_strength": 0.3148
+              },
+              "fold": {
+                "count": 36,
+                "mean_strength": 0.329
+              }
+            },
+            "se": 0.0449,
+            "separation_aggress_minus_fold": 0.2918
+          },
+          "turn": {
+            "ci95": [
+              0.1211,
+              0.2926
+            ],
+            "decisions": 351,
+            "families": {
+              "aggress": {
+                "count": 222,
+                "mean_strength": 0.5936
+              },
+              "check_call": {
+                "count": 91,
+                "mean_strength": 0.3486
+              },
+              "fold": {
+                "count": 38,
+                "mean_strength": 0.3868
+              }
+            },
+            "se": 0.0437,
+            "separation_aggress_minus_fold": 0.2068
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.6452,
+          1.0,
+          1.0
+        ]
+      },
+      "vs-station": {
+        "aggression_rate": 0.7223,
+        "check_call_rate": 0.1561,
+        "counts": {
+          "aggress": 8844,
+          "check_call": 1912,
+          "fold": 1489
+        },
+        "decisions": 12245,
+        "fold_rate": 0.1216,
+        "median_wager_pot_fraction": 0.8559,
+        "sized_aggressions": 8844,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.1253,
+              0.1536
+            ],
+            "decisions": 12245,
+            "families": {
+              "aggress": {
+                "count": 8844,
+                "mean_strength": 0.5395
+              },
+              "check_call": {
+                "count": 1912,
+                "mean_strength": 0.4094
+              },
+              "fold": {
+                "count": 1489,
+                "mean_strength": 0.4001
+              }
+            },
+            "se": 0.0072,
+            "separation_aggress_minus_fold": 0.1395
+          },
+          "flop": {
+            "ci95": [
+              0.0898,
+              0.144
+            ],
+            "decisions": 3291,
+            "families": {
+              "aggress": {
+                "count": 2439,
+                "mean_strength": 0.5218
+              },
+              "check_call": {
+                "count": 465,
+                "mean_strength": 0.4647
+              },
+              "fold": {
+                "count": 387,
+                "mean_strength": 0.4049
+              }
+            },
+            "se": 0.0138,
+            "separation_aggress_minus_fold": 0.1169
+          },
+          "preflop": {
+            "ci95": [
+              0.0391,
+              0.0854
+            ],
+            "decisions": 4229,
+            "families": {
+              "aggress": {
+                "count": 3254,
+                "mean_strength": 0.4998
+              },
+              "check_call": {
+                "count": 341,
+                "mean_strength": 0.5336
+              },
+              "fold": {
+                "count": 634,
+                "mean_strength": 0.4376
+              }
+            },
+            "se": 0.0118,
+            "separation_aggress_minus_fold": 0.0623
+          },
+          "river": {
+            "ci95": [
+              0.2576,
+              0.3221
+            ],
+            "decisions": 2140,
+            "families": {
+              "aggress": {
+                "count": 1364,
+                "mean_strength": 0.6244
+              },
+              "check_call": {
+                "count": 576,
+                "mean_strength": 0.3259
+              },
+              "fold": {
+                "count": 200,
+                "mean_strength": 0.3345
+              }
+            },
+            "se": 0.0165,
+            "separation_aggress_minus_fold": 0.2899
+          },
+          "turn": {
+            "ci95": [
+              0.1872,
+              0.2486
+            ],
+            "decisions": 2585,
+            "families": {
+              "aggress": {
+                "count": 1787,
+                "mean_strength": 0.5713
+              },
+              "check_call": {
+                "count": 530,
+                "mean_strength": 0.3716
+              },
+              "fold": {
+                "count": 268,
+                "mean_strength": 0.3534
+              }
+            },
+            "se": 0.0157,
+            "separation_aggress_minus_fold": 0.2179
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.25,
+          0.8559,
+          1.0
+        ]
+      }
+    },
+    "heuristic-aggressive-v6": {
+      "vs-median": {
+        "aggression_rate": 0.5171,
+        "check_call_rate": 0.3511,
+        "counts": {
+          "aggress": 3557,
+          "check_call": 2415,
+          "fold": 907
+        },
+        "decisions": 6879,
+        "fold_rate": 0.1319,
+        "median_wager_pot_fraction": 0.58,
+        "sized_aggressions": 3557,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.2773,
+              0.3134
+            ],
+            "decisions": 6879,
+            "families": {
+              "aggress": {
+                "count": 3557,
+                "mean_strength": 0.6435
+              },
+              "check_call": {
+                "count": 2415,
+                "mean_strength": 0.298
+              },
+              "fold": {
+                "count": 907,
+                "mean_strength": 0.3482
+              }
+            },
+            "se": 0.0092,
+            "separation_aggress_minus_fold": 0.2953
+          },
+          "flop": {
+            "ci95": [
+              0.2287,
+              0.2954
+            ],
+            "decisions": 1876,
+            "families": {
+              "aggress": {
+                "count": 1037,
+                "mean_strength": 0.6003
+              },
+              "check_call": {
+                "count": 558,
+                "mean_strength": 0.3334
+              },
+              "fold": {
+                "count": 281,
+                "mean_strength": 0.3382
+              }
+            },
+            "se": 0.017,
+            "separation_aggress_minus_fold": 0.262
+          },
+          "preflop": {
+            "ci95": [
+              0.2233,
+              0.2804
+            ],
+            "decisions": 3379,
+            "families": {
+              "aggress": {
+                "count": 1829,
+                "mean_strength": 0.6415
+              },
+              "check_call": {
+                "count": 1163,
+                "mean_strength": 0.296
+              },
+              "fold": {
+                "count": 387,
+                "mean_strength": 0.3897
+              }
+            },
+            "se": 0.0146,
+            "separation_aggress_minus_fold": 0.2518
+          },
+          "river": {
+            "ci95": [
+              0.4327,
+              0.5164
+            ],
+            "decisions": 613,
+            "families": {
+              "aggress": {
+                "count": 230,
+                "mean_strength": 0.7362
+              },
+              "check_call": {
+                "count": 281,
+                "mean_strength": 0.2529
+              },
+              "fold": {
+                "count": 102,
+                "mean_strength": 0.2616
+              }
+            },
+            "se": 0.0214,
+            "separation_aggress_minus_fold": 0.4746
+          },
+          "turn": {
+            "ci95": [
+              0.3436,
+              0.4296
+            ],
+            "decisions": 1011,
+            "families": {
+              "aggress": {
+                "count": 461,
+                "mean_strength": 0.7023
+              },
+              "check_call": {
+                "count": 413,
+                "mean_strength": 0.2863
+              },
+              "fold": {
+                "count": 137,
+                "mean_strength": 0.3157
+              }
+            },
+            "se": 0.0219,
+            "separation_aggress_minus_fold": 0.3866
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.555,
+          0.58,
+          0.63
+        ]
+      },
+      "vs-p3": {
+        "aggression_rate": 0.5113,
+        "check_call_rate": 0.3636,
+        "counts": {
+          "aggress": 3110,
+          "check_call": 2212,
+          "fold": 761
+        },
+        "decisions": 6083,
+        "fold_rate": 0.1251,
+        "median_wager_pot_fraction": 0.575,
+        "sized_aggressions": 3110,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.271,
+              0.3103
+            ],
+            "decisions": 6083,
+            "families": {
+              "aggress": {
+                "count": 3110,
+                "mean_strength": 0.6399
+              },
+              "check_call": {
+                "count": 2212,
+                "mean_strength": 0.2804
+              },
+              "fold": {
+                "count": 761,
+                "mean_strength": 0.3492
+              }
+            },
+            "se": 0.01,
+            "separation_aggress_minus_fold": 0.2907
+          },
+          "flop": {
+            "ci95": [
+              0.1881,
+              0.2606
+            ],
+            "decisions": 1660,
+            "families": {
+              "aggress": {
+                "count": 931,
+                "mean_strength": 0.5924
+              },
+              "check_call": {
+                "count": 484,
+                "mean_strength": 0.296
+              },
+              "fold": {
+                "count": 245,
+                "mean_strength": 0.368
+              }
+            },
+            "se": 0.0185,
+            "separation_aggress_minus_fold": 0.2244
+          },
+          "preflop": {
+            "ci95": [
+              0.2504,
+              0.31
+            ],
+            "decisions": 3241,
+            "families": {
+              "aggress": {
+                "count": 1775,
+                "mean_strength": 0.6494
+              },
+              "check_call": {
+                "count": 1127,
+                "mean_strength": 0.2944
+              },
+              "fold": {
+                "count": 339,
+                "mean_strength": 0.3692
+              }
+            },
+            "se": 0.0152,
+            "separation_aggress_minus_fold": 0.2802
+          },
+          "river": {
+            "ci95": [
+              0.4032,
+              0.506
+            ],
+            "decisions": 465,
+            "families": {
+              "aggress": {
+                "count": 145,
+                "mean_strength": 0.7338
+              },
+              "check_call": {
+                "count": 250,
+                "mean_strength": 0.2241
+              },
+              "fold": {
+                "count": 70,
+                "mean_strength": 0.2792
+              }
+            },
+            "se": 0.0262,
+            "separation_aggress_minus_fold": 0.4546
+          },
+          "turn": {
+            "ci95": [
+              0.3546,
+              0.4538
+            ],
+            "decisions": 717,
+            "families": {
+              "aggress": {
+                "count": 259,
+                "mean_strength": 0.6931
+              },
+              "check_call": {
+                "count": 351,
+                "mean_strength": 0.2543
+              },
+              "fold": {
+                "count": 107,
+                "mean_strength": 0.2889
+              }
+            },
+            "se": 0.0253,
+            "separation_aggress_minus_fold": 0.4042
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.555,
+          0.575,
+          0.615
+        ]
+      },
+      "vs-station": {
+        "aggression_rate": 0.5518,
+        "check_call_rate": 0.3415,
+        "counts": {
+          "aggress": 7321,
+          "check_call": 4531,
+          "fold": 1415
+        },
+        "decisions": 13267,
+        "fold_rate": 0.1067,
+        "median_wager_pot_fraction": 0.59,
+        "sized_aggressions": 7321,
+        "strength_separation": {
+          "all_streets": {
+            "ci95": [
+              0.2541,
+              0.2809
+            ],
+            "decisions": 13267,
+            "families": {
+              "aggress": {
+                "count": 7321,
+                "mean_strength": 0.6381
+              },
+              "check_call": {
+                "count": 4531,
+                "mean_strength": 0.3036
+              },
+              "fold": {
+                "count": 1415,
+                "mean_strength": 0.3707
+              }
+            },
+            "se": 0.0068,
+            "separation_aggress_minus_fold": 0.2675
+          },
+          "flop": {
+            "ci95": [
+              0.1756,
+              0.226
+            ],
+            "decisions": 3684,
+            "families": {
+              "aggress": {
+                "count": 2248,
+                "mean_strength": 0.5776
+              },
+              "check_call": {
+                "count": 1012,
+                "mean_strength": 0.3521
+              },
+              "fold": {
+                "count": 424,
+                "mean_strength": 0.3769
+              }
+            },
+            "se": 0.0129,
+            "separation_aggress_minus_fold": 0.2008
+          },
+          "preflop": {
+            "ci95": [
+              0.2057,
+              0.2568
+            ],
+            "decisions": 4290,
+            "families": {
+              "aggress": {
+                "count": 2479,
+                "mean_strength": 0.6237
+              },
+              "check_call": {
+                "count": 1385,
+                "mean_strength": 0.2925
+              },
+              "fold": {
+                "count": 426,
+                "mean_strength": 0.3924
+              }
+            },
+            "se": 0.013,
+            "separation_aggress_minus_fold": 0.2313
+          },
+          "river": {
+            "ci95": [
+              0.3744,
+              0.4279
+            ],
+            "decisions": 2349,
+            "families": {
+              "aggress": {
+                "count": 1095,
+                "mean_strength": 0.7394
+              },
+              "check_call": {
+                "count": 1010,
+                "mean_strength": 0.2703
+              },
+              "fold": {
+                "count": 244,
+                "mean_strength": 0.3383
+              }
+            },
+            "se": 0.0137,
+            "separation_aggress_minus_fold": 0.4012
+          },
+          "turn": {
+            "ci95": [
+              0.2928,
+              0.3485
+            ],
+            "decisions": 2944,
+            "families": {
+              "aggress": {
+                "count": 1499,
+                "mean_strength": 0.6788
+              },
+              "check_call": {
+                "count": 1124,
+                "mean_strength": 0.3034
+              },
+              "fold": {
+                "count": 321,
+                "mean_strength": 0.3582
+              }
+            },
+            "se": 0.0142,
+            "separation_aggress_minus_fold": 0.3206
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.555,
+          0.59,
+          0.653
+        ]
+      }
+    },
+    "trivial-always_aggress_large": {
+      "vs-median": {
+        "aggression_rate": 1.0,
+        "check_call_rate": 0.0,
+        "counts": {
+          "aggress": 6629,
+          "check_call": 0,
+          "fold": 0
+        },
+        "decisions": 6629,
+        "fold_rate": 0.0,
+        "median_wager_pot_fraction": 0.535,
+        "sized_aggressions": 6629,
+        "strength_separation": {
+          "all_streets": {
+            "decisions": 6629,
+            "families": {
+              "aggress": {
+                "count": 6629,
+                "mean_strength": 0.5012
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "flop": {
+            "decisions": 1619,
+            "families": {
+              "aggress": {
+                "count": 1619,
+                "mean_strength": 0.5018
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "preflop": {
+            "decisions": 3361,
+            "families": {
+              "aggress": {
+                "count": 3361,
+                "mean_strength": 0.5008
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "river": {
+            "decisions": 700,
+            "families": {
+              "aggress": {
+                "count": 700,
+                "mean_strength": 0.5089
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "turn": {
+            "decisions": 949,
+            "families": {
+              "aggress": {
+                "count": 949,
+                "mean_strength": 0.4955
+              }
+            },
+            "separation_aggress_minus_fold": null
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.2641,
+          0.535,
+          1.0
+        ]
+      },
+      "vs-p3": {
+        "aggression_rate": 1.0,
+        "check_call_rate": 0.0,
+        "counts": {
+          "aggress": 5282,
+          "check_call": 0,
+          "fold": 0
+        },
+        "decisions": 5282,
+        "fold_rate": 0.0,
+        "median_wager_pot_fraction": 1.0,
+        "sized_aggressions": 5282,
+        "strength_separation": {
+          "all_streets": {
+            "decisions": 5282,
+            "families": {
+              "aggress": {
+                "count": 5282,
+                "mean_strength": 0.5057
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "flop": {
+            "decisions": 1199,
+            "families": {
+              "aggress": {
+                "count": 1199,
+                "mean_strength": 0.5035
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "preflop": {
+            "decisions": 3140,
+            "families": {
+              "aggress": {
+                "count": 3140,
+                "mean_strength": 0.5036
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "river": {
+            "decisions": 433,
+            "families": {
+              "aggress": {
+                "count": 433,
+                "mean_strength": 0.5036
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "turn": {
+            "decisions": 510,
+            "families": {
+              "aggress": {
+                "count": 510,
+                "mean_strength": 0.5253
+              }
+            },
+            "separation_aggress_minus_fold": null
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.2865,
+          1.0,
+          1.0
+        ]
+      },
+      "vs-station": {
+        "aggression_rate": 1.0,
+        "check_call_rate": 0.0,
+        "counts": {
+          "aggress": 14411,
+          "check_call": 0,
+          "fold": 0
+        },
+        "decisions": 14411,
+        "fold_rate": 0.0,
+        "median_wager_pot_fraction": 0.4067,
+        "sized_aggressions": 14411,
+        "strength_separation": {
+          "all_streets": {
+            "decisions": 14411,
+            "families": {
+              "aggress": {
+                "count": 14411,
+                "mean_strength": 0.4961
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "flop": {
+            "decisions": 3840,
+            "families": {
+              "aggress": {
+                "count": 3840,
+                "mean_strength": 0.4959
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "preflop": {
+            "decisions": 4436,
+            "families": {
+              "aggress": {
+                "count": 4436,
+                "mean_strength": 0.4906
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "river": {
+            "decisions": 2810,
+            "families": {
+              "aggress": {
+                "count": 2810,
+                "mean_strength": 0.4988
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "turn": {
+            "decisions": 3325,
+            "families": {
+              "aggress": {
+                "count": 3325,
+                "mean_strength": 0.5015
+              }
+            },
+            "separation_aggress_minus_fold": null
+          }
+        },
+        "wager_pot_fraction_quartiles": [
+          0.1303,
+          0.4067,
+          1.0
+        ]
+      }
+    },
+    "trivial-always_check_call": {
+      "vs-median": {
+        "aggression_rate": 0.0,
+        "check_call_rate": 1.0,
+        "counts": {
+          "aggress": 0,
+          "check_call": 12774,
+          "fold": 0
+        },
+        "decisions": 12774,
+        "fold_rate": 0.0,
+        "median_wager_pot_fraction": null,
+        "sized_aggressions": 0,
+        "strength_separation": {
+          "all_streets": {
+            "decisions": 12774,
+            "families": {
+              "check_call": {
+                "count": 12774,
+                "mean_strength": 0.4985
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "flop": {
+            "decisions": 3150,
+            "families": {
+              "check_call": {
+                "count": 3150,
+                "mean_strength": 0.499
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "preflop": {
+            "decisions": 3411,
+            "families": {
+              "check_call": {
+                "count": 3411,
+                "mean_strength": 0.5006
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "river": {
+            "decisions": 3083,
+            "families": {
+              "check_call": {
+                "count": 3083,
+                "mean_strength": 0.4967
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "turn": {
+            "decisions": 3130,
+            "families": {
+              "check_call": {
+                "count": 3130,
+                "mean_strength": 0.4976
+              }
+            },
+            "separation_aggress_minus_fold": null
+          }
+        }
+      },
+      "vs-p3": {
+        "aggression_rate": 0.0,
+        "check_call_rate": 1.0,
+        "counts": {
+          "aggress": 0,
+          "check_call": 12447,
+          "fold": 0
+        },
+        "decisions": 12447,
+        "fold_rate": 0.0,
+        "median_wager_pot_fraction": null,
+        "sized_aggressions": 0,
+        "strength_separation": {
+          "all_streets": {
+            "decisions": 12447,
+            "families": {
+              "check_call": {
+                "count": 12447,
+                "mean_strength": 0.5095
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "flop": {
+            "decisions": 3048,
+            "families": {
+              "check_call": {
+                "count": 3048,
+                "mean_strength": 0.5038
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "preflop": {
+            "decisions": 3349,
+            "families": {
+              "check_call": {
+                "count": 3349,
+                "mean_strength": 0.5084
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "river": {
+            "decisions": 3005,
+            "families": {
+              "check_call": {
+                "count": 3005,
+                "mean_strength": 0.5144
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "turn": {
+            "decisions": 3045,
+            "families": {
+              "check_call": {
+                "count": 3045,
+                "mean_strength": 0.5114
+              }
+            },
+            "separation_aggress_minus_fold": null
+          }
+        }
+      },
+      "vs-station": {
+        "aggression_rate": 0.0,
+        "check_call_rate": 1.0,
+        "counts": {
+          "aggress": 0,
+          "check_call": 16541,
+          "fold": 0
+        },
+        "decisions": 16541,
+        "fold_rate": 0.0,
+        "median_wager_pot_fraction": null,
+        "sized_aggressions": 0,
+        "strength_separation": {
+          "all_streets": {
+            "decisions": 16541,
+            "families": {
+              "check_call": {
+                "count": 16541,
+                "mean_strength": 0.5025
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "flop": {
+            "decisions": 4156,
+            "families": {
+              "check_call": {
+                "count": 4156,
+                "mean_strength": 0.5018
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "preflop": {
+            "decisions": 4191,
+            "families": {
+              "check_call": {
+                "count": 4191,
+                "mean_strength": 0.5011
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "river": {
+            "decisions": 4079,
+            "families": {
+              "check_call": {
+                "count": 4079,
+                "mean_strength": 0.499
+              }
+            },
+            "separation_aggress_minus_fold": null
+          },
+          "turn": {
+            "decisions": 4115,
+            "families": {
+              "check_call": {
+                "count": 4115,
+                "mean_strength": 0.5081
+              }
+            },
+            "separation_aggress_minus_fold": null
+          }
+        }
+      }
+    }
+  },
+  "seed_note": "the same opponent seeds (13+i) and match seeds (100+i) as the first log_seeds seeds of the arms stage, so these logs are a subsample of the matches whose BB/100 is reported above",
+  "seeds": 4,
+  "wager_definition": "(new chips - call) / (pot + call), the engine's own pot fraction"
+}

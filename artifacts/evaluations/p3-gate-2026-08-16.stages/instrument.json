@@ -1,0 +1,217 @@
+{
+  "degradation_guard": {
+    "detail": "the P3 seat raises instead of falling back to the card-blind constant, so a completed run cannot contain a vs-p3 match that was partly played by vs-median",
+    "mechanism": "tools.evaluate_v8.StrictStrengthAwareAgent"
+  },
+  "known_answer_test": {
+    "negative_control": {
+      "channel": "vs-median",
+      "expected": "CI95 contains 0",
+      "observed": {
+        "ci95": [
+          -0.0138,
+          0.0234
+        ],
+        "mean_strength_continue": 0.5026,
+        "mean_strength_fold": 0.4978,
+        "n_continue": 3035,
+        "n_fold": 1337,
+        "realized_fold_rate": 0.3058,
+        "se": 0.0095,
+        "t": 0.5,
+        "value": 0.0048
+      },
+      "passed": true,
+      "why_impossible": "ScriptedAgent is card-blind: its action is a seeded function of public state only, so continue-minus-fold strength CANNOT differ from zero except by sampling noise"
+    },
+    "passed": true,
+    "positive_control": {
+      "channel": "vs-p3",
+      "expected": "CI95 lower bound > +0.05",
+      "observed": {
+        "ci95": [
+          0.2078,
+          0.2409
+        ],
+        "mean_strength_continue": 0.631,
+        "mean_strength_fold": 0.4067,
+        "n_continue": 2394,
+        "n_fold": 1453,
+        "realized_fold_rate": 0.3777,
+        "se": 0.0084,
+        "t": 26.58,
+        "value": 0.2244
+      },
+      "passed": true
+    },
+    "question": "does the opponent's own action correlate with its own hand strength on the canonical metric?"
+  },
+  "monotonicity_sweep": {
+    "band": [
+      0.03273198005612337,
+      0.9954362347525898
+    ],
+    "note": "clamped output, i.e. the function the table sees; monotone strictly unless the clamp band is active at both endpoints",
+    "passed": true,
+    "streets": {
+      "flop": {
+        "decreasing_in_strength": true,
+        "increasing_in_price": true,
+        "p_fold_by_pot_odds_at_median_hand": [
+          0.7185,
+          0.91726,
+          0.94761,
+          0.97965,
+          0.99524,
+          0.99544
+        ],
+        "p_fold_by_strength_at_half_pot": [
+          0.99541,
+          0.98955,
+          0.97641,
+          0.94761,
+          0.8877,
+          0.7755,
+          0.60152
+        ],
+        "pot_odds_grid": [
+          0.2,
+          0.3,
+          0.3333,
+          0.4,
+          0.5,
+          0.6
+        ],
+        "strength_grid": [
+          0.05,
+          0.2,
+          0.35,
+          0.5,
+          0.65,
+          0.8,
+          0.95
+        ]
+      },
+      "preflop": {
+        "decreasing_in_strength": true,
+        "increasing_in_price": true,
+        "p_fold_by_pot_odds_at_median_hand": [
+          0.6438,
+          0.69311,
+          0.70868,
+          0.73838,
+          0.77909,
+          0.81506
+        ],
+        "p_fold_by_strength_at_half_pot": [
+          0.97644,
+          0.94154,
+          0.86225,
+          0.70868,
+          0.48599,
+          0.26872,
+          0.12497
+        ],
+        "pot_odds_grid": [
+          0.2,
+          0.3,
+          0.3333,
+          0.4,
+          0.5,
+          0.6
+        ],
+        "strength_grid": [
+          0.05,
+          0.2,
+          0.35,
+          0.5,
+          0.65,
+          0.8,
+          0.95
+        ]
+      },
+      "river": {
+        "decreasing_in_strength": true,
+        "increasing_in_price": true,
+        "p_fold_by_pot_odds_at_median_hand": [
+          0.66625,
+          0.84795,
+          0.88707,
+          0.93969,
+          0.97754,
+          0.99184
+        ],
+        "p_fold_by_strength_at_half_pot": [
+          0.98083,
+          0.96479,
+          0.93619,
+          0.88707,
+          0.8079,
+          0.69247,
+          0.5466
+        ],
+        "pot_odds_grid": [
+          0.2,
+          0.3,
+          0.3333,
+          0.4,
+          0.5,
+          0.6
+        ],
+        "strength_grid": [
+          0.05,
+          0.2,
+          0.35,
+          0.5,
+          0.65,
+          0.8,
+          0.95
+        ]
+      },
+      "turn": {
+        "decreasing_in_strength": true,
+        "increasing_in_price": true,
+        "p_fold_by_pot_odds_at_median_hand": [
+          0.66625,
+          0.84795,
+          0.88707,
+          0.93969,
+          0.97754,
+          0.99184
+        ],
+        "p_fold_by_strength_at_half_pot": [
+          0.98083,
+          0.96479,
+          0.93619,
+          0.88707,
+          0.8079,
+          0.69247,
+          0.5466
+        ],
+        "pot_odds_grid": [
+          0.2,
+          0.3,
+          0.3333,
+          0.4,
+          0.5,
+          0.6
+        ],
+        "strength_grid": [
+          0.05,
+          0.2,
+          0.35,
+          0.5,
+          0.65,
+          0.8,
+          0.95
+        ]
+      }
+    }
+  },
+  "probe_config": {
+    "hands_per_seed": 500,
+    "hero": "heuristic-aggressive (champion)",
+    "seeds": 4
+  },
+  "ran_before_any_result": true
+}

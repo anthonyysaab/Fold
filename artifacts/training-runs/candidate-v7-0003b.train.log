@@ -1,0 +1,13 @@
+training device: cuda (Quadro RTX 3000)
+loaded 503342 corpus examples from artifacts/corpora/candidate-v7-0003.corpus
+counterfactual reward examples: 117447; behavior-only examples: 385895
+examples: 503342
+train_loss: 0.047488
+validation_loss: 0.051996
+validation_degenerate_group_fraction: 0.141860
+  (accuracy and regret below exclude those groups; every branch ties there, so no predictor can be wrong)
+validation_best_action_accuracy: 0.402288
+validation_mean_regret_pct: 7.186906
+validation_action_value_mae_pct: 6.141866
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v7-0003b.manifest.json
+state: candidate (promotion requires the evaluation gate)

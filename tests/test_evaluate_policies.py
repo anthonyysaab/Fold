@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import pickle
 import tempfile
 import unittest
 from pathlib import Path
@@ -157,6 +158,11 @@ class GauntletReportSmokeTest(unittest.TestCase):
                             "--json",
                             "--output",
                             str(output),
+                            # Policies are rebuilt inside worker processes,
+                            # where this mock does not exist; a mocked
+                            # loader requires the sequential path.
+                            "--workers",
+                            "1",
                         ]
                     )
             raw = output.read_bytes()
@@ -205,6 +211,117 @@ class GauntletReportSmokeTest(unittest.TestCase):
             set(duel_data["ruin"]),
             {heuristic_label, "candidate-test-0001"},
         )
+
+
+class GauntletWorkerCountTest(unittest.TestCase):
+    def test_one_worker_stays_sequential(self) -> None:
+        self.assertEqual(evaluate_policies._gauntlet_workers(1, 128), 1)
+
+    def test_single_task_never_spawns_a_pool(self) -> None:
+        self.assertEqual(evaluate_policies._gauntlet_workers(0, 1), 1)
+
+    def test_explicit_count_never_exceeds_the_task_count(self) -> None:
+        self.assertEqual(evaluate_policies._gauntlet_workers(32, 6), 6)
+
+    def test_auto_stays_within_the_task_count(self) -> None:
+        self.assertLessEqual(evaluate_policies._gauntlet_workers(0, 4), 4)
+        self.assertGreaterEqual(evaluate_policies._gauntlet_workers(0, 4), 1)
+
+
+class TaskSpecTest(unittest.TestCase):
+    def test_policy_specs_are_picklable_by_value(self) -> None:
+        # Matches cross a process boundary; factories are closures and would
+        # not survive, which is why policies are described rather than passed.
+        spec = evaluate_policies._PolicySpec(
+            label="heuristic", kind="heuristic", equity_trials=10
+        )
+        self.assertEqual(pickle.loads(pickle.dumps(spec)), spec)
+
+    def test_battery_task_rebuilds_its_opponents(self) -> None:
+        spec = evaluate_policies._PolicySpec(
+            label="heuristic", kind="heuristic", equity_trials=10
+        )
+        task = evaluate_policies._BatteryTask(
+            policy=spec,
+            battery="vs-station",
+            opponent_seed=13,
+            hands=50,
+            seed=100,
+            stack=600,
+            reset_stacks=False,
+        )
+
+        opponents = task.opponents()
+
+        self.assertEqual(len(opponents), 1)
+        self.assertEqual(opponents[0][0], "vs-station")
+        self.assertEqual(opponents[0][1].seed, 13)
+        self.assertEqual(pickle.loads(pickle.dumps(task)), task)
+
+    def test_five_max_task_rebuilds_the_calibrated_lineup(self) -> None:
+        spec = evaluate_policies._PolicySpec(
+            label="heuristic", kind="heuristic", equity_trials=10
+        )
+        task = evaluate_policies._BatteryTask(
+            policy=spec,
+            battery="five-max-lineup",
+            opponent_seed=23,
+            hands=50,
+            seed=200,
+            stack=600,
+            reset_stacks=False,
+        )
+
+        self.assertEqual(len(task.opponents()), 4)
+
+    def test_duel_tasks_cover_both_orientations_per_seed(self) -> None:
+        first = evaluate_policies._PolicySpec(
+            label="a", kind="heuristic", equity_trials=10
+        )
+        second = evaluate_policies._PolicySpec(
+            label="b", kind="heuristic", equity_trials=10
+        )
+
+        tasks = evaluate_policies.duel_tasks(
+            first, second, seeds=(0, 1), scale=0.05, stack=600, reset_stacks=False
+        )
+
+        self.assertEqual(len(tasks), 4)
+        self.assertEqual([task.first.label for task in tasks], ["a", "b", "a", "b"])
+        # Both orientations of one seed share the simulator seed, which is
+        # what makes the seat-mean a paired comparison.
+        self.assertEqual(tasks[0].seed, tasks[1].seed)
+        self.assertNotEqual(tasks[0].seed, tasks[2].seed)
+
+
+class GauntletParallelEquivalenceTest(unittest.TestCase):
+    def test_parallel_report_matches_sequential_exactly(self) -> None:
+        reports = []
+        for workers in (1, 2):
+            with tempfile.TemporaryDirectory() as directory:
+                out = Path(directory) / "report.json"
+                argv = [
+                    "--include-heuristic",
+                    "--seeds",
+                    "2",
+                    "--duel-seeds",
+                    "1",
+                    "--scale",
+                    "0.01",
+                    "--equity-trials",
+                    "4",
+                    "--json",
+                    "--output",
+                    str(out),
+                    "--workers",
+                    str(workers),
+                ]
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(evaluate_policies.main(argv), 0)
+                reports.append(json.loads(out.read_text(encoding="utf-8")))
+
+        self.assertEqual(reports[0], reports[1])
+        self.assertTrue(reports[0]["batteries"])
 
 
 if __name__ == "__main__":

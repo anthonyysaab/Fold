@@ -80,6 +80,11 @@ class MatchResult:
     # chip delta must not be divided by hands it never played; in multiway
     # that subsidized ruin by up to a third.
     hands_by_agent: dict[str, int] = field(default_factory=dict)
+    # Branch-set diagnostics, summed across sessions: how many decisions
+    # collapsed to a single executable action and were dropped, and the
+    # histogram of emitted branch-set sizes.
+    single_branch_groups: int = 0
+    emitted_branch_counts: dict[int, int] = field(default_factory=dict)
 
     def bb_per_100(self, agent_id: str) -> float:
         hands = self.hands_by_agent.get(agent_id, self.hands)
@@ -118,6 +123,14 @@ _FAMILY_BRANCHES = {
     ),
 }
 
+# These are candidates, not the emitted set: a branch survives only if the
+# engine executes it as an action no earlier branch already executes
+# (`_probe_branch_set`). When two collide the surviving label is the one that
+# names the executed action honestly -- a "fold" the engine turns into a free
+# check is a check, and the smaller wager is the size the engine actually
+# sized -- so this order decides which head slot carries the label.
+_BRANCH_DEDUP_ORDER = ("check_call", "fold", "aggress_half_pot", "aggress_pot")
+
 
 class TableSimulator:
     """Deal seeded hands between agents that speak the Arena snapshot dialect."""
@@ -145,6 +158,12 @@ class TableSimulator:
         self.collect_counterfactuals = collect_counterfactuals
         self.counterfactual_rollouts = counterfactual_rollouts
         self._evaluator = _shared_evaluator()
+        # Branch-set diagnostics: group size stops being constant once
+        # branches are emitted by executability and distinctness, and the
+        # emitted sizes are the measurement that says how much of the old
+        # label degeneracy was definitional.
+        self.single_branch_groups = 0
+        self.emitted_branch_counts: dict[int, int] = {}
 
     # ------------------------------------------------------------------
     # Match level
@@ -768,11 +787,26 @@ class TableSimulator:
                 f"sim-{self.seed}-{hand_index}:{point.agent_id}:"
                 f"{point.decision_ordinal}"
             )
-            branches = [
+            candidates = [
                 branch
                 for family in point.legal_families
                 for branch in _FAMILY_BRANCHES[family]
             ]
+            branches, absorption = self._emitted_branches(
+                initial_seats,
+                button_index,
+                hand_index,
+                point,
+                candidates,
+                deck_for_test,
+            )
+            if len(branches) < 2:
+                # No choice exists, so the group carries no preference to
+                # learn: every centred target is exactly zero by
+                # construction. Dropping it here keeps it out of feature
+                # normalization and out of the rollout budget.
+                self.single_branch_groups += 1
+                continue
             outcomes: dict[str, float] = {}
             risks: dict[str, float] = {}
             for label, family, pot_fraction in branches:
@@ -789,8 +823,8 @@ class TableSimulator:
                     )
                     for rollout in range(self.counterfactual_rollouts)
                 ]
-                outcomes[label] = sum(outcome for outcome, _ in samples) / len(samples)
-                risks[label] = sum(risk for _, risk in samples) / len(samples)
+                outcomes[label] = sum(sample[0] for sample in samples) / len(samples)
+                risks[label] = sum(sample[1] for sample in samples) / len(samples)
             baseline = sum(outcomes.values()) / len(outcomes)
             for label, family, _ in branches:
                 examples.append(
@@ -808,9 +842,110 @@ class TableSimulator:
                         decision_id=decision_id,
                         inclusion_count=inclusion_counts[point.agent_id],
                         action_branch=label,
+                        branch_absorption=tuple(sorted(absorption.items())),
                     )
                 )
         return examples
+
+    def _emitted_branches(
+        self,
+        initial_seats: list[SimSeat],
+        button_index: int,
+        hand_index: int,
+        point: _CounterfactualPoint,
+        candidates: Sequence[tuple[str, str, float | None]],
+        deck_for_test: Sequence[str] | None,
+    ) -> tuple[list[tuple[str, str, float | None]], dict[str, str]]:
+        """Keep the candidate branches that name distinct executed actions.
+
+        Deduplication is on the **executed** action, never on the nominal
+        family: the whole defect this closes is that the two disagree. One
+        mechanism covers all three cases -- a `fold` the engine turns into a
+        free check collides with `check_call`; an `aggress` with no legal
+        bet or raise falls through to a check and collides the same way; and
+        the two aggression sizes collide once the risk cap or the
+        `raiseRange` clamp merges them.
+
+        Returns the surviving branches and the absorption map -- every
+        candidate label pointing at the survivor that carries its executed
+        action. Consumers need that map to find the branch holding the value
+        of an action whose own label was dropped.
+        """
+
+        executed = self._probe_branch_set(
+            initial_seats, button_index, hand_index, point, candidates, deck_for_test
+        )
+        rank = {label: index for index, label in enumerate(_BRANCH_DEDUP_ORDER)}
+        survivors: dict[tuple[str, int | None], str] = {}
+        for label, _, _ in sorted(candidates, key=lambda entry: rank[entry[0]]):
+            survivors.setdefault(executed[label], label)
+        absorption = {label: survivors[executed[label]] for label, _, _ in candidates}
+        keep = set(survivors.values())
+        branches = [entry for entry in candidates if entry[0] in keep]
+        self.emitted_branch_counts[len(branches)] = (
+            self.emitted_branch_counts.get(len(branches), 0) + 1
+        )
+        return branches, absorption
+
+    def _probe_branch_set(
+        self,
+        initial_seats: list[SimSeat],
+        button_index: int,
+        hand_index: int,
+        point: _CounterfactualPoint,
+        candidates: Sequence[tuple[str, str, float | None]],
+        deck_for_test: Sequence[str] | None,
+    ) -> dict[str, tuple[str, int | None]]:
+        """Executed ``(action, amount)`` per candidate branch, in one replay.
+
+        ``decide_forced`` is a pure function of the branch-point table, and
+        that table is identical in every rollout: the chance salt resamples
+        only the continuation, and the replayed prefix is deterministic. So
+        the branch set is settled by a single prefix replay rather than by
+        one full rollout per candidate, which is what saves the duplicate
+        aggression rollouts. That invariant is load-bearing, so it is
+        checked against reality rather than assumed: see
+        ``test_table_simulator.BranchSetTests.test_probe_matches_every_rollout``,
+        which asserts the probe's answer equals what each rollout submits.
+        """
+
+        seats = copy.deepcopy(initial_seats)
+        target = next(seat for seat in seats if seat.agent_id == point.agent_id)
+        probe = _BranchProbePolicy(
+            target.agent,
+            decision_ordinal=point.decision_ordinal,
+            candidates=candidates,
+            risk_fraction=point.proposed_risk_fraction,
+        )
+        target.agent = probe
+        replay = TableSimulator(
+            small_blind=self.small_blind,
+            big_blind=self.big_blind,
+            starting_stack=self.starting_stack,
+            seed=self.seed,
+        )
+        result = MatchResult(
+            hands=0,
+            big_blind=self.big_blind,
+            chip_deltas={seat.agent_id: 0 for seat in seats},
+            decisions={seat.agent_id: 0 for seat in seats},
+        )
+        try:
+            replay._play_hand(
+                seats,
+                button_index=button_index,
+                hand_index=hand_index,
+                result=result,
+                deck_for_test=deck_for_test,
+                chance_salt=(
+                    0,
+                    _REVEALED_BOARD.get(point.street, 0),
+                    point.agent_id,
+                ),
+            )
+        except _BranchProbeSignal as signal:
+            return signal.executed
+        raise SimulationError("branch probe did not reach its target decision")
 
     def _counterfactual_outcome(
         self,
@@ -822,7 +957,7 @@ class TableSimulator:
         pot_fraction: float | None,
         rollout: int,
         deck_for_test: Sequence[str] | None,
-    ) -> tuple[int, float]:
+    ) -> tuple[int, float, tuple[str, int | None] | None]:
         seats = copy.deepcopy(initial_seats)
         target = next(seat for seat in seats if seat.agent_id == point.agent_id)
         forced = _ForcedFamilyPolicy(
@@ -862,7 +997,11 @@ class TableSimulator:
             raise SimulationError(
                 "counterfactual replay did not reach its target decision"
             )
-        return hand.chip_deltas[point.agent_id], forced.submitted_risk_fraction
+        return (
+            hand.chip_deltas[point.agent_id],
+            forced.submitted_risk_fraction,
+            forced.executed_action,
+        )
 
 
 def run_sessions(
@@ -927,6 +1066,15 @@ def run_sessions(
                 total.hands_by_agent.get(agent_id, 0) + count
             )
         total.examples.extend(result.examples)
+        # Branch-set diagnostics live on the simulator, not the match result,
+        # and each session builds a fresh simulator -- so without this the
+        # drop rate the design requires reporting is computed and thrown away
+        # once per session.
+        total.single_branch_groups += simulator.single_branch_groups
+        for size, count in simulator.emitted_branch_counts.items():
+            total.emitted_branch_counts[size] = (
+                total.emitted_branch_counts.get(size, 0) + count
+            )
         session += 1
     return total
 
@@ -969,6 +1117,62 @@ class RecordingPolicy:
         )
 
 
+class _BranchProbeSignal(Exception):
+    """Carries the executed action of every candidate branch, then unwinds.
+
+    The probe only needs the hand's deterministic prefix, so it stops the
+    replay at the branch point instead of playing a continuation whose
+    result it would discard.
+    """
+
+    def __init__(self, executed: dict[str, tuple[str, int | None]]) -> None:
+        super().__init__("branch probe reached its target decision")
+        self.executed = executed
+
+
+class _BranchProbePolicy:
+    """Replay to one decision, price every candidate branch, and stop."""
+
+    def __init__(
+        self,
+        policy: Any,
+        *,
+        decision_ordinal: int,
+        candidates: Sequence[tuple[str, str, float | None]],
+        risk_fraction: float,
+    ) -> None:
+        self.policy = policy
+        self.decision_ordinal = decision_ordinal
+        self.candidates = candidates
+        self.risk_fraction = risk_fraction
+        self.calls = 0
+
+    def decide(self, table: Mapping[str, Any]) -> dict:
+        original = self.policy.decide(table)
+        if self.calls != self.decision_ordinal:
+            self.calls += 1
+            return original
+        executed: dict[str, tuple[str, int | None]] = {}
+        for label, family, pot_fraction in self.candidates:
+            # Each candidate decides from its own copy of the policy state
+            # the real rollout will hold at this point -- after the original
+            # decide, before any forcing -- so one probe cannot leak tracker
+            # or RNG movement into the next.
+            probe = copy.deepcopy(self.policy)
+            if hasattr(probe, "decide_forced"):
+                payload = dict(
+                    probe.decide_forced(table, family=family, pot_fraction=pot_fraction)
+                )
+            else:
+                payload = _payload_for_family(table, family, self.risk_fraction)
+            amount = payload.get("amount")
+            executed[label] = (
+                str(payload.get("action")),
+                None if amount is None else int(amount),
+            )
+        raise _BranchProbeSignal(executed)
+
+
 class _ForcedFamilyPolicy:
     """Replay one policy trajectory while replacing exactly one decision."""
 
@@ -991,6 +1195,9 @@ class _ForcedFamilyPolicy:
         self.calls = 0
         self.forced = False
         self.submitted_risk_fraction: float | None = None
+        # What the engine actually did with this branch, for the probe's
+        # agreement check.
+        self.executed_action: tuple[str, int | None] | None = None
 
     def decide(self, table: Mapping[str, Any]) -> dict:
         # Calling the original policy keeps its tracker/RNG state aligned for
@@ -1017,6 +1224,11 @@ class _ForcedFamilyPolicy:
             payload = _payload_for_family(table, self.family, self.risk_fraction)
         payload["_counterfactual_rollout"] = self.rollout
         self.submitted_risk_fraction = _payload_risk_fraction(table, payload)
+        amount = payload.get("amount")
+        self.executed_action = (
+            str(payload.get("action")),
+            None if amount is None else int(amount),
+        )
         return payload
 
 
@@ -1113,6 +1325,24 @@ class ScriptedAgent:
 
     policy_version = "scripted"
 
+    def _fold_probability(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any]
+    ) -> float:
+        """Chance of folding when facing a wager.
+
+        Constant here, and that constant is precisely the defect precondition
+        P3 names: a fold frequency that ignores the size of the bet makes
+        expected value linear in that size, so the largest legal wager
+        dominates and any model trained against this archetype learns to
+        overbet. :class:`TexturedAgent` overrides this.
+
+        Implementations must not draw from the caller's RNG. The caller has
+        already spent exactly one ``roll.random()`` for this decision, and
+        consuming more would desynchronise counterfactual replay.
+        """
+
+        return self.fold_vs_bet
+
     def decide(self, table: Mapping[str, Any]) -> dict:
         allowed = table["allowedActions"]
         available = set(allowed["availableActions"])
@@ -1138,7 +1368,11 @@ class ScriptedAgent:
                     "message": "pressure",
                 }
         facing = int(allowed.get("callChips") or 0) > 0
-        if facing and roll.random() < self.fold_vs_bet and "fold" in available:
+        if (
+            facing
+            and roll.random() < self._fold_probability(table, allowed)
+            and "fold" in available
+        ):
             return {"action": "fold", "message": "release"}
         if roll.random() < self.aggression:
             for action, range_name in (("raise", "raiseRange"), ("bet", "betRange")):
@@ -1157,6 +1391,109 @@ class ScriptedAgent:
         return {"action": "fold", "message": "done"}
 
 
+_RANK_ORDER = "23456789TJQKA"
+
+# Half pot is the reference price: a villain laid these odds folds at its base
+# frequency, and the size response is measured as a deviation from it.
+_REFERENCE_PRICE = 1.0 / 3.0
+
+
+def board_coordination(board_cards: Sequence[str]) -> float:
+    """How connected a revealed board is, on a 0..1 scale.
+
+    Reads only the public board, never a hole card, so an archetype keyed on
+    this stays ``reads_cards = False`` and the counterfactual chance salt can
+    still resample its holdings. The already-revealed board is held fixed
+    across rollouts by that same salt, so this value is stable exactly where
+    replay consistency requires it and moves only on genuinely new cards.
+    """
+
+    cards = [card for card in board_cards if len(card) >= 2]
+    if not cards:
+        return 0.0
+
+    suits: dict[str, int] = {}
+    ranks: list[int] = []
+    for card in cards:
+        suits[card[-1]] = suits.get(card[-1], 0) + 1
+        position = _RANK_ORDER.find(card[0].upper())
+        if position >= 0:
+            ranks.append(position)
+
+    flush = max(suits.values())
+    suited = 0.0 if flush < 2 else 0.35 if flush == 2 else 0.8 if flush == 3 else 1.0
+
+    distinct = sorted(set(ranks))
+    paired = 1.0 if len(distinct) < len(ranks) else 0.0
+    if len(distinct) < 2:
+        connected = 0.0
+    else:
+        # Tightest window spanned by any two ranks; adjacent ranks score 1.0
+        # and anything five apart or wider scores 0.
+        span = min(
+            distinct[index + 1] - distinct[index] for index in range(len(distinct) - 1)
+        )
+        connected = max(0.0, 1.0 - (span - 1) / 4.0)
+
+    score = 0.45 * suited + 0.35 * connected + 0.20 * paired
+    return min(1.0, max(0.0, score))
+
+
+@dataclass
+class TexturedAgent(ScriptedAgent):
+    """Opponent that prices a call instead of folding at a fixed rate.
+
+    This is precondition **P3**, phase one. :class:`ScriptedAgent` folds with a
+    constant probability no matter what it is charged, which makes expected
+    value linear in bet size: a larger wager buys the same fold equity at
+    strictly more profit, and the villain's range never narrows, so the EV
+    optimum is always the corner of the legal range. That is the measured
+    cause of candidate v7-0001's preference for maximum-size aggression, and
+    it is why no conclusion about sizing can be drawn against these opponents.
+
+    Here the fold frequency rises with the price being laid and with how
+    connected the board is, which puts a cost on overbetting and moves the
+    optimum into the interior of the size range.
+
+    Both inputs -- the wager and the revealed board -- are **public**, so
+    ``reads_cards`` stays ``False`` and the chance salt still resamples this
+    agent's hole cards. The label therefore remains a true ``Q(s, a)``. An
+    archetype that read its own hole cards would have to be excluded from
+    resampling, which would reintroduce the frozen-runout defect that closed
+    candidate 0016; that is a separate, later problem and it is not this one.
+
+    ``size_response`` and ``texture_response`` set how hard the archetype
+    bites. At the defaults a villain facing a base rate of 0.5 folds 0.50 at
+    half pot, about 0.60 at pot, and about 0.70 at two times pot.
+    """
+
+    size_response: float = 0.6
+    texture_response: float = 0.15
+    min_fold: float = 0.02
+    max_fold: float = 0.95
+
+    policy_version = "textured"
+
+    def _fold_probability(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any]
+    ) -> float:
+        call_chips = int(allowed.get("callChips") or 0)
+        pot = int(table.get("potChips") or 0)
+        total = pot + call_chips
+        # Pot odds being laid: half pot prices at 1/3, pot at 1/2, two times
+        # pot at 2/3. Larger wagers are worse prices and get folded on more.
+        price = (call_chips / total) if total > 0 else _REFERENCE_PRICE
+
+        texture = board_coordination(table.get("boardCards") or ())
+
+        probability = (
+            self.fold_vs_bet
+            + self.size_response * (price - _REFERENCE_PRICE)
+            + self.texture_response * texture
+        )
+        return min(self.max_fold, max(self.min_fold, probability))
+
+
 def calibrated_lineup(seed: int = 5) -> list[tuple[str, ScriptedAgent]]:
     """Opponent set spanning the audited arena distribution plus extremes."""
 
@@ -1169,6 +1506,7 @@ def calibrated_lineup(seed: int = 5) -> list[tuple[str, ScriptedAgent]]:
 
 
 __all__ = [
+    "board_coordination",
     "calibrated_lineup",
     "HandResult",
     "MatchResult",
@@ -1176,4 +1514,5 @@ __all__ = [
     "ScriptedAgent",
     "SimulationError",
     "TableSimulator",
+    "TexturedAgent",
 ]

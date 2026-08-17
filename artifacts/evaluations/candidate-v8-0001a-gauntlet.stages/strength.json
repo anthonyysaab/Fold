@@ -1,0 +1,252 @@
+{
+  "arenas": {
+    "five-max-lineup": {
+      "hands": 1200,
+      "opponent_seed": 43,
+      "seed": 500
+    },
+    "vs-median-hu": {
+      "hands": 2000,
+      "opponent_seed": 41,
+      "seed": 400
+    }
+  },
+  "caveat": "every battery opponent is card-blind (DECISIONS \u00a75): separation measured here says what the policy does, not what a real field would let it get away with; the field benchmark +0.150 was measured on a similar but not identical instrument and window",
+  "metric": "strength_metric.strength_percentile (canonical percentile scale)",
+  "policies": {
+    "candidate-v7-0001c": {
+      "all_streets": {
+        "ci95": [
+          0.1492,
+          0.1899
+        ],
+        "decisions": 4523,
+        "families": {
+          "aggress": {
+            "count": 2921,
+            "mean_strength": 0.5663
+          },
+          "check_call": {
+            "count": 762,
+            "mean_strength": 0.3827
+          },
+          "fold": {
+            "count": 840,
+            "mean_strength": 0.3968
+          }
+        },
+        "se": 0.0104,
+        "separation_aggress_minus_fold": 0.1695
+      },
+      "flop": {
+        "ci95": [
+          0.1193,
+          0.198
+        ],
+        "decisions": 1127,
+        "families": {
+          "aggress": {
+            "count": 726,
+            "mean_strength": 0.5707
+          },
+          "check_call": {
+            "count": 194,
+            "mean_strength": 0.4062
+          },
+          "fold": {
+            "count": 207,
+            "mean_strength": 0.4121
+          }
+        },
+        "se": 0.0201,
+        "separation_aggress_minus_fold": 0.1586
+      },
+      "preflop": {
+        "ci95": [
+          0.126,
+          0.1791
+        ],
+        "decisions": 2554,
+        "families": {
+          "aggress": {
+            "count": 1733,
+            "mean_strength": 0.5463
+          },
+          "check_call": {
+            "count": 288,
+            "mean_strength": 0.4268
+          },
+          "fold": {
+            "count": 533,
+            "mean_strength": 0.3938
+          }
+        },
+        "se": 0.0136,
+        "separation_aggress_minus_fold": 0.1526
+      },
+      "river": {
+        "ci95": [
+          0.231,
+          0.3766
+        ],
+        "decisions": 327,
+        "families": {
+          "aggress": {
+            "count": 171,
+            "mean_strength": 0.6567
+          },
+          "check_call": {
+            "count": 118,
+            "mean_strength": 0.2847
+          },
+          "fold": {
+            "count": 38,
+            "mean_strength": 0.3529
+          }
+        },
+        "se": 0.0372,
+        "separation_aggress_minus_fold": 0.3038
+      },
+      "turn": {
+        "ci95": [
+          0.154,
+          0.2912
+        ],
+        "decisions": 515,
+        "families": {
+          "aggress": {
+            "count": 291,
+            "mean_strength": 0.6212
+          },
+          "check_call": {
+            "count": 162,
+            "mean_strength": 0.3476
+          },
+          "fold": {
+            "count": 62,
+            "mean_strength": 0.3986
+          }
+        },
+        "se": 0.035,
+        "separation_aggress_minus_fold": 0.2226
+      }
+    },
+    "candidate-v8-0001a": {
+      "all_streets": {
+        "ci95": [
+          0.0906,
+          0.1329
+        ],
+        "decisions": 4400,
+        "families": {
+          "aggress": {
+            "count": 3133,
+            "mean_strength": 0.5422
+          },
+          "check_call": {
+            "count": 530,
+            "mean_strength": 0.4737
+          },
+          "fold": {
+            "count": 737,
+            "mean_strength": 0.4304
+          }
+        },
+        "se": 0.0108,
+        "separation_aggress_minus_fold": 0.1117
+      },
+      "flop": {
+        "ci95": [
+          0.0941,
+          0.1835
+        ],
+        "decisions": 1055,
+        "families": {
+          "aggress": {
+            "count": 758,
+            "mean_strength": 0.5502
+          },
+          "check_call": {
+            "count": 138,
+            "mean_strength": 0.4964
+          },
+          "fold": {
+            "count": 159,
+            "mean_strength": 0.4115
+          }
+        },
+        "se": 0.0228,
+        "separation_aggress_minus_fold": 0.1388
+      },
+      "preflop": {
+        "ci95": [
+          0.0331,
+          0.0872
+        ],
+        "decisions": 2490,
+        "families": {
+          "aggress": {
+            "count": 1826,
+            "mean_strength": 0.5111
+          },
+          "check_call": {
+            "count": 181,
+            "mean_strength": 0.5648
+          },
+          "fold": {
+            "count": 483,
+            "mean_strength": 0.451
+          }
+        },
+        "se": 0.0138,
+        "separation_aggress_minus_fold": 0.0601
+      },
+      "river": {
+        "ci95": [
+          0.2679,
+          0.4221
+        ],
+        "decisions": 328,
+        "families": {
+          "aggress": {
+            "count": 208,
+            "mean_strength": 0.6618
+          },
+          "check_call": {
+            "count": 88,
+            "mean_strength": 0.3392
+          },
+          "fold": {
+            "count": 32,
+            "mean_strength": 0.3168
+          }
+        },
+        "se": 0.0393,
+        "separation_aggress_minus_fold": 0.345
+      },
+      "turn": {
+        "ci95": [
+          0.1797,
+          0.2985
+        ],
+        "decisions": 527,
+        "families": {
+          "aggress": {
+            "count": 341,
+            "mean_strength": 0.6175
+          },
+          "check_call": {
+            "count": 123,
+            "mean_strength": 0.4103
+          },
+          "fold": {
+            "count": 63,
+            "mean_strength": 0.3784
+          }
+        },
+        "se": 0.0303,
+        "separation_aggress_minus_fold": 0.2391
+      }
+    }
+  }
+}

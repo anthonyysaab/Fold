@@ -1,0 +1,36 @@
+MODE: train only (init seed index 0 of three; corpus reused via --examples-in, no harvest)
+INTERPRETER: C:\Users\user\AppData\Local\Python\bin\python.exe -> pythoncore-3.14-64 (3.14.2, torch 2.10.0+cu128, CUDA Quadro RTX 3000)
+COMMAND: python -m tools.self_play_cycle --model-version candidate-v7-0003a --init-seed 89 --examples-in artifacts/corpora/candidate-v7-0003.corpus --architecture v7 --device cuda --batch-size 256 --epochs 40 --learning-rate 0.001 --reinforcement-multiplier 1.0 --behavior-warmup-epochs 0 --return-scale-pct 50 --split-seed 17 --equity-trials 80 --starting-stack 6000
+RECIPE: hyperparameters are the $trainerArgs block of artifacts/training-runs/candidate-v7-0001.ps1, unchanged; --split-seed held at 17 across all three seeds, only --init-seed varies (DECISIONS L34).
+NOTE: --counterfactual-rollouts is not in that $trainerArgs block, so the manifest records counterfactual_rollouts_per_family=1 exactly as candidate-v7-0001b/c did. The corpus was in fact harvested at 2 rollouts per family; the field is provenance only and does not enter training.
+----------------------------------------------------------------------
+training device: cuda (Quadro RTX 3000)
+loaded 503342 corpus examples from artifacts/corpora/candidate-v7-0003.corpus
+counterfactual reward examples: 117447; behavior-only examples: 385895
+examples: 503342
+train_loss: 0.044501
+validation_loss: 0.052558
+validation_degenerate_group_fraction: 0.141860
+  (accuracy and regret below exclude those groups; every branch ties there, so no predictor can be wrong)
+validation_best_action_accuracy: 0.491719
+validation_mean_regret_pct: 7.048591
+validation_action_value_mae_pct: 6.337393
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v7-0003a.manifest.json
+state: candidate (promotion requires the evaluation gate)
+----------------------------------------------------------------------
+EXIT 0; stderr empty (candidate-v7-0003a.train.err.txt is 0 bytes).
+best_epoch 19 of 40 (29 run, early stop patience 10); best weighted validation loss 0.051832.
+TRIVIAL-BASELINE FLOOR (validation, 7740 groups, 1098 degenerate, 0 single-branch, 6642 scored):
+  candidate                 acc 0.491719  regret 7.048591   (chance acc 0.381223)
+  always_fold               acc 0.420054  regret 9.110606
+  always_check_call         acc 0.367359  regret 8.419188
+  always_aggress_half_pot   acc 0.335291  regret 8.560551
+  always_aggress_pot        acc 0.395212  regret 8.516522
+  uniform_random_legal      acc 0.385878  regret 8.569236
+  PASS: beats every baseline on both accuracy and regret.
+CAVEAT: branch_absorption is not serialized by save_training_corpus, so every group here
+carries an empty absorption map and _intent_branch falls back to min(returns). Re-scoring the
+same split with an honest absorption raises always_aggress_pot to acc 0.421409 / regret 7.912391
+and always_aggress_half_pot to acc 0.343571 / regret 8.301736; always_fold and always_check_call
+are unchanged. The candidate still passes under that harder floor (acc +0.070310, regret -0.863800).
+Nothing promoted, deployed, or evaluated; artifacts/approved.json untouched.

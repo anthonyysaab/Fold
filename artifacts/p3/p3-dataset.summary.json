@@ -1,0 +1,68 @@
+{
+  "generator": {
+    "tool": "tools.build_p3_dataset",
+    "roots": [
+      "foreign play data\\20260812T082057Z_poker-playground_s13_top15",
+      "foreign play data\\20260815T210237Z_poker-playground_s14_top15"
+    ],
+    "excluded_agents": [
+      "Fold-ver-4"
+    ],
+    "limit": null,
+    "validation_modulus": 5
+  },
+  "counts": {
+    "files": 1196,
+    "tables_with_rows": 1195,
+    "rows": 7320,
+    "folds": 5029,
+    "train_rows": 5792,
+    "val_rows": 1528
+  },
+  "per_street": {
+    "preflop": {
+      "rows": 6473,
+      "folds": 4521,
+      "train": 5109,
+      "val": 1364
+    },
+    "flop": {
+      "rows": 555,
+      "folds": 372,
+      "train": 455,
+      "val": 100
+    },
+    "turn": {
+      "rows": 191,
+      "folds": 89,
+      "train": 154,
+      "val": 37
+    },
+    "river": {
+      "rows": 101,
+      "folds": 47,
+      "train": 74,
+      "val": 27
+    }
+  },
+  "per_collection": {
+    "20260812T082057Z_poker-playground_s13_top15": {
+      "tables_with_rows": 587,
+      "action_events": 4508,
+      "board_corrected": 340,
+      "not_facing_a_wager": 844,
+      "timeout_actions": 309
+    },
+    "20260815T210237Z_poker-playground_s14_top15": {
+      "tables_with_rows": 608,
+      "action_events": 4576,
+      "board_corrected": 345,
+      "excluded_agent_decisions": 98,
+      "not_facing_a_wager": 822,
+      "timeout_actions": 447
+    }
+  },
+  "files": {
+    "dataset": "p3-dataset.jsonl"
+  }
+}

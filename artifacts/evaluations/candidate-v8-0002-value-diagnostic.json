@@ -1,0 +1,127 @@
+{
+  "corpus": "C:\\Users\\user\\Fold-ver-4 (multiway)\\artifacts\\phase_b\\candidate-v8-0002.phase-b.jsonl.gz",
+  "invariants": {
+    "I1_targets_centered_max_abs_sum": 2.706168622523819e-16,
+    "I2_constant_predictor_loss_independent_of_constant": true,
+    "I3_self_scored_loss_zero": true
+  },
+  "path": "stdlib serve path (_forward_v3 + compose_branch_values), residual on",
+  "reduction": "per-decision mean of squared error over emitted branches, then mean over decisions (the trainer's value_loss)",
+  "seeds": [
+    {
+      "overall": {
+        "constant_predictor_mse": 0.009258104740035068,
+        "decisions": 506,
+        "model_mse": 0.009194796457101598,
+        "pct_better_than_constant": 0.6838147192232968
+      },
+      "per_street": {
+        "flop": {
+          "constant_predictor_mse": 0.019095229264048153,
+          "decisions": 87,
+          "model_mse": 0.018608970353288755,
+          "pct_better_than_constant": 2.5464942265705615
+        },
+        "preflop": {
+          "constant_predictor_mse": 0.007384433471077993,
+          "decisions": 388,
+          "model_mse": 0.007359953350983495,
+          "pct_better_than_constant": 0.3315097927332866
+        },
+        "river": {
+          "constant_predictor_mse": 0.001143026013845847,
+          "decisions": 15,
+          "model_mse": 0.0010463434941882157,
+          "pct_better_than_constant": 8.458470628532034
+        },
+        "turn": {
+          "constant_predictor_mse": 0.008813154718725472,
+          "decisions": 16,
+          "model_mse": 0.010139345872679117,
+          "pct_better_than_constant": -15.047859662963404
+        }
+      },
+      "seed": "a (401)",
+      "version": "candidate-v8-0002a"
+    },
+    {
+      "overall": {
+        "constant_predictor_mse": 0.009258104740035068,
+        "decisions": 506,
+        "model_mse": 0.009386319843885058,
+        "pct_better_than_constant": -1.3848958015731494
+      },
+      "per_street": {
+        "flop": {
+          "constant_predictor_mse": 0.019095229264048153,
+          "decisions": 87,
+          "model_mse": 0.019364804591060537,
+          "pct_better_than_constant": -1.4117417669340604
+        },
+        "preflop": {
+          "constant_predictor_mse": 0.007384433471077993,
+          "decisions": 388,
+          "model_mse": 0.007411784213272206,
+          "pct_better_than_constant": -0.37038375795970246
+        },
+        "river": {
+          "constant_predictor_mse": 0.001143026013845847,
+          "decisions": 15,
+          "model_mse": 0.001183419472700008,
+          "pct_better_than_constant": -3.5339054723918517
+        },
+        "turn": {
+          "constant_predictor_mse": 0.008813154718725472,
+          "decisions": 16,
+          "model_mse": 0.010701017171466423,
+          "pct_better_than_constant": -21.420961199396338
+        }
+      },
+      "seed": "b (402)",
+      "version": "candidate-v8-0002b"
+    },
+    {
+      "overall": {
+        "constant_predictor_mse": 0.009258104740035068,
+        "decisions": 506,
+        "model_mse": 0.009337369751074397,
+        "pct_better_than_constant": -0.8561688732744877
+      },
+      "per_street": {
+        "flop": {
+          "constant_predictor_mse": 0.019095229264048153,
+          "decisions": 87,
+          "model_mse": 0.018780090732839285,
+          "pct_better_than_constant": 1.6503521735777182
+        },
+        "preflop": {
+          "constant_predictor_mse": 0.007384433471077993,
+          "decisions": 388,
+          "model_mse": 0.007444001160782767,
+          "pct_better_than_constant": -0.8066656695883134
+        },
+        "river": {
+          "constant_predictor_mse": 0.001143026013845847,
+          "decisions": 15,
+          "model_mse": 0.0026366801842350896,
+          "pct_better_than_constant": -130.67543103097586
+        },
+        "turn": {
+          "constant_predictor_mse": 0.008813154718725472,
+          "decisions": 16,
+          "model_mse": 0.010188659196211857,
+          "pct_better_than_constant": -15.607401905288532
+        }
+      },
+      "seed": "c (403)",
+      "version": "candidate-v8-0002c"
+    }
+  ],
+  "split": {
+    "split_seed": 17,
+    "train_decisions": 4683,
+    "validation_decisions": 506,
+    "validation_fraction": 0.1
+  },
+  "study": "candidate-v8-0002-phase-b-value-diagnostic"
+}

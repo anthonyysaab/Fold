@@ -1,0 +1,73 @@
+{
+  "channel": "vs-p3",
+  "date": "2026-08-16",
+  "fit_new": "artifacts/p3/p3-fit.json",
+  "fit_old": "artifacts/p3/p3-fit.pre-clamp-2026-08-16.json",
+  "hands_per_seed": 1000,
+  "instrument_gate_old_fit_reproduces_published": true,
+  "note": "8-seed rerun of the vs-p3 arms most price-sensitive to the 2026-08-16 price-support clamp. Old-fit arms reproduced the published 16-seed gate per-seed values exactly (first 8 seeds) before the new numbers were read. All three arms are bit-identical under old and new fits: measured clamp exposure is zero for these heroes (max price laid 0.3333, a pot-sized bet; lowest cap 0.3626) \u2014 the clamp binds only against overbets, which no frozen gate arm ever lays.",
+  "per_seed": {
+    "new:heuristic-aggressive-v6": [
+      45.28,
+      41.95,
+      94.58,
+      60.79,
+      27.43,
+      45.92,
+      81.51,
+      38.72
+    ],
+    "new:trivial-always_aggress_large": [
+      121.79,
+      114.93,
+      146.74,
+      185.65,
+      99.89,
+      98.35,
+      119.75,
+      92.39
+    ],
+    "new:trivial-always_aggress_small": [
+      90.4,
+      186.4,
+      98.61,
+      122.34,
+      112.89,
+      76.41,
+      154.84,
+      129.34
+    ],
+    "old:heuristic-aggressive-v6": [
+      45.28,
+      41.95,
+      94.58,
+      60.79,
+      27.43,
+      45.92,
+      81.51,
+      38.72
+    ],
+    "old:trivial-always_aggress_large": [
+      121.79,
+      114.93,
+      146.74,
+      185.65,
+      99.89,
+      98.35,
+      119.75,
+      92.39
+    ],
+    "old:trivial-always_aggress_small": [
+      90.4,
+      186.4,
+      98.61,
+      122.34,
+      112.89,
+      76.41,
+      154.84,
+      129.34
+    ]
+  },
+  "seeds": 8,
+  "study": "p3-gate-arms-rerun-post-clamp"
+}

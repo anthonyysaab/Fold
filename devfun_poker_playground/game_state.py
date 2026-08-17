@@ -121,6 +121,36 @@ def effective_stack_chips(table: Mapping[str, Any]) -> int:
     return min(stack, max(opponent_stacks, default=stack))
 
 
+# Board cards still to be dealt on each street. The river is 0 by
+# definition: paying there buys a showdown, not a card.
+_REVEALS_REMAINING = {"preflop": 3, "flop": 2, "turn": 1, "river": 0}
+
+
+def card_reveal_expense(table: Mapping[str, Any], price_chips: int) -> float:
+    """What it costs to reach the next card, as a share of what can be lost.
+
+    Chips committed before a reveal are chips staked on cards nobody has
+    seen. The engine already knows how far it is from the river (the risk
+    temperature's ``distance_from_river`` factor) but nowhere prices that
+    distance in chips, so a decision cannot tell a cheap look at the turn
+    from staking the stack on it.
+
+    Measured on live play 2026-08-15: the deployment's worst hand paid
+    100% of the effective stack on the turn holding ``QsJc`` into a
+    three-club ``KcJd3cQc`` board, then folded the river for -3,768 chips.
+    Nine such committed-then-folded hands cost -5,858 in total, every one a
+    complete loss of the commitment.
+
+    Public data only -- price, stacks, and the street -- so this is equally
+    usable as a gate input and as a learned feature. Returns ``[0, 1]``.
+    """
+
+    at_risk = max(1, effective_stack_chips(table))
+    share = min(1.0, max(0, price_chips) / at_risk)
+    remaining = _REVEALS_REMAINING.get(str(table.get("street") or "").casefold(), 0)
+    return share * (remaining / 3.0)
+
+
 def _blind_seats(table: Mapping[str, Any]) -> tuple[int | None, int | None]:
     small_blind = _integer(table.get("smallBlindChips"), "smallBlindChips", minimum=1)
     big_blind = _integer(table.get("bigBlindChips"), "bigBlindChips", minimum=1)

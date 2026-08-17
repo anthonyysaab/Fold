@@ -31,9 +31,11 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
+from devfun_poker_playground.decision_engine import SharedEquityCache
 from devfun_poker_playground.foreign_data import load_foreign_training_examples
 from devfun_poker_playground.learned_policy import load_policy
 from devfun_poker_playground.offline_trainer import (
+    print_branch_summary,
     TRAINING_OBJECTIVE,
     TrainingConfig,
     train_candidate,
@@ -45,6 +47,7 @@ from devfun_poker_playground.table_simulator import (
     RecordingPolicy,
     run_sessions,
     ScriptedAgent,
+    TexturedAgent,
 )
 from devfun_poker_playground.training_telemetry import (
     load_training_corpus,
@@ -53,10 +56,33 @@ from devfun_poker_playground.training_telemetry import (
 
 
 def _hero(equity_trials: int, on_policy: str | None) -> RecordingPolicy:
+    # equity_cache: harvest-only memoization, measured at an 80.1% hit rate
+    # here (branches x rollouts revisit the pinned decision state) and 0.0%
+    # on the serve path, which is why live construction never passes one.
+    #
+    # hyper_aggression_chance=0.0: the anti-modeling roll is switched OFF for
+    # harvesting, and only for harvesting. Its whole purpose is to stop an
+    # opponent modelling us, but every harvest opponent is a ScriptedAgent or
+    # TexturedAgent -- stateless seeded RNG with no memory of us and no
+    # capacity to model anyone. Against a non-modelling opponent the noise is
+    # all cost: it is excluded from training labels by construction, so it
+    # burns harvest decisions outright, and it perturbs the trajectories that
+    # the surrounding labelled decisions are conditioned on. Live play keeps
+    # its floor (HYPER_AGGRESSION_CHANCE), where opponents can adapt.
     policy = (
-        load_policy(on_policy, equity_trials=equity_trials)
+        load_policy(
+            on_policy,
+            equity_trials=equity_trials,
+            equity_cache=SharedEquityCache(),
+            hyper_aggression_chance=0.0,
+        )
         if on_policy
-        else build_policy(aggressive=True, equity_trials=equity_trials)
+        else build_policy(
+            aggressive=True,
+            equity_trials=equity_trials,
+            equity_cache=SharedEquityCache(),
+            hyper_aggression_chance=0.0,
+        )
     )
     return RecordingPolicy(policy)
 
@@ -81,15 +107,20 @@ class _LegSpec:
     archetype: tuple[str, float, float, float, int] | None = None
     sparring: str | None = None
     sparring_record_both: bool = False
+    # Build the archetype as a TexturedAgent rather than a ScriptedAgent
+    # (precondition P3): its fold frequency responds to the price being laid
+    # and to board texture, so expected value stops being linear in bet size.
+    # A flag rather than a sixth tuple slot, because every existing leg's
+    # archetype tuple must keep meaning exactly what it meant before.
+    textured: bool = False
 
     def opponents(self) -> list:
         if self.lineup_seed is not None:
             return calibrated_lineup(self.lineup_seed)
         if self.archetype is not None:
             label, aggression, fold_vs_bet, shove_rate, seed = self.archetype
-            return [
-                (label, ScriptedAgent(label, aggression, fold_vs_bet, shove_rate, seed))
-            ]
+            factory = TexturedAgent if self.textured else ScriptedAgent
+            return [(label, factory(label, aggression, fold_vs_bet, shove_rate, seed))]
         return []
 
 
@@ -101,7 +132,11 @@ def _sparring_partner(spec: _LegSpec) -> RecordingPolicy:
     """
 
     if spec.sparring == "champion" and spec.sparring_record_both:
-        policy = build_policy(aggressive=True, equity_trials=spec.equity_trials)
+        policy = build_policy(
+            aggressive=True,
+            equity_trials=spec.equity_trials,
+            equity_cache=SharedEquityCache(),
+        )
     else:
         policy = load_policy(spec.sparring, equity_trials=spec.equity_trials)
     return RecordingPolicy(policy, record_examples=spec.sparring_record_both)
@@ -198,6 +233,22 @@ def harvest_specs(args) -> list[_LegSpec]:
                 **common,
             )
         )
+    # P3 phase two. Added as a NEW leg rather than by re-parameterising an
+    # existing one, so every other leg's contribution to the corpus is
+    # unchanged and the corpus stays comparable to candidate-v7-0001's.
+    # Note this ends vs-textured's held-out status in the batteries: once the
+    # model trains against this archetype, that battery measures fit, not
+    # generalisation.
+    specs.append(
+        _LegSpec(
+            name="heads-up vs textured",
+            hands=args.textured_hands,
+            seed=args.seed + 23,
+            archetype=("textured", 0.226, 0.5, 0.0, args.seed + 13),
+            textured=True,
+            **common,
+        )
+    )
     if args.sparring and args.sparring_hands > 0:
         specs.append(
             _LegSpec(
@@ -242,6 +293,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--shover-hands", type=int, default=2_000)
     parser.add_argument("--station-hands", type=int, default=1_000)
     parser.add_argument("--nit-hands", type=int, default=1_000)
+    parser.add_argument(
+        "--textured-hands",
+        type=int,
+        default=1_000,
+        help=(
+            "heads-up hands against the card-aware TexturedAgent, whose fold "
+            "frequency responds to bet size and board texture (precondition "
+            "P3); 0 disables the leg and reproduces the pre-P3 harvest mix"
+        ),
+    )
     parser.add_argument("--sparring", help="candidate manifest to spar against")
     parser.add_argument(
         "--on-policy",
@@ -492,15 +553,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"examples: {summary.examples}")
     print(f"train_loss: {summary.train_loss:.6f}")
     print(f"validation_loss: {summary.validation_loss:.6f}")
-    print(
-        "validation_best_action_accuracy: "
-        f"{summary.validation_best_action_accuracy:.6f}"
-    )
-    print(f"validation_mean_regret_pct: {summary.validation_mean_regret_pct:.6f}")
-    print(
-        "validation_action_value_mae_pct: "
-        f"{summary.validation_action_value_mae_pct:.6f}"
-    )
+    print_branch_summary(summary)
     print(f"manifest: {summary.manifest_path}")
     print("state: candidate (promotion requires the evaluation gate)")
     return 0

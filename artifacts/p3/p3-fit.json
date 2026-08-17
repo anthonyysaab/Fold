@@ -1,0 +1,1355 @@
+{
+  "generator": {
+    "tool": "tools.build_p3_dataset",
+    "what_this_is": "a fitted model of the observed field's fold frequency, conditional on the actor's true hand strength and the price it was laid",
+    "what_this_is_not": "an optimal player, an exploitative player, or a range-balanced one; it makes no claim beyond folding more with worse hands and worse prices",
+    "l2": 1.0,
+    "l2_ablatable": true,
+    "optimizer": "ridge-damped IRLS (Newton), deterministic, no RNG",
+    "validation_split": "1 in 5 tables by sha256 of table_id"
+  },
+  "features": [
+    "strength_percentile",
+    "pot_odds",
+    "texture",
+    "active_players",
+    "position_unit"
+  ],
+  "excluded_regressors": {
+    "bet_to_pot": "recorded per row but not fitted: pot_odds == bet_to_pot / (1 + bet_to_pot) exactly, so fitting both is exact collinearity and the price sign invariant becomes unreadable"
+  },
+  "price_support": {
+    "clamped_feature": "pot_odds",
+    "why": "repair of the overbet blind spot (2026-08-16): the archive's fields bet at most ~1.1x pot, so every overbet price is an extrapolation, and the extrapolated positive price slope made a zero-equity bluff's EV RISE with bet size. Above the cap the fold probability is flat in size, so a bigger overbet buys no extra fold equity.",
+    "method": "linear-interpolation quantile of the pot_odds observed on the model's own training rows (the fitted support), applied as an upper clamp on the price input before the logit; derived per model, never hand-authored",
+    "side": "upper only \u2014 below-support prices are not clamped",
+    "quantile": 0.99,
+    "quantile_ablatable": true,
+    "bet_to_pot_note": "pot_odds is the only fitted price regressor; bet_to_pot = pot_odds / (1 - pot_odds) is capped by implication",
+    "full_data_refit_note": "caps attach to the shipped train-split models; the recorded full_data_refit blocks remain unclamped fit records",
+    "per_model": {
+      "preflop": {
+        "train_rows": 5109,
+        "price_cap": 0.4117647058823529,
+        "train_price_max": 0.4972972972972973,
+        "train_price_median": 0.38461538461538464
+      },
+      "flop": {
+        "train_rows": 455,
+        "price_cap": 0.36259187620889743,
+        "train_price_max": 0.39156626506024095,
+        "train_price_median": 0.23529411764705882
+      },
+      "postflop": {
+        "train_rows": 683,
+        "price_cap": 0.3794283891547049,
+        "train_price_max": 0.42857142857142855,
+        "train_price_median": 0.25
+      },
+      "all": {
+        "train_rows": 5792,
+        "price_cap": 0.4117647058823529,
+        "train_price_max": 0.4972972972972973,
+        "train_price_median": 0.38461538461538464
+      }
+    }
+  },
+  "street_plan": {
+    "rule": {
+      "min_street_rows": 300,
+      "min_street_minority": 50,
+      "stated": "thresholds fixed before the row counts were inspected",
+      "amendment": "a thin postflop street pools with postflop streets only, never with preflop: preflop has no board (texture is identically 0 and takes exactly zero weight) and its strength percentile is a different construction from the postflop enumeration (V8_DESIGN.md \u00a72). Structural, not performance-selected; see pooling_audit.",
+      "ablatable": true
+    },
+    "per_street_train": {
+      "preflop": {
+        "train_rows": 5109,
+        "folds": 3564,
+        "non_folds": 1545,
+        "minority": 1545
+      },
+      "flop": {
+        "train_rows": 455,
+        "folds": 303,
+        "non_folds": 152,
+        "minority": 152
+      },
+      "turn": {
+        "train_rows": 154,
+        "folds": 71,
+        "non_folds": 83,
+        "minority": 71
+      },
+      "river": {
+        "train_rows": 74,
+        "folds": 35,
+        "non_folds": 39,
+        "minority": 35
+      }
+    },
+    "own_model": [
+      "preflop",
+      "flop"
+    ],
+    "thin": [
+      "turn",
+      "river"
+    ],
+    "pooling": {
+      "postflop": {
+        "thin_streets": [
+          "turn",
+          "river"
+        ],
+        "model": "postflop",
+        "model_streets": [
+          "flop",
+          "turn",
+          "river"
+        ],
+        "thin_only_train_rows": 228,
+        "thin_only_minority": 106,
+        "model_train_rows": 683,
+        "model_minority": 274
+      }
+    }
+  },
+  "pooling_audit": {
+    "turn+river": {
+      "streets": [
+        "turn",
+        "river"
+      ],
+      "val_rows": 64,
+      "postflop": {
+        "rows": 64,
+        "base_rate": 0.46875,
+        "log_loss": 0.5797002581344536,
+        "auc": 0.7872549019607843,
+        "brier": 0.19025641806797083
+      },
+      "all": {
+        "rows": 64,
+        "base_rate": 0.46875,
+        "log_loss": 0.6185182485067756,
+        "auc": 0.7735294117647059,
+        "brier": 0.2039233224704858
+      },
+      "assigned": "postflop"
+    }
+  },
+  "street_to_model": {
+    "preflop": "preflop",
+    "flop": "flop",
+    "turn": "postflop",
+    "river": "postflop"
+  },
+  "fallback_model": "all",
+  "models": {
+    "preflop": {
+      "intercept": 1.443731718149822,
+      "coefficients": [
+        -1.8534987190361747,
+        0.1476326423789539,
+        0.0,
+        0.3928913985506261,
+        -0.22932205582116724
+      ],
+      "mean": [
+        0.513081665688004,
+        0.35341614301162977,
+        0.0,
+        4.069093756116657,
+        0.5103803745025123
+      ],
+      "std": [
+        0.29418651738160845,
+        0.06625081334224692,
+        1.0,
+        1.3563252935185268,
+        0.34187180083506874
+      ],
+      "price_cap": 0.4117647058823529
+    },
+    "flop": {
+      "intercept": 1.0461236467224837,
+      "coefficients": [
+        -1.3851584876767464,
+        0.8036250778469413,
+        -0.07320248616006385,
+        0.09593777213599153,
+        -0.2268705210348138
+      ],
+      "mean": [
+        0.6034176739079603,
+        0.24512758302233764,
+        0.3695659340659328,
+        2.3098901098901097,
+        0.4998534798534796
+      ],
+      "std": [
+        0.2509962001131461,
+        0.054719313076310484,
+        0.1326702350080627,
+        0.53719968764667,
+        0.3345088839299509
+      ],
+      "price_cap": 0.36259187620889743
+    },
+    "postflop": {
+      "intercept": 0.5510911021669611,
+      "coefficients": [
+        -1.0455918516454257,
+        0.5756035663015373,
+        -0.28807900001786213,
+        0.16278123055173566,
+        -0.1564477945642413
+      ],
+      "mean": [
+        0.6162330413352658,
+        0.24907652554411558,
+        0.43836383601756784,
+        2.2459736456808197,
+        0.5141776476329917
+      ],
+      "std": [
+        0.2510558744810661,
+        0.05602582184957884,
+        0.1690878133799157,
+        0.48803611513030565,
+        0.3362287421418066
+      ],
+      "price_cap": 0.3794283891547049
+    },
+    "all": {
+      "intercept": 1.299578067835104,
+      "coefficients": [
+        -1.7296829161802427,
+        0.22014509080874028,
+        0.1387679417628961,
+        0.3244790429432951,
+        -0.22012360480499749
+      ],
+      "mean": [
+        0.525245406980663,
+        0.3411122827336085,
+        0.051692420580110296,
+        3.8541091160220993,
+        0.5108281537753233
+      ],
+      "std": [
+        0.2913405965972909,
+        0.07330846504710627,
+        0.15283792646945618,
+        1.4129752294868425,
+        0.341213415746223
+      ],
+      "price_cap": 0.4117647058823529
+    }
+  },
+  "reports": {
+    "preflop": {
+      "streets": [
+        "preflop"
+      ],
+      "intercept": 1.443731718149822,
+      "coefficients": [
+        -1.8534987190361747,
+        0.1476326423789539,
+        0.0,
+        0.3928913985506261,
+        -0.22932205582116724
+      ],
+      "mean": [
+        0.513081665688004,
+        0.35341614301162977,
+        0.0,
+        4.069093756116657,
+        0.5103803745025123
+      ],
+      "std": [
+        0.29418651738160845,
+        0.06625081334224692,
+        1.0,
+        1.3563252935185268,
+        0.34187180083506874
+      ],
+      "price_cap": 0.4117647058823529,
+      "natural_scale": {
+        "intercept": 3.0524594554738353,
+        "coefficients": [
+          -6.300420343981574,
+          2.228389885816108,
+          0.0,
+          0.2896734289540545,
+          -0.6707837711709965
+        ]
+      },
+      "coefficients_by_name": {
+        "strength_percentile": -1.8534987190361747,
+        "pot_odds": 0.1476326423789539,
+        "texture": 0.0,
+        "active_players": 0.3928913985506261,
+        "position_unit": -0.22932205582116724
+      },
+      "metrics": {
+        "train": {
+          "rows": 5109,
+          "base_rate": 0.6975924838520259,
+          "log_loss": 0.39794259187135467,
+          "auc": 0.8763919308148003,
+          "brier": 0.12275656486722648
+        },
+        "val": {
+          "rows": 1364,
+          "base_rate": 0.7016129032258065,
+          "log_loss": 0.3963152671725309,
+          "auc": 0.8766376807129158,
+          "brier": 0.12294981402184903
+        }
+      },
+      "calibration_val": [
+        {
+          "decile": 1,
+          "rows": 136,
+          "predicted_low": 0.06119804874912314,
+          "predicted_high": 0.22953684104142055,
+          "mean_predicted": 0.1649509129242654,
+          "observed": 0.15441176470588236
+        },
+        {
+          "decile": 2,
+          "rows": 136,
+          "predicted_low": 0.2315174167136963,
+          "predicted_high": 0.37907843627022686,
+          "mean_predicted": 0.30461247815630393,
+          "observed": 0.20588235294117646
+        },
+        {
+          "decile": 3,
+          "rows": 137,
+          "predicted_low": 0.37907843627022686,
+          "predicted_high": 0.541137594949436,
+          "mean_predicted": 0.46287994615599104,
+          "observed": 0.45985401459854014
+        },
+        {
+          "decile": 4,
+          "rows": 136,
+          "predicted_low": 0.5418877922603184,
+          "predicted_high": 0.7157373893600821,
+          "mean_predicted": 0.629154032569857,
+          "observed": 0.7426470588235294
+        },
+        {
+          "decile": 5,
+          "rows": 137,
+          "predicted_low": 0.7185419701281972,
+          "predicted_high": 0.8257899756212549,
+          "mean_predicted": 0.7768943122158938,
+          "observed": 0.8248175182481752
+        },
+        {
+          "decile": 6,
+          "rows": 136,
+          "predicted_low": 0.8285817651146417,
+          "predicted_high": 0.9029177041923652,
+          "mean_predicted": 0.8699860340606211,
+          "observed": 0.8382352941176471
+        },
+        {
+          "decile": 7,
+          "rows": 136,
+          "predicted_low": 0.9032022852357796,
+          "predicted_high": 0.9444099164366634,
+          "mean_predicted": 0.925005870739903,
+          "observed": 0.9117647058823529
+        },
+        {
+          "decile": 8,
+          "rows": 137,
+          "predicted_low": 0.9444099164366634,
+          "predicted_high": 0.9696884558179399,
+          "mean_predicted": 0.9580962858249465,
+          "observed": 0.9197080291970803
+        },
+        {
+          "decile": 9,
+          "rows": 136,
+          "predicted_low": 0.9696884558179399,
+          "predicted_high": 0.9838183865425788,
+          "mean_predicted": 0.9779743554342398,
+          "observed": 0.9632352941176471
+        },
+        {
+          "decile": 10,
+          "rows": 137,
+          "predicted_low": 0.9839132617542715,
+          "predicted_high": 0.9951697460074842,
+          "mean_predicted": 0.9892536181679504,
+          "observed": 0.9927007299270073
+        }
+      ],
+      "calibration_train": [
+        {
+          "decile": 1,
+          "rows": 510,
+          "predicted_low": 0.05366255261313099,
+          "predicted_high": 0.22396154138628796,
+          "mean_predicted": 0.16067297692115826,
+          "observed": 0.11960784313725491
+        },
+        {
+          "decile": 2,
+          "rows": 511,
+          "predicted_low": 0.22411562713478836,
+          "predicted_high": 0.3674177278961484,
+          "mean_predicted": 0.298582383525493,
+          "observed": 0.22504892367906065
+        },
+        {
+          "decile": 3,
+          "rows": 511,
+          "predicted_low": 0.3674177278961484,
+          "predicted_high": 0.538759933671585,
+          "mean_predicted": 0.44744968755715386,
+          "observed": 0.47162426614481406
+        },
+        {
+          "decile": 4,
+          "rows": 511,
+          "predicted_low": 0.538759933671585,
+          "predicted_high": 0.6913703846011655,
+          "mean_predicted": 0.6179490909726969,
+          "observed": 0.700587084148728
+        },
+        {
+          "decile": 5,
+          "rows": 511,
+          "predicted_low": 0.6913703846011655,
+          "predicted_high": 0.8133214812122062,
+          "mean_predicted": 0.7567053658391713,
+          "observed": 0.8140900195694716
+        },
+        {
+          "decile": 6,
+          "rows": 511,
+          "predicted_low": 0.8133214812122062,
+          "predicted_high": 0.8900576326421347,
+          "mean_predicted": 0.8553088528597427,
+          "observed": 0.8806262230919765
+        },
+        {
+          "decile": 7,
+          "rows": 511,
+          "predicted_low": 0.8900576326421347,
+          "predicted_high": 0.9393538829654505,
+          "mean_predicted": 0.9174454061924053,
+          "observed": 0.9060665362035225
+        },
+        {
+          "decile": 8,
+          "rows": 511,
+          "predicted_low": 0.9395298093515685,
+          "predicted_high": 0.9676115277117305,
+          "mean_predicted": 0.9545641583239721,
+          "observed": 0.9256360078277887
+        },
+        {
+          "decile": 9,
+          "rows": 511,
+          "predicted_low": 0.9677764988324945,
+          "predicted_high": 0.9834866945404537,
+          "mean_predicted": 0.9763336211696286,
+          "observed": 0.958904109589041
+        },
+        {
+          "decile": 10,
+          "rows": 511,
+          "predicted_low": 0.9834866945404537,
+          "predicted_high": 0.9954362347525898,
+          "mean_predicted": 0.9889608471092572,
+          "observed": 0.9726027397260274
+        }
+      ],
+      "full_data_refit": {
+        "intercept": 1.4485118961731036,
+        "coefficients": [
+          -1.8495224417615717,
+          0.13242034339370734,
+          0.0,
+          0.3979329203641185,
+          -0.23061137896084985
+        ],
+        "mean": [
+          0.5104477633245805,
+          0.3530603974009743,
+          0.0,
+          4.069210566970493,
+          0.5116741335805159
+        ],
+        "std": [
+          0.29430545674500547,
+          0.06677596722502324,
+          1.0,
+          1.3550230214046772,
+          0.3418158416724926
+        ],
+        "natural_scale": {
+          "intercept": 3.1064072487866845,
+          "coefficients": [
+            -6.284363403306008,
+            1.983053917399266,
+            0.0,
+            0.293672442518064,
+            -0.6746655679633707
+          ]
+        },
+        "rows": 6473
+      }
+    },
+    "flop": {
+      "streets": [
+        "flop"
+      ],
+      "intercept": 1.0461236467224837,
+      "coefficients": [
+        -1.3851584876767464,
+        0.8036250778469413,
+        -0.07320248616006385,
+        0.09593777213599153,
+        -0.2268705210348138
+      ],
+      "mean": [
+        0.6034176739079603,
+        0.24512758302233764,
+        0.3695659340659328,
+        2.3098901098901097,
+        0.4998534798534796
+      ],
+      "std": [
+        0.2509962001131461,
+        0.054719313076310484,
+        0.1326702350080627,
+        0.53719968764667,
+        0.3345088839299509
+      ],
+      "price_cap": 0.36259187620889743,
+      "natural_scale": {
+        "intercept": 0.9065525861421928,
+        "coefficients": [
+          -5.518643258552653,
+          14.686315172235833,
+          -0.5517626930834574,
+          0.17858865956581169,
+          -0.6782197183209117
+        ]
+      },
+      "coefficients_by_name": {
+        "strength_percentile": -1.3851584876767464,
+        "pot_odds": 0.8036250778469413,
+        "texture": -0.07320248616006385,
+        "active_players": 0.09593777213599153,
+        "position_unit": -0.2268705210348138
+      },
+      "metrics": {
+        "train": {
+          "rows": 455,
+          "base_rate": 0.6659340659340659,
+          "log_loss": 0.46580211684154604,
+          "auc": 0.8384141045683515,
+          "brier": 0.14784288249338381
+        },
+        "val": {
+          "rows": 100,
+          "base_rate": 0.69,
+          "log_loss": 0.3443586273625703,
+          "auc": 0.9233286582515194,
+          "brier": 0.09756089647140158
+        }
+      },
+      "calibration_val": [
+        {
+          "decile": 1,
+          "rows": 10,
+          "predicted_low": 0.14956026031720066,
+          "predicted_high": 0.25298444037064216,
+          "mean_predicted": 0.2033828564403961,
+          "observed": 0.0
+        },
+        {
+          "decile": 2,
+          "rows": 10,
+          "predicted_low": 0.2773463519628072,
+          "predicted_high": 0.39522413380129184,
+          "mean_predicted": 0.32625281136592943,
+          "observed": 0.1
+        },
+        {
+          "decile": 3,
+          "rows": 10,
+          "predicted_low": 0.42544501090956466,
+          "predicted_high": 0.56063280622466,
+          "mean_predicted": 0.4839776159039131,
+          "observed": 0.3
+        },
+        {
+          "decile": 4,
+          "rows": 10,
+          "predicted_low": 0.564342855349972,
+          "predicted_high": 0.6603258065586372,
+          "mean_predicted": 0.6277167693886735,
+          "observed": 0.9
+        },
+        {
+          "decile": 5,
+          "rows": 10,
+          "predicted_low": 0.6604446034119594,
+          "predicted_high": 0.7693274558385359,
+          "mean_predicted": 0.7175421314745016,
+          "observed": 0.9
+        },
+        {
+          "decile": 6,
+          "rows": 10,
+          "predicted_low": 0.7756244282764351,
+          "predicted_high": 0.8400670288175031,
+          "mean_predicted": 0.8209697311328682,
+          "observed": 1.0
+        },
+        {
+          "decile": 7,
+          "rows": 10,
+          "predicted_low": 0.8416516758280046,
+          "predicted_high": 0.8808283658971908,
+          "mean_predicted": 0.8613186932766217,
+          "observed": 0.9
+        },
+        {
+          "decile": 8,
+          "rows": 10,
+          "predicted_low": 0.8853138294030435,
+          "predicted_high": 0.9247222371098486,
+          "mean_predicted": 0.9064745679701547,
+          "observed": 0.9
+        },
+        {
+          "decile": 9,
+          "rows": 10,
+          "predicted_low": 0.9263471471500054,
+          "predicted_high": 0.9551828414678603,
+          "mean_predicted": 0.9464192387632263,
+          "observed": 0.9
+        },
+        {
+          "decile": 10,
+          "rows": 10,
+          "predicted_low": 0.9559414319833577,
+          "predicted_high": 0.9922162610999525,
+          "mean_predicted": 0.9748595051138143,
+          "observed": 1.0
+        }
+      ],
+      "calibration_train": [
+        {
+          "decile": 1,
+          "rows": 45,
+          "predicted_low": 0.043021058742476255,
+          "predicted_high": 0.23984758900891334,
+          "mean_predicted": 0.17483020453680503,
+          "observed": 0.1111111111111111
+        },
+        {
+          "decile": 2,
+          "rows": 46,
+          "predicted_low": 0.2402473021493379,
+          "predicted_high": 0.40662602549753957,
+          "mean_predicted": 0.32940261438112406,
+          "observed": 0.2826086956521739
+        },
+        {
+          "decile": 3,
+          "rows": 45,
+          "predicted_low": 0.41044284327259806,
+          "predicted_high": 0.5218732054081403,
+          "mean_predicted": 0.4679202863704504,
+          "observed": 0.5333333333333333
+        },
+        {
+          "decile": 4,
+          "rows": 46,
+          "predicted_low": 0.5248719466144485,
+          "predicted_high": 0.6380898023689963,
+          "mean_predicted": 0.5882091437851061,
+          "observed": 0.5217391304347826
+        },
+        {
+          "decile": 5,
+          "rows": 45,
+          "predicted_low": 0.6407859369026676,
+          "predicted_high": 0.7183357025629183,
+          "mean_predicted": 0.6787201248399141,
+          "observed": 0.8
+        },
+        {
+          "decile": 6,
+          "rows": 46,
+          "predicted_low": 0.7199328477099751,
+          "predicted_high": 0.8028457232836076,
+          "mean_predicted": 0.7587487275847649,
+          "observed": 0.7391304347826086
+        },
+        {
+          "decile": 7,
+          "rows": 45,
+          "predicted_low": 0.8035604785782893,
+          "predicted_high": 0.8709864326137845,
+          "mean_predicted": 0.8413225635846249,
+          "observed": 0.8666666666666667
+        },
+        {
+          "decile": 8,
+          "rows": 46,
+          "predicted_low": 0.8731821919231333,
+          "predicted_high": 0.9154480890490634,
+          "mean_predicted": 0.894503449036188,
+          "observed": 0.9347826086956522
+        },
+        {
+          "decile": 9,
+          "rows": 45,
+          "predicted_low": 0.9177441687757729,
+          "predicted_high": 0.958553158494125,
+          "mean_predicted": 0.9410823758623036,
+          "observed": 0.9555555555555556
+        },
+        {
+          "decile": 10,
+          "rows": 46,
+          "predicted_low": 0.9614708170221259,
+          "predicted_high": 0.9950383024678937,
+          "mean_predicted": 0.9788869013669634,
+          "observed": 0.9130434782608695
+        }
+      ],
+      "full_data_refit": {
+        "intercept": 1.1394774631682516,
+        "coefficients": [
+          -1.5075915285098984,
+          0.9188861151738956,
+          -0.13301121283093795,
+          0.15134705010529748,
+          -0.21050737693298913
+        ],
+        "mean": [
+          0.5956605078714234,
+          0.244614529966156,
+          0.36605405405405184,
+          2.291891891891892,
+          0.517927927927928
+        ],
+        "std": [
+          0.24795600729487885,
+          0.05409330189619224,
+          0.13594975143779067,
+          0.527980196041228,
+          0.3395079917870831
+        ],
+        "natural_scale": {
+          "intercept": 0.6281561951814921,
+          "coefficients": [
+            -6.080076643261207,
+            16.987059080573122,
+            -0.9783851123244063,
+            0.28665289198362154,
+            -0.6200365883139665
+          ]
+        },
+        "rows": 555
+      }
+    },
+    "postflop": {
+      "streets": [
+        "flop",
+        "turn",
+        "river"
+      ],
+      "intercept": 0.5510911021669611,
+      "coefficients": [
+        -1.0455918516454257,
+        0.5756035663015373,
+        -0.28807900001786213,
+        0.16278123055173566,
+        -0.1564477945642413
+      ],
+      "mean": [
+        0.6162330413352658,
+        0.24907652554411558,
+        0.43836383601756784,
+        2.2459736456808197,
+        0.5141776476329917
+      ],
+      "std": [
+        0.2510558744810661,
+        0.05602582184957884,
+        0.1690878133799157,
+        0.48803611513030565,
+        0.3362287421418066
+      ],
+      "price_cap": 0.3794283891547049,
+      "natural_scale": {
+        "intercept": 0.795546915868671,
+        "coefficients": [
+          -4.164777477550246,
+          10.273897772476214,
+          -1.7037242025869157,
+          0.3335434110409494,
+          -0.465301668047934
+        ]
+      },
+      "coefficients_by_name": {
+        "strength_percentile": -1.0455918516454257,
+        "pot_odds": 0.5756035663015373,
+        "texture": -0.28807900001786213,
+        "active_players": 0.16278123055173566,
+        "position_unit": -0.1564477945642413
+      },
+      "metrics": {
+        "train": {
+          "rows": 683,
+          "base_rate": 0.5988286969253295,
+          "log_loss": 0.542341582071176,
+          "auc": 0.7908196955365588,
+          "brier": 0.179861717726035
+        },
+        "val": {
+          "rows": 164,
+          "base_rate": 0.6036585365853658,
+          "log_loss": 0.45927152039670865,
+          "auc": 0.878010878010878,
+          "brier": 0.1428475513402958
+        }
+      },
+      "calibration_val": [
+        {
+          "decile": 1,
+          "rows": 16,
+          "predicted_low": 0.06894404763620052,
+          "predicted_high": 0.2779105171870494,
+          "mean_predicted": 0.2151723826248035,
+          "observed": 0.0625
+        },
+        {
+          "decile": 2,
+          "rows": 16,
+          "predicted_low": 0.27835262882654577,
+          "predicted_high": 0.34319752293860883,
+          "mean_predicted": 0.295745464219454,
+          "observed": 0.25
+        },
+        {
+          "decile": 3,
+          "rows": 17,
+          "predicted_low": 0.3440309731606686,
+          "predicted_high": 0.4451525173937243,
+          "mean_predicted": 0.39304982212255457,
+          "observed": 0.11764705882352941
+        },
+        {
+          "decile": 4,
+          "rows": 16,
+          "predicted_low": 0.4456574917837976,
+          "predicted_high": 0.5380932855197875,
+          "mean_predicted": 0.4820789957371939,
+          "observed": 0.3125
+        },
+        {
+          "decile": 5,
+          "rows": 17,
+          "predicted_low": 0.545162253147871,
+          "predicted_high": 0.6315861536990731,
+          "mean_predicted": 0.5852906382400866,
+          "observed": 0.7647058823529411
+        },
+        {
+          "decile": 6,
+          "rows": 16,
+          "predicted_low": 0.6316022836233177,
+          "predicted_high": 0.7002953628375914,
+          "mean_predicted": 0.6713161223160754,
+          "observed": 0.875
+        },
+        {
+          "decile": 7,
+          "rows": 16,
+          "predicted_low": 0.7081808029251416,
+          "predicted_high": 0.781071936765668,
+          "mean_predicted": 0.748619174604533,
+          "observed": 1.0
+        },
+        {
+          "decile": 8,
+          "rows": 17,
+          "predicted_low": 0.7812853871392021,
+          "predicted_high": 0.8260868876776297,
+          "mean_predicted": 0.8015897173946412,
+          "observed": 0.8235294117647058
+        },
+        {
+          "decile": 9,
+          "rows": 16,
+          "predicted_low": 0.8350226061207843,
+          "predicted_high": 0.8911279277121352,
+          "mean_predicted": 0.8656077010094654,
+          "observed": 0.9375
+        },
+        {
+          "decile": 10,
+          "rows": 17,
+          "predicted_low": 0.891237263317155,
+          "predicted_high": 0.9811461637103038,
+          "mean_predicted": 0.9315405664631811,
+          "observed": 0.8823529411764706
+        }
+      ],
+      "calibration_train": [
+        {
+          "decile": 1,
+          "rows": 68,
+          "predicted_low": 0.03273198005612337,
+          "predicted_high": 0.26249737777722504,
+          "mean_predicted": 0.18755619338229457,
+          "observed": 0.14705882352941177
+        },
+        {
+          "decile": 2,
+          "rows": 68,
+          "predicted_low": 0.2635861642499956,
+          "predicted_high": 0.3565731933132809,
+          "mean_predicted": 0.3124433578911771,
+          "observed": 0.2647058823529412
+        },
+        {
+          "decile": 3,
+          "rows": 68,
+          "predicted_low": 0.3573086140285744,
+          "predicted_high": 0.4566740935708813,
+          "mean_predicted": 0.4060717961604523,
+          "observed": 0.38235294117647056
+        },
+        {
+          "decile": 4,
+          "rows": 69,
+          "predicted_low": 0.45727579652835587,
+          "predicted_high": 0.5409765054534245,
+          "mean_predicted": 0.49597223854197764,
+          "observed": 0.6086956521739131
+        },
+        {
+          "decile": 5,
+          "rows": 68,
+          "predicted_low": 0.5424010095660369,
+          "predicted_high": 0.6188553990629141,
+          "mean_predicted": 0.5813484524320238,
+          "observed": 0.5441176470588235
+        },
+        {
+          "decile": 6,
+          "rows": 68,
+          "predicted_low": 0.619015785869034,
+          "predicted_high": 0.6901397389216901,
+          "mean_predicted": 0.65442487474106,
+          "observed": 0.6911764705882353
+        },
+        {
+          "decile": 7,
+          "rows": 69,
+          "predicted_low": 0.6901795401768469,
+          "predicted_high": 0.7691863085711644,
+          "mean_predicted": 0.7317493312112946,
+          "observed": 0.7391304347826086
+        },
+        {
+          "decile": 8,
+          "rows": 68,
+          "predicted_low": 0.7692886908331517,
+          "predicted_high": 0.8307747367390885,
+          "mean_predicted": 0.7994596175745159,
+          "observed": 0.8382352941176471
+        },
+        {
+          "decile": 9,
+          "rows": 68,
+          "predicted_low": 0.8316382713849416,
+          "predicted_high": 0.9061161000656985,
+          "mean_predicted": 0.8686322555904026,
+          "observed": 0.8823529411764706
+        },
+        {
+          "decile": 10,
+          "rows": 69,
+          "predicted_low": 0.9062240326279156,
+          "predicted_high": 0.9828120149949653,
+          "mean_predicted": 0.9435439847884681,
+          "observed": 0.8840579710144928
+        }
+      ],
+      "full_data_refit": {
+        "intercept": 0.5812192520560118,
+        "coefficients": [
+          -1.1492606971460249,
+          0.6281981085995513,
+          -0.32411189876741897,
+          0.1809756549738747,
+          -0.1287757571322181
+        ],
+        "mean": [
+          0.6112950934917127,
+          0.24823007919969353,
+          0.43779220779220585,
+          2.2255017709563165,
+          0.5239669421487604
+        ],
+        "std": [
+          0.24916718559170925,
+          0.055561114831577794,
+          0.17091706574573012,
+          0.4735372204076298,
+          0.3417697149616834
+        ],
+        "natural_scale": {
+          "intercept": 0.7712421036793164,
+          "coefficients": [
+            -4.612407907633665,
+            11.30643455416267,
+            -1.8963109233901412,
+            0.3821783107526108,
+            -0.3767910130558392
+          ]
+        },
+        "rows": 847
+      }
+    },
+    "all": {
+      "streets": [
+        "preflop",
+        "flop",
+        "turn",
+        "river"
+      ],
+      "intercept": 1.299578067835104,
+      "coefficients": [
+        -1.7296829161802427,
+        0.22014509080874028,
+        0.1387679417628961,
+        0.3244790429432951,
+        -0.22012360480499749
+      ],
+      "mean": [
+        0.525245406980663,
+        0.3411122827336085,
+        0.051692420580110296,
+        3.8541091160220993,
+        0.5108281537753233
+      ],
+      "std": [
+        0.2913405965972909,
+        0.07330846504710627,
+        0.15283792646945618,
+        1.4129752294868425,
+        0.341213415746223
+      ],
+      "price_cap": 0.4117647058823529,
+      "natural_scale": {
+        "intercept": 2.791134580995637,
+        "coefficients": [
+          -5.9369786990967075,
+          3.0029968662865922,
+          0.9079417980106406,
+          0.22964241422769868,
+          -0.6451200176979973
+        ]
+      },
+      "coefficients_by_name": {
+        "strength_percentile": -1.7296829161802427,
+        "pot_odds": 0.22014509080874028,
+        "texture": 0.1387679417628961,
+        "active_players": 0.3244790429432951,
+        "position_unit": -0.22012360480499749
+      },
+      "metrics": {
+        "train": {
+          "rows": 5792,
+          "base_rate": 0.6859461325966851,
+          "log_loss": 0.4213364175307815,
+          "auc": 0.86379585013575,
+          "brier": 0.13207862049111077
+        },
+        "val": {
+          "rows": 1528,
+          "base_rate": 0.6910994764397905,
+          "log_loss": 0.4081247069009523,
+          "auc": 0.8716605274139703,
+          "brier": 0.12731210730663914
+        }
+      },
+      "calibration_val": [
+        {
+          "decile": 1,
+          "rows": 152,
+          "predicted_low": 0.06792878757647977,
+          "predicted_high": 0.2425626869702904,
+          "mean_predicted": 0.17858040400750114,
+          "observed": 0.15789473684210525
+        },
+        {
+          "decile": 2,
+          "rows": 153,
+          "predicted_low": 0.24402551638473635,
+          "predicted_high": 0.3732052417255083,
+          "mean_predicted": 0.30971908927251535,
+          "observed": 0.19607843137254902
+        },
+        {
+          "decile": 3,
+          "rows": 153,
+          "predicted_low": 0.37338403979989865,
+          "predicted_high": 0.5375874528877911,
+          "mean_predicted": 0.4587960753655034,
+          "observed": 0.40522875816993464
+        },
+        {
+          "decile": 4,
+          "rows": 153,
+          "predicted_low": 0.537615676308959,
+          "predicted_high": 0.6834515692774616,
+          "mean_predicted": 0.6110596351589274,
+          "observed": 0.7320261437908496
+        },
+        {
+          "decile": 5,
+          "rows": 153,
+          "predicted_low": 0.6859926728085471,
+          "predicted_high": 0.7972290028777426,
+          "mean_predicted": 0.7463687441563103,
+          "observed": 0.8235294117647058
+        },
+        {
+          "decile": 6,
+          "rows": 152,
+          "predicted_low": 0.801309621712422,
+          "predicted_high": 0.8799929567517208,
+          "mean_predicted": 0.8440873880422588,
+          "observed": 0.8486842105263158
+        },
+        {
+          "decile": 7,
+          "rows": 153,
+          "predicted_low": 0.8808220465641471,
+          "predicted_high": 0.9305641407919792,
+          "mean_predicted": 0.9071812024602873,
+          "observed": 0.9084967320261438
+        },
+        {
+          "decile": 8,
+          "rows": 153,
+          "predicted_low": 0.9305949309741252,
+          "predicted_high": 0.9613128158412397,
+          "mean_predicted": 0.9466090153904186,
+          "observed": 0.8954248366013072
+        },
+        {
+          "decile": 9,
+          "rows": 153,
+          "predicted_low": 0.9616441405135715,
+          "predicted_high": 0.9795163999215168,
+          "mean_predicted": 0.9714885570511224,
+          "observed": 0.9673202614379085
+        },
+        {
+          "decile": 10,
+          "rows": 153,
+          "predicted_low": 0.9795163999215168,
+          "predicted_high": 0.9935136338091444,
+          "mean_predicted": 0.9859732897545069,
+          "observed": 0.9738562091503268
+        }
+      ],
+      "calibration_train": [
+        {
+          "decile": 1,
+          "rows": 579,
+          "predicted_low": 0.06269456889750931,
+          "predicted_high": 0.2343983805501961,
+          "mean_predicted": 0.17121613244989292,
+          "observed": 0.15544041450777202
+        },
+        {
+          "decile": 2,
+          "rows": 579,
+          "predicted_low": 0.23576402589430442,
+          "predicted_high": 0.3696291252590992,
+          "mean_predicted": 0.3016051018441362,
+          "observed": 0.22625215889464595
+        },
+        {
+          "decile": 3,
+          "rows": 579,
+          "predicted_low": 0.3701728759244889,
+          "predicted_high": 0.5218830851966779,
+          "mean_predicted": 0.44016251144499124,
+          "observed": 0.43523316062176165
+        },
+        {
+          "decile": 4,
+          "rows": 579,
+          "predicted_low": 0.5218830851966779,
+          "predicted_high": 0.6653154978130212,
+          "mean_predicted": 0.5984352187875241,
+          "observed": 0.6839378238341969
+        },
+        {
+          "decile": 5,
+          "rows": 580,
+          "predicted_low": 0.6654229403352369,
+          "predicted_high": 0.780739378159341,
+          "mean_predicted": 0.727014028197138,
+          "observed": 0.7706896551724138
+        },
+        {
+          "decile": 6,
+          "rows": 579,
+          "predicted_low": 0.780739378159341,
+          "predicted_high": 0.8638377462592751,
+          "mean_predicted": 0.8262885004251203,
+          "observed": 0.8549222797927462
+        },
+        {
+          "decile": 7,
+          "rows": 579,
+          "predicted_low": 0.8638377462592751,
+          "predicted_high": 0.9232574375915945,
+          "mean_predicted": 0.8960467366558581,
+          "observed": 0.9050086355785838
+        },
+        {
+          "decile": 8,
+          "rows": 579,
+          "predicted_low": 0.9232574375915945,
+          "predicted_high": 0.9581820890029934,
+          "mean_predicted": 0.9418471042375318,
+          "observed": 0.9067357512953368
+        },
+        {
+          "decile": 9,
+          "rows": 579,
+          "predicted_low": 0.9581820890029934,
+          "predicted_high": 0.9784817153684023,
+          "mean_predicted": 0.9695245033491969,
+          "observed": 0.9516407599309153
+        },
+        {
+          "decile": 10,
+          "rows": 580,
+          "predicted_low": 0.9784817153684023,
+          "predicted_high": 0.9938508603463154,
+          "mean_predicted": 0.985626336443273,
+          "observed": 0.9689655172413794
+        }
+      ],
+      "full_data_refit": {
+        "intercept": 1.3151014835771133,
+        "coefficients": [
+          -1.743791197238037,
+          0.20235860309625095,
+          0.12659313303848158,
+          0.3323723765797312,
+          -0.21850103709449284
+        ],
+        "mean": [
+          0.5221168464737013,
+          0.340930441182877,
+          0.050657103825136385,
+          3.855874316939891,
+          0.513096539162115
+        ],
+        "std": [
+          0.2912349408621806,
+          0.0736527485925013,
+          0.15162898566500252,
+          1.4132930292014942,
+          0.34183312187682907
+        ],
+        "natural_scale": {
+          "intercept": 2.8834916953411542,
+          "coefficients": [
+            -5.987575502017943,
+            2.7474684511210947,
+            0.8348874226341312,
+            0.2351758408994067,
+            -0.6392038193806865
+          ]
+        },
+        "rows": 7320
+      }
+    }
+  },
+  "band": {
+    "low": 0.03273198005612337,
+    "high": 0.9954362347525898,
+    "method": "union of the fit's predicted range on training decisions and the Laplace-smoothed observed fold rate of the extreme prediction deciles, guarded to stay strictly inside (0, 1)",
+    "ablatable": true,
+    "predicted_range": [
+      0.03273198005612337,
+      0.9954362347525898
+    ],
+    "decile_observed_range": [
+      0.12220309810671257,
+      0.9656357388316151
+    ],
+    "guard": [
+      0.00017259233690024162,
+      0.9998274076630997
+    ]
+  },
+  "invariants": {
+    "strength_coefficient_negative": true,
+    "price_coefficient_positive": true,
+    "checked_on": [
+      "train-split models",
+      "full-data refits"
+    ]
+  },
+  "dataset": {
+    "path": "artifacts\\p3\\p3-dataset.jsonl",
+    "rows": 7320,
+    "folds": 5029,
+    "per_street": {
+      "preflop": {
+        "rows": 6473,
+        "folds": 4521,
+        "train": 5109,
+        "val": 1364
+      },
+      "flop": {
+        "rows": 555,
+        "folds": 372,
+        "train": 455,
+        "val": 100
+      },
+      "turn": {
+        "rows": 191,
+        "folds": 89,
+        "train": 154,
+        "val": 37
+      },
+      "river": {
+        "rows": 101,
+        "folds": 47,
+        "train": 74,
+        "val": 27
+      }
+    }
+  }
+}

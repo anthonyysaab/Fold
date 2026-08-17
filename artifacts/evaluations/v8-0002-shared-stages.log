@@ -1,0 +1,5 @@
+[evaluate_v8] stage trivial starting
+[evaluate_v8] stage trivial done in 5.6s
+[evaluate_v8] stage champion starting
+[evaluate_v8] stage champion done in 157.6s
+[evaluate_v8] report written to artifacts\evaluations\candidate-v8-0002a-gauntlet.json

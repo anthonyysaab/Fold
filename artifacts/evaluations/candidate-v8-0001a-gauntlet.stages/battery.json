@@ -1,0 +1,137 @@
+{
+  "channels": {
+    "five-max-lineup": {
+      "bb_per_100": 78.91,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 86.7,
+        "bust_rate_per_session": 0.6281,
+        "busts": 76,
+        "busts_per_100_hands": 1.2424,
+        "mean_session_hands": 50.6,
+        "sessions": 121
+      },
+      "seeds": [
+        135.25,
+        87.51,
+        -63.06,
+        92.86,
+        227.22,
+        6.24,
+        119.98,
+        25.32
+      ]
+    },
+    "vs-median": {
+      "bb_per_100": 107.52,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 107.52,
+        "bust_rate_per_session": 0.0529,
+        "busts": 9,
+        "busts_per_100_hands": 0.1125,
+        "mean_session_hands": 47.1,
+        "sessions": 170
+      },
+      "seeds": [
+        113.13,
+        112.69,
+        115.42,
+        106.1,
+        102.1,
+        124.25,
+        107.8,
+        78.7
+      ]
+    },
+    "vs-nit": {
+      "bb_per_100": 69.65,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 69.65,
+        "bust_rate_per_session": 0.0,
+        "busts": 0,
+        "busts_per_100_hands": 0.0,
+        "mean_session_hands": 85.1,
+        "sessions": 94
+      },
+      "seeds": [
+        76.5,
+        69.6,
+        65.91,
+        71.97,
+        69.6,
+        71.88,
+        53.91,
+        77.81
+      ]
+    },
+    "vs-shover": {
+      "bb_per_100": -3.86,
+      "hands_per_seed": 1500,
+      "ruin": {
+        "bb_per_100": -3.86,
+        "bust_rate_per_session": 0.4994,
+        "busts": 424,
+        "busts_per_100_hands": 3.5333,
+        "mean_session_hands": 14.1,
+        "sessions": 849
+      },
+      "seeds": [
+        -4.47,
+        -51.73,
+        -8.27,
+        -41.53,
+        7.8,
+        22.27,
+        9.53,
+        35.53
+      ]
+    },
+    "vs-station": {
+      "bb_per_100": -8.68,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": -8.68,
+        "bust_rate_per_session": 0.5032,
+        "busts": 310,
+        "busts_per_100_hands": 3.875,
+        "mean_session_hands": 13.0,
+        "sessions": 616
+      },
+      "seeds": [
+        18.0,
+        -38.83,
+        -27.05,
+        6.84,
+        -20.8,
+        -36.72,
+        -17.55,
+        46.64
+      ]
+    },
+    "vs-textured": {
+      "bb_per_100": 97.66,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 97.66,
+        "bust_rate_per_session": 0.0405,
+        "busts": 6,
+        "busts_per_100_hands": 0.075,
+        "mean_session_hands": 54.1,
+        "sessions": 148
+      },
+      "seeds": [
+        98.2,
+        115.88,
+        70.84,
+        97.6,
+        108.15,
+        88.14,
+        107.11,
+        95.36
+      ]
+    }
+  },
+  "seed_count": 8
+}

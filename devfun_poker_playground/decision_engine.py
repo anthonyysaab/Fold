@@ -35,6 +35,7 @@ from devfun_poker_playground.game_state import (
     active_opponent_count,
     ArenaSnapshotError,
     _cards,
+    card_reveal_expense,
     effective_stack_chips,
     _hero_and_seats,
     _integer,
@@ -172,7 +173,19 @@ _BOARD_DISCOUNT_RANGE_TIGHTEN = {"kicker": 0.60, "thin": 0.75}
 # deliberately inside every hard safety gate, so the noise can neither
 # stack off through the risk cap nor bluff a paired board. Hyper decisions
 # are flagged in diagnostics and excluded from training labels.
-HYPER_AGGRESSION_CHANCE = 0.05
+#
+# Lowered 5% -> 1% on 2026-08-15 (owner instruction), then set to 2% the same
+# day as the value to run live while the ablation is pending. The measured
+# case: the served policy is already aggressive on ~71% of live decisions, so a
+# 5% random-aggression injection is far below the policy's own variability and
+# obscures nothing an observer could detect -- noise only hides a signal when
+# it is comparable to that signal's natural spread. Against that it cost a
+# measured 4.28% of live decisions (58 of 1,355), every one of them excluded
+# from training labels. 2% keeps a floor against genuinely adaptive Arena
+# opponents while cutting both the EV leak and the data loss well over half.
+# The price of the floor has still never been measured; the constructor
+# override exists precisely for that ablation, queued at 0/2/5%.
+HYPER_AGGRESSION_CHANCE = 0.02
 _HYPER_FLOOR_DROP = 0.12
 _HYPER_POT_FRACTION = 1.0
 
@@ -223,6 +236,11 @@ class SafetyGates:
     # A fold-family hand may still call at this equity above pot odds.
     rescue_call_floor: float = 0.57  # was 0.60
     rescue_call_margin: float = 0.105  # was 0.15
+    # Extra equity demanded per unit of card-reveal expense
+    # (`game_state.card_reveal_expense`): paying a large share of what you
+    # can lose, with cards still to come, is a bet on unseen cards and is
+    # priced as one. Zero reproduces the pre-2026-08-15 gates exactly.
+    reveal_expense_equity_slope: float = 0.12
 
     def __post_init__(self) -> None:
         for name in ("board_stackoff_kicker", "board_stackoff_thin"):
@@ -249,6 +267,8 @@ class SafetyGates:
                 raise ValueError(f"{name} must be between 0.5 and 1")
         if not 0.01 <= self.risk_cap_stack_fraction <= 1.0:
             raise ValueError("risk_cap_stack_fraction must be between 0.01 and 1")
+        if not 0.0 <= self.reveal_expense_equity_slope <= 0.50:
+            raise ValueError("reveal_expense_equity_slope must be between 0 and 0.5")
         gates = (
             self.board_stackoff_kicker,
             self.board_stackoff_thin,
@@ -328,6 +348,23 @@ def safest_passive_action(available: Collection[str]) -> str | None:
     )
 
 
+class SharedEquityCache(dict):
+    """Equity memo that stays one shared object through ``copy.deepcopy``.
+
+    The counterfactual replay deep-copies the seats -- policies included --
+    once per branch and rollout. A plain dict would be copied along with its
+    engine, giving every replay a private memo and forfeiting exactly the
+    cross-rollout duplication the cache exists for (measured: a per-copy
+    dict captured 103 of 628 unique keys on a harvest-shaped leg). Returning
+    ``self`` from deepcopy keeps one memo per leg. Safe because entries are
+    pure deterministic function values, so sharing them across replays
+    cannot leak state between branches.
+    """
+
+    def __deepcopy__(self, memo: dict) -> "SharedEquityCache":
+        return self
+
+
 class DecisionEngine:
     """Family proposals plus deterministic Arena safety rails."""
 
@@ -345,10 +382,20 @@ class DecisionEngine:
         opponent_tracker: AggressionTracker | None = None,
         bluff_settings: BluffSettings | None = None,
         hyper_aggression_chance: float | None = None,
+        equity_cache: SharedEquityCache | None = None,
     ) -> None:
         if equity_trials < 0:
             raise ValueError("equity_trials cannot be negative")
         self.equity_trials = equity_trials
+        # Opt-in memo for the Monte Carlo equity estimate, keyed on every
+        # argument the estimate depends on. estimate_equity is deterministic,
+        # so a hit returns the bit-identical float and behaviour cannot
+        # change; the switch only decides whether compute is repeated. The
+        # default stays None so the live serve path is untouched: measured
+        # hit rates are 80.1% inside a counterfactual harvest (branches x
+        # rollouts revisit the pinned decision state) and 0.0% on the serve
+        # path, so only the harvest passes a cache in.
+        self.equity_cache = equity_cache
         self.seed = seed
         self.temperature_shaping = temperature_shaping or DEFAULT_TEMPERATURE_SHAPING
         self.safety_gates = safety_gates or self.default_safety_gates
@@ -390,7 +437,13 @@ class DecisionEngine:
         table_id = str(table.get("tableId") or table.get("id") or "")
         digest = hashlib.sha256(f"{self.seed}:{table_id}".encode()).digest()
         trial_seed = int.from_bytes(digest[:8], "big")
-        return estimate_equity(
+        key: tuple | None = None
+        if self.equity_cache is not None:
+            key = (hole, tuple(board), opponents, trial_seed, top_fraction)
+            cached = self.equity_cache.get(key)
+            if cached is not None:
+                return cached
+        value = estimate_equity(
             hole,
             board,
             opponents,
@@ -398,6 +451,9 @@ class DecisionEngine:
             seed=trial_seed,
             top_fraction=top_fraction,
         )
+        if key is not None:
+            self.equity_cache[key] = value
+        return value
 
     @staticmethod
     def _street(table: Mapping[str, Any]) -> str:
@@ -694,9 +750,22 @@ class DecisionEngine:
             gate_floors = [floor for _, floor in self._call_stack_gates()]
             if gate_floors and equity < wildness * min(gate_floors):
                 return False
-        hero, _ = _hero_and_seats(table)
-        stack = _integer(hero.get("stackChips"), "hero stackChips")
         to_call = _integer(allowed.get("callChips", 0), "callChips")
+        # These gates ask "is this call a large share of what I can lose?",
+        # so they are denominated in the EFFECTIVE stack, not hero's own
+        # purse. Keyed on hero's stack they decay to nothing as the bankroll
+        # grows past the table: measured live 2026-08-15, a 2,207-chip call
+        # against a 2,207 effective stack read as 24% of a 9,143 purse and
+        # tripped no gate, and the hand lost 3,768. Same mis-scoping as the
+        # sizing risk cap, in the path that governs the larger losses --
+        # every one of the biggest live losses is a call, and calls are
+        # otherwise ungated.
+        stack = max(1, effective_stack_chips(table))
+        # Chips staked before a card is turned are staked on unseen cards.
+        reveal_penalty = (
+            self.safety_gates.reveal_expense_equity_slope
+            * card_reveal_expense(table, to_call)
+        )
         # The temperature's defensive margin also assumes bets mean
         # strength, so the wild-opponent blend targets the plain price.
         neutral_price = (
@@ -705,6 +774,7 @@ class DecisionEngine:
             + self.safety_gates.board_margin(tier)
         )
         for stack_fraction, equity_floor in self._call_stack_gates():
+            equity_floor += reveal_penalty
             if to_call >= stack_fraction * stack:
                 # The gate's premise is that big bets mean strength. Tracked
                 # wildness dissolves that premise proportionally, sliding the
@@ -715,7 +785,7 @@ class DecisionEngine:
         gate = self.safety_gates.board_stack_gate(tier)
         if gate is not None:
             stack_fraction, floor = gate
-            if to_call >= stack_fraction * stack and equity < floor:
+            if to_call >= stack_fraction * stack and equity < floor + reveal_penalty:
                 return False
         return True
 
@@ -1032,7 +1102,6 @@ class DecisionEngine:
         hero, _ = _hero_and_seats(table)
         pot = _integer(table.get("potChips"), "potChips")
         big_blind = _integer(table.get("bigBlindChips"), "bigBlindChips", minimum=1)
-        stack = _integer(hero.get("stackChips"), "hero stackChips")
         contribution = _integer(hero.get("currentBetChips"), "hero currentBetChips")
         call_chips = _integer(allowed.get("callChips", 0), "callChips")
 
@@ -1064,9 +1133,40 @@ class DecisionEngine:
         desired = base + max(big_blind, round(pot_fraction * (pot + call_chips)))
 
         if equity is None or equity < self.safety_gates.near_nut_floor:
+            # The cap keys on the EFFECTIVE stack, not hero's own purse.
+            #
+            # A stack-off gate has to be denominated in chips that can
+            # actually be lost. Hero's own stack is the wrong unit: hero
+            # brings the whole bankroll to a table of short opponents, so as
+            # the bankroll grows a fixed fraction of it stops bounding
+            # anything. Measured live on 2026-08-15, the hero-stack form
+            # could bind on 58.6% of sub-near-nut sizing decisions at a
+            # ~2.6k purse, 30.4% at ~8.7k and 4.3% at ~12k -- the gate
+            # decayed to inert exactly as the money it guards grew. In the
+            # worst observed case an 11,842 stack bought a 5,388 cap against
+            # a 1,133 effective stack, and a flop raise put 87.9% of that
+            # effective stack in on 10% equity.
+            #
+            # min(hero stack, effective stack) is the same number:
+            # effective_stack_chips already clamps to hero's purse. So when
+            # hero IS the short stack the denominator is hero's stack and
+            # the bankroll protection is exactly what it always was; the two
+            # definitions only diverge when hero covers the table, which is
+            # precisely where the old form failed.
+            #
+            # Multiway, "effective" is ambiguous. effective_stack_chips takes
+            # the DEEPEST active opponent (bounded by hero) -- the most any
+            # single opponent can make hero pay -- rather than the shallowest.
+            # The shallowest would shrink a legitimate bet whenever one short
+            # stack is in the pot, and it is not the bound on hero's risk;
+            # hero's commitment is capped directly by this number either way.
+            # It is also the definition the learned features, the bluff
+            # advisor and the telemetry already use, so the gate and the model
+            # agree on what "effective stack" means.
+            effective_stack = max(1, effective_stack_chips(table))
             risk_cap = contribution + max(
                 big_blind,
-                round(self.safety_gates.risk_cap_stack_fraction * stack),
+                round(self.safety_gates.risk_cap_stack_fraction * effective_stack),
             )
             maximum = min(maximum, risk_cap)
         if maximum < minimum:
@@ -1164,6 +1264,7 @@ __all__ = [
     "NEUTRAL_TEMPERATURE_SHAPING",
     "safest_passive_action",
     "SafetyGates",
+    "SharedEquityCache",
     "TemperatureShaping",
     "UNSOFTENED_SAFETY_GATES",
 ]

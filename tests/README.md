@@ -1,4 +1,8 @@
-# Tests folder
+# Tests
+
+> **This map is incomplete and partly stale** (it omits ~10 test files added
+> since it was written). `python -m pytest tests/ -q` is the source of truth;
+> the current baseline is 344 passed, 1 expected CUDA skip. folder
 
 This folder contains checks that run locally without joining Arena.
 
@@ -10,7 +14,7 @@ This folder contains checks that run locally without joining Arena.
 - `test_hyper_aggression.py` checks the anti-modeling dice roll: full-pot pressure on trigger, hard gates and the risk cap holding, deterministic rolls, and training exclusion.
 - `test_lead_position.py` checks the lead gauge's bounds, chip monotonicity, positional accentuation, and validation.
 - `test_learned_policy.py` checks artifact loading (checksums, engine parameters), legality of learned decisions, atomic promotion, and rollback.
-- `test_learning_contract.py` protects the exact 138-input model shape and immutable artifact metadata.
+- `test_learning_contract.py` protects the exact 142-input model shape and immutable artifact metadata.
 - `test_offline_trainer.py` checks candidate artifact writing and the empty-data guard.
 - `test_opponent_model.py` checks aggression tracking (dedup, hand resets, identity keys, decayed evidence) and proves repeated shoves flip the engine from folding to calling.
 - `test_policy_fixes.py` protects six-player routing and the aggressive policy's authoritative call and raise thresholds.

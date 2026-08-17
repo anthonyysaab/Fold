@@ -1,0 +1,4903 @@
+{
+  "battery_comparisons": {
+    "a": {
+      "five-max-lineup": {
+        "bb_per_100": 74.52,
+        "champion_mean_bb_per_100": 214.93,
+        "fresh_champion_bb_per_100": 165.18,
+        "fresh_champion_empirical_mde_bb_per_100": 47.81,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 113.16,
+        "fresh_incumbent_empirical_mde_bb_per_100": 22.95,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -67.46,
+            -158.62,
+            -198.39,
+            -93.71,
+            -121.08,
+            -231.08,
+            -84.54,
+            -101.34
+          ],
+          "mean": -132.03,
+          "sd": 58.4,
+          "se": 20.65,
+          "t": -6.39
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            20.18,
+            -152.42,
+            -150.29,
+            -1.47,
+            -131.9,
+            -141.71,
+            -83.44,
+            -84.24
+          ],
+          "mean": -90.66,
+          "sd": 67.62,
+          "se": 23.91,
+          "t": -3.79
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -12.19,
+            -92.72,
+            -30.53,
+            -41.87,
+            -40.08,
+            15.32,
+            -66.08,
+            -40.93
+          ],
+          "mean": -38.64,
+          "sd": 32.45,
+          "se": 11.47,
+          "t": -3.37
+        },
+        "published_mde_bb_per_100": 40.67,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 438.06,
+            "paired_vs_floor": {
+              "diffs": [
+                -300.92,
+                -572.68,
+                -561.45,
+                -98.74,
+                -363.21,
+                -176.54,
+                -466.86,
+                -367.88
+              ],
+              "mean": -363.54,
+              "sd": 170.13,
+              "se": 60.15,
+              "t": -6.04
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 399.09,
+            "paired_vs_floor": {
+              "diffs": [
+                -316.47,
+                -461.77,
+                -462.51,
+                -41.83,
+                -345.79,
+                -388.27,
+                -293.38,
+                -286.52
+              ],
+              "mean": -324.57,
+              "sd": 133.52,
+              "se": 47.21,
+              "t": -6.88
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 43.48,
+            "paired_vs_floor": {
+              "diffs": [
+                46.49,
+                -58.37,
+                -48.35,
+                -7.76,
+                -97.79,
+                170.76,
+                168.06,
+                75.27
+              ],
+              "mean": 31.04,
+              "sd": 102.04,
+              "se": 36.08,
+              "t": 0.86
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -28.58,
+            "paired_vs_floor": {
+              "diffs": [
+                148.88,
+                66.61,
+                67.73,
+                84.45,
+                114.9,
+                89.73,
+                140.87,
+                111.67
+              ],
+              "mean": 103.1,
+              "sd": 31.27,
+              "se": 11.06,
+              "t": 9.33
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -491.12,
+            "paired_vs_floor": {
+              "diffs": [
+                852.72,
+                727.6,
+                481.36,
+                562.37,
+                240.57,
+                407.59,
+                734.4,
+                518.52
+              ],
+              "mean": 565.64,
+              "sd": 198.97,
+              "se": 70.34,
+              "t": 8.04
+            }
+          }
+        }
+      },
+      "vs-median": {
+        "bb_per_100": 65.66,
+        "champion_mean_bb_per_100": 149.72,
+        "fresh_champion_bb_per_100": 116.45,
+        "fresh_champion_empirical_mde_bb_per_100": 16.02,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 103.46,
+        "fresh_incumbent_empirical_mde_bb_per_100": 9.77,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -68.64,
+            -98.84,
+            -85.05,
+            -104.0,
+            -65.06,
+            -32.88,
+            -107.65,
+            -87.43
+          ],
+          "mean": -81.19,
+          "sd": 24.89,
+          "se": 8.8,
+          "t": -9.23
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -30.1,
+            -65.97,
+            -83.18,
+            -64.34,
+            -29.35,
+            -17.12,
+            -58.74,
+            -57.57
+          ],
+          "mean": -50.8,
+          "sd": 22.66,
+          "se": 8.01,
+          "t": -6.34
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -26.65,
+            -42.55,
+            -22.32,
+            -34.61,
+            -46.26,
+            -33.38,
+            -30.62,
+            -66.05
+          ],
+          "mean": -37.8,
+          "sd": 13.82,
+          "se": 4.89,
+          "t": -7.74
+        },
+        "published_mde_bb_per_100": 17.06,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 399.2,
+            "paired_vs_floor": {
+              "diffs": [
+                -308.4,
+                -317.57,
+                -324.96,
+                -330.71,
+                -371.37,
+                -324.23,
+                -332.87,
+                -358.22
+              ],
+              "mean": -333.54,
+              "sd": 21.03,
+              "se": 7.44,
+              "t": -44.86
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 334.53,
+            "paired_vs_floor": {
+              "diffs": [
+                -298.55,
+                -293.28,
+                -232.8,
+                -265.06,
+                -283.04,
+                -275.28,
+                -252.54,
+                -250.41
+              ],
+              "mean": -268.87,
+              "sd": 22.81,
+              "se": 8.06,
+              "t": -33.34
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -2.64,
+            "paired_vs_floor": {
+              "diffs": [
+                128.85,
+                -11.79,
+                97.22,
+                49.24,
+                67.41,
+                140.24,
+                63.19,
+                12.0
+              ],
+              "mean": 68.29,
+              "sd": 52.99,
+              "se": 18.73,
+              "t": 3.65
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -28.44,
+            "paired_vs_floor": {
+              "diffs": [
+                110.75,
+                63.46,
+                109.03,
+                102.14,
+                92.96,
+                103.22,
+                100.65,
+                70.6
+              ],
+              "mean": 94.1,
+              "sd": 17.66,
+              "se": 6.24,
+              "t": 15.07
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -107.65,
+            "paired_vs_floor": {
+              "diffs": [
+                183.9,
+                227.46,
+                147.58,
+                181.75,
+                154.69,
+                174.82,
+                158.81,
+                157.47
+              ],
+              "mean": 173.31,
+              "sd": 25.6,
+              "se": 9.05,
+              "t": 19.15
+            }
+          }
+        }
+      },
+      "vs-nit": {
+        "bb_per_100": 48.74,
+        "champion_mean_bb_per_100": 79.72,
+        "fresh_champion_bb_per_100": 62.3,
+        "fresh_champion_empirical_mde_bb_per_100": 6.43,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 65.81,
+        "fresh_incumbent_empirical_mde_bb_per_100": 5.11,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -16.54,
+            -32.94,
+            -31.53,
+            -36.42,
+            -29.88,
+            -45.32,
+            -27.93,
+            -29.21
+          ],
+          "mean": -31.22,
+          "sd": 8.12,
+          "se": 2.87,
+          "t": -10.88
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -6.65,
+            -14.66,
+            -18.03,
+            -12.15,
+            -6.54,
+            -33.52,
+            -10.56,
+            -6.38
+          ],
+          "mean": -13.56,
+          "sd": 9.1,
+          "se": 3.22,
+          "t": -4.22
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -11.15,
+            -29.0,
+            -10.59,
+            -24.32,
+            -16.44,
+            -19.73,
+            -17.49,
+            -7.8
+          ],
+          "mean": -17.07,
+          "sd": 7.23,
+          "se": 2.55,
+          "t": -6.68
+        },
+        "published_mde_bb_per_100": 3.22,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 105.89,
+            "paired_vs_floor": {
+              "diffs": [
+                -45.6,
+                -57.2,
+                -55.69,
+                -60.47,
+                -59.99,
+                -68.16,
+                -52.95,
+                -57.14
+              ],
+              "mean": -57.15,
+              "sd": 6.48,
+              "se": 2.29,
+              "t": -24.96
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 95.48,
+            "paired_vs_floor": {
+              "diffs": [
+                -34.05,
+                -54.6,
+                -41.84,
+                -54.17,
+                -48.99,
+                -53.81,
+                -35.8,
+                -50.6
+              ],
+              "mean": -46.73,
+              "sd": 8.38,
+              "se": 2.96,
+              "t": -15.77
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 14.6,
+            "paired_vs_floor": {
+              "diffs": [
+                39.11,
+                62.7,
+                44.88,
+                11.07,
+                18.49,
+                47.66,
+                12.9,
+                36.36
+              ],
+              "mean": 34.15,
+              "sd": 18.41,
+              "se": 6.51,
+              "t": 5.25
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -5.41,
+            "paired_vs_floor": {
+              "diffs": [
+                64.35,
+                48.75,
+                58.81,
+                46.38,
+                52.66,
+                47.69,
+                60.2,
+                54.35
+              ],
+              "mean": 54.15,
+              "sd": 6.5,
+              "se": 2.3,
+              "t": 23.56
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 1.2,
+            "paired_vs_floor": {
+              "diffs": [
+                64.5,
+                32.12,
+                51.04,
+                47.87,
+                32.78,
+                57.4,
+                24.15,
+                70.45
+              ],
+              "mean": 47.54,
+              "sd": 16.58,
+              "se": 5.86,
+              "t": 8.11
+            }
+          }
+        }
+      },
+      "vs-shover": {
+        "bb_per_100": 36.11,
+        "champion_mean_bb_per_100": 158.29,
+        "fresh_champion_bb_per_100": 84.57,
+        "fresh_champion_empirical_mde_bb_per_100": 25.17,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 50.54,
+        "fresh_incumbent_empirical_mde_bb_per_100": 42.6,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -99.98,
+            -170.51,
+            -139.73,
+            -97.67,
+            -63.8,
+            -183.92,
+            -158.81,
+            -85.0
+          ],
+          "mean": -124.93,
+          "sd": 44.11,
+          "se": 15.6,
+          "t": -8.01
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -92.53,
+            -102.05,
+            -30.47,
+            -60.71,
+            -11.17,
+            -34.63,
+            -3.92,
+            -52.2
+          ],
+          "mean": -48.46,
+          "sd": 35.59,
+          "se": 12.58,
+          "t": -3.85
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -60.47,
+            -106.7,
+            -16.27,
+            -28.8,
+            51.5,
+            83.97,
+            -3.9,
+            -34.8
+          ],
+          "mean": -14.43,
+          "sd": 60.24,
+          "se": 21.3,
+          "t": -0.68
+        },
+        "published_mde_bb_per_100": 46.58,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -72.67,
+                -26.8,
+                -20.47,
+                -301.87,
+                -0.07,
+                -56.13,
+                331.87,
+                -105.0
+              ],
+              "mean": -31.39,
+              "sd": 174.84,
+              "se": 61.81,
+              "t": -0.51
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -72.67,
+                -26.8,
+                -20.47,
+                -301.87,
+                -0.07,
+                -56.13,
+                331.87,
+                -105.0
+              ],
+              "mean": -31.39,
+              "sd": 174.84,
+              "se": 61.81,
+              "t": -0.51
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -72.67,
+                -26.8,
+                -20.47,
+                -301.87,
+                -0.07,
+                -56.13,
+                331.87,
+                -105.0
+              ],
+              "mean": -31.39,
+              "sd": 174.84,
+              "se": 61.81,
+              "t": -0.51
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -72.69,
+            "paired_vs_floor": {
+              "diffs": [
+                85.13,
+                42.03,
+                101.23,
+                78.83,
+                155.03,
+                145.37,
+                123.8,
+                138.97
+              ],
+              "mean": 108.8,
+              "sd": 38.88,
+              "se": 13.75,
+              "t": 7.91
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -341.11,
+            "paired_vs_floor": {
+              "diffs": [
+                483.53,
+                322.74,
+                319.73,
+                302.2,
+                379.93,
+                302.77,
+                455.87,
+                451.0
+              ],
+              "mean": 377.22,
+              "sd": 75.95,
+              "se": 26.85,
+              "t": 14.05
+            }
+          }
+        }
+      },
+      "vs-station": {
+        "bb_per_100": 10.27,
+        "champion_mean_bb_per_100": 311.54,
+        "fresh_champion_bb_per_100": 250.82,
+        "fresh_champion_empirical_mde_bb_per_100": 55.67,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 273.95,
+        "fresh_incumbent_empirical_mde_bb_per_100": 40.16,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -342.26,
+            -341.79,
+            -286.9,
+            -248.97,
+            -331.8,
+            -246.86,
+            -253.51,
+            -357.71
+          ],
+          "mean": -301.23,
+          "sd": 47.24,
+          "se": 16.7,
+          "t": -18.03
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -211.08,
+            -269.39,
+            -215.73,
+            -163.46,
+            -361.48,
+            -135.93,
+            -229.55,
+            -337.71
+          ],
+          "mean": -240.54,
+          "sd": 78.73,
+          "se": 27.84,
+          "t": -8.64
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -230.76,
+            -274.35,
+            -353.16,
+            -247.37,
+            -301.37,
+            -309.3,
+            -213.84,
+            -179.28
+          ],
+          "mean": -263.68,
+          "sd": 56.79,
+          "se": 20.08,
+          "t": -13.13
+        },
+        "published_mde_bb_per_100": 42.13,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 179.89,
+            "paired_vs_floor": {
+              "diffs": [
+                -217.66,
+                -123.83,
+                -233.13,
+                -266.97,
+                -254.64,
+                -7.81,
+                -120.95,
+                -131.97
+              ],
+              "mean": -169.62,
+              "sd": 88.73,
+              "se": 31.37,
+              "t": -5.41
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 155.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -223.05,
+                24.38,
+                -161.93,
+                -140.6,
+                -182.6,
+                -167.47,
+                -180.52,
+                -130.05
+              ],
+              "mean": -145.23,
+              "sd": 74.15,
+              "se": 26.22,
+              "t": -5.54
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 2.18,
+            "paired_vs_floor": {
+              "diffs": [
+                31.41,
+                -65.43,
+                58.42,
+                52.28,
+                -24.85,
+                4.98,
+                -6.95,
+                14.88
+              ],
+              "mean": 8.09,
+              "sd": 41.06,
+              "se": 14.52,
+              "t": 0.56
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -46.04,
+            "paired_vs_floor": {
+              "diffs": [
+                42.79,
+                23.41,
+                32.99,
+                119.83,
+                3.36,
+                88.29,
+                78.75,
+                61.08
+              ],
+              "mean": 56.31,
+              "sd": 38.17,
+              "se": 13.49,
+              "t": 4.17
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -489.7,
+            "paired_vs_floor": {
+              "diffs": [
+                448.21,
+                499.43,
+                455.44,
+                560.65,
+                439.71,
+                604.07,
+                527.02,
+                465.22
+              ],
+              "mean": 499.97,
+              "sd": 59.46,
+              "se": 21.02,
+              "t": 23.78
+            }
+          }
+        }
+      },
+      "vs-textured": {
+        "bb_per_100": 66.19,
+        "champion_mean_bb_per_100": 165.61,
+        "fresh_champion_bb_per_100": 111.12,
+        "fresh_champion_empirical_mde_bb_per_100": 24.18,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 102.71,
+        "fresh_incumbent_empirical_mde_bb_per_100": 5.63,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -96.07,
+            -113.8,
+            -82.78,
+            -104.18,
+            -66.56,
+            -129.3,
+            -122.01,
+            -99.54
+          ],
+          "mean": -101.78,
+          "sd": 20.55,
+          "se": 7.27,
+          "t": -14.01
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -26.18,
+            -66.03,
+            -26.15,
+            -61.72,
+            -14.0,
+            -33.12,
+            -114.9,
+            -17.37
+          ],
+          "mean": -44.93,
+          "sd": 34.19,
+          "se": 12.09,
+          "t": -3.72
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -42.26,
+            -42.5,
+            -41.5,
+            -32.15,
+            -31.07,
+            -20.49,
+            -39.96,
+            -42.25
+          ],
+          "mean": -36.52,
+          "sd": 7.96,
+          "se": 2.82,
+          "t": -12.97
+        },
+        "published_mde_bb_per_100": 17.13,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 397.1,
+            "paired_vs_floor": {
+              "diffs": [
+                -318.66,
+                -322.6,
+                -295.69,
+                -352.37,
+                -363.71,
+                -354.16,
+                -373.05,
+                -267.07
+              ],
+              "mean": -330.91,
+              "sd": 36.62,
+              "se": 12.95,
+              "t": -25.56
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 350.45,
+            "paired_vs_floor": {
+              "diffs": [
+                -332.69,
+                -261.85,
+                -271.06,
+                -288.34,
+                -264.93,
+                -261.36,
+                -316.07,
+                -277.8
+              ],
+              "mean": -284.26,
+              "sd": 26.7,
+              "se": 9.44,
+              "t": -30.11
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 4.61,
+            "paired_vs_floor": {
+              "diffs": [
+                57.59,
+                72.6,
+                79.27,
+                -0.53,
+                57.78,
+                64.61,
+                80.0,
+                81.26
+              ],
+              "mean": 61.57,
+              "sd": 26.88,
+              "se": 9.5,
+              "t": 6.48
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -30.28,
+            "paired_vs_floor": {
+              "diffs": [
+                91.3,
+                96.5,
+                106.41,
+                97.78,
+                88.57,
+                95.83,
+                86.21,
+                109.15
+              ],
+              "mean": 96.47,
+              "sd": 8.07,
+              "se": 2.85,
+              "t": 33.8
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -141.38,
+            "paired_vs_floor": {
+              "diffs": [
+                191.4,
+                200.02,
+                231.16,
+                238.18,
+                233.87,
+                238.58,
+                138.55,
+                188.75
+              ],
+              "mean": 207.56,
+              "sd": 35.02,
+              "se": 12.38,
+              "t": 16.77
+            }
+          }
+        }
+      }
+    },
+    "b": {
+      "five-max-lineup": {
+        "bb_per_100": 123.14,
+        "champion_mean_bb_per_100": 214.93,
+        "fresh_champion_bb_per_100": 165.18,
+        "fresh_champion_empirical_mde_bb_per_100": 67.94,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 113.16,
+        "fresh_incumbent_empirical_mde_bb_per_100": 46.32,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            20.53,
+            -84.41,
+            -158.17,
+            16.9,
+            -32.93,
+            -189.96,
+            -126.71,
+            -112.52
+          ],
+          "mean": -83.41,
+          "sd": 78.45,
+          "se": 27.74,
+          "t": -3.01
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            108.17,
+            -78.21,
+            -110.07,
+            109.14,
+            -43.75,
+            -100.59,
+            -125.61,
+            -95.42
+          ],
+          "mean": -42.04,
+          "sd": 96.08,
+          "se": 33.97,
+          "t": -1.24
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            75.8,
+            -18.51,
+            9.69,
+            68.74,
+            48.07,
+            56.44,
+            -108.25,
+            -52.11
+          ],
+          "mean": 9.98,
+          "sd": 65.51,
+          "se": 23.16,
+          "t": 0.43
+        },
+        "published_mde_bb_per_100": 40.67,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 438.06,
+            "paired_vs_floor": {
+              "diffs": [
+                -212.93,
+                -498.47,
+                -521.23,
+                11.87,
+                -275.06,
+                -135.42,
+                -509.03,
+                -379.06
+              ],
+              "mean": -314.92,
+              "sd": 196.05,
+              "se": 69.31,
+              "t": -4.54
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 399.09,
+            "paired_vs_floor": {
+              "diffs": [
+                -228.48,
+                -387.56,
+                -422.29,
+                68.78,
+                -257.64,
+                -347.15,
+                -335.55,
+                -297.7
+              ],
+              "mean": -275.95,
+              "sd": 153.25,
+              "se": 54.18,
+              "t": -5.09
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 43.48,
+            "paired_vs_floor": {
+              "diffs": [
+                134.48,
+                15.84,
+                -8.13,
+                102.85,
+                -9.64,
+                211.88,
+                125.89,
+                64.09
+              ],
+              "mean": 79.66,
+              "sd": 78.52,
+              "se": 27.76,
+              "t": 2.87
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -28.58,
+            "paired_vs_floor": {
+              "diffs": [
+                236.87,
+                140.82,
+                107.95,
+                195.06,
+                203.05,
+                130.85,
+                98.7,
+                100.49
+              ],
+              "mean": 151.72,
+              "sd": 53.01,
+              "se": 18.74,
+              "t": 8.1
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -491.12,
+            "paired_vs_floor": {
+              "diffs": [
+                940.71,
+                801.81,
+                521.58,
+                672.98,
+                328.72,
+                448.71,
+                692.23,
+                507.34
+              ],
+              "mean": 614.26,
+              "sd": 200.08,
+              "se": 70.74,
+              "t": 8.68
+            }
+          }
+        }
+      },
+      "vs-median": {
+        "bb_per_100": 76.81,
+        "champion_mean_bb_per_100": 149.72,
+        "fresh_champion_bb_per_100": 116.45,
+        "fresh_champion_empirical_mde_bb_per_100": 17.09,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 103.46,
+        "fresh_incumbent_empirical_mde_bb_per_100": 9.08,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -48.46,
+            -73.45,
+            -84.1,
+            -91.44,
+            -65.76,
+            -28.4,
+            -107.42,
+            -61.31
+          ],
+          "mean": -70.04,
+          "sd": 24.95,
+          "se": 8.82,
+          "t": -7.94
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -9.92,
+            -40.58,
+            -82.23,
+            -51.78,
+            -30.05,
+            -12.64,
+            -58.51,
+            -31.45
+          ],
+          "mean": -39.64,
+          "sd": 24.17,
+          "se": 8.55,
+          "t": -4.64
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -6.47,
+            -17.16,
+            -21.37,
+            -22.05,
+            -46.96,
+            -28.9,
+            -30.39,
+            -39.93
+          ],
+          "mean": -26.65,
+          "sd": 12.84,
+          "se": 4.54,
+          "t": -5.87
+        },
+        "published_mde_bb_per_100": 17.06,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 399.2,
+            "paired_vs_floor": {
+              "diffs": [
+                -288.22,
+                -292.18,
+                -324.01,
+                -318.15,
+                -372.07,
+                -319.75,
+                -332.64,
+                -332.1
+              ],
+              "mean": -322.39,
+              "sd": 26.12,
+              "se": 9.23,
+              "t": -34.91
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 334.53,
+            "paired_vs_floor": {
+              "diffs": [
+                -278.37,
+                -267.89,
+                -231.85,
+                -252.5,
+                -283.74,
+                -270.8,
+                -252.31,
+                -224.29
+              ],
+              "mean": -257.72,
+              "sd": 21.45,
+              "se": 7.58,
+              "t": -33.98
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -2.64,
+            "paired_vs_floor": {
+              "diffs": [
+                149.03,
+                13.6,
+                98.17,
+                61.8,
+                66.71,
+                144.72,
+                63.42,
+                38.12
+              ],
+              "mean": 79.45,
+              "sd": 48.15,
+              "se": 17.02,
+              "t": 4.67
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -28.44,
+            "paired_vs_floor": {
+              "diffs": [
+                130.93,
+                88.85,
+                109.98,
+                114.7,
+                92.26,
+                107.7,
+                100.88,
+                96.72
+              ],
+              "mean": 105.25,
+              "sd": 13.66,
+              "se": 4.83,
+              "t": 21.79
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -107.65,
+            "paired_vs_floor": {
+              "diffs": [
+                204.08,
+                252.85,
+                148.53,
+                194.31,
+                153.99,
+                179.3,
+                159.04,
+                183.59
+              ],
+              "mean": 184.46,
+              "sd": 33.92,
+              "se": 11.99,
+              "t": 15.38
+            }
+          }
+        }
+      },
+      "vs-nit": {
+        "bb_per_100": 51.14,
+        "champion_mean_bb_per_100": 79.72,
+        "fresh_champion_bb_per_100": 62.3,
+        "fresh_champion_empirical_mde_bb_per_100": 5.59,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 65.81,
+        "fresh_incumbent_empirical_mde_bb_per_100": 4.4,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -25.89,
+            -22.07,
+            -25.53,
+            -24.1,
+            -29.84,
+            -36.11,
+            -34.33,
+            -32.74
+          ],
+          "mean": -28.83,
+          "sd": 5.17,
+          "se": 1.83,
+          "t": -15.77
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -16.0,
+            -3.79,
+            -12.03,
+            0.17,
+            -6.5,
+            -24.31,
+            -16.96,
+            -9.91
+          ],
+          "mean": -11.17,
+          "sd": 7.9,
+          "se": 2.79,
+          "t": -4.0
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -20.5,
+            -18.13,
+            -4.59,
+            -12.0,
+            -16.4,
+            -10.52,
+            -23.89,
+            -11.33
+          ],
+          "mean": -14.67,
+          "sd": 6.22,
+          "se": 2.2,
+          "t": -6.67
+        },
+        "published_mde_bb_per_100": 3.22,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 105.89,
+            "paired_vs_floor": {
+              "diffs": [
+                -54.95,
+                -46.33,
+                -49.69,
+                -48.15,
+                -59.95,
+                -58.95,
+                -59.35,
+                -60.67
+              ],
+              "mean": -54.76,
+              "sd": 5.87,
+              "se": 2.07,
+              "t": -26.4
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 95.48,
+            "paired_vs_floor": {
+              "diffs": [
+                -43.4,
+                -43.73,
+                -35.84,
+                -41.85,
+                -48.95,
+                -44.6,
+                -42.2,
+                -54.13
+              ],
+              "mean": -44.34,
+              "sd": 5.36,
+              "se": 1.9,
+              "t": -23.38
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 14.6,
+            "paired_vs_floor": {
+              "diffs": [
+                29.76,
+                73.57,
+                50.88,
+                23.39,
+                18.53,
+                56.87,
+                6.5,
+                32.83
+              ],
+              "mean": 36.54,
+              "sd": 22.2,
+              "se": 7.85,
+              "t": 4.66
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -5.41,
+            "paired_vs_floor": {
+              "diffs": [
+                55.0,
+                59.62,
+                64.81,
+                58.7,
+                52.7,
+                56.9,
+                53.8,
+                50.82
+              ],
+              "mean": 56.54,
+              "sd": 4.47,
+              "se": 1.58,
+              "t": 35.76
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 1.2,
+            "paired_vs_floor": {
+              "diffs": [
+                55.15,
+                42.99,
+                57.04,
+                60.19,
+                32.82,
+                66.61,
+                17.75,
+                66.92
+              ],
+              "mean": 49.93,
+              "sd": 17.43,
+              "se": 6.16,
+              "t": 8.1
+            }
+          }
+        }
+      },
+      "vs-shover": {
+        "bb_per_100": 39.26,
+        "champion_mean_bb_per_100": 158.29,
+        "fresh_champion_bb_per_100": 84.57,
+        "fresh_champion_empirical_mde_bb_per_100": 36.77,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 50.54,
+        "fresh_incumbent_empirical_mde_bb_per_100": 32.77,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -111.31,
+            -142.41,
+            -79.33,
+            -58.2,
+            -107.86,
+            -252.12,
+            -130.68,
+            -92.27
+          ],
+          "mean": -121.77,
+          "sd": 59.18,
+          "se": 20.92,
+          "t": -5.82
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -103.86,
+            -73.95,
+            29.93,
+            -21.24,
+            -55.23,
+            -102.83,
+            24.21,
+            -59.47
+          ],
+          "mean": -45.31,
+          "sd": 52.0,
+          "se": 18.39,
+          "t": -2.46
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -71.8,
+            -78.6,
+            44.13,
+            10.67,
+            7.44,
+            15.77,
+            24.23,
+            -42.07
+          ],
+          "mean": -11.28,
+          "sd": 46.35,
+          "se": 16.39,
+          "t": -0.69
+        },
+        "published_mde_bb_per_100": 46.58,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -84.0,
+                1.3,
+                39.93,
+                -262.4,
+                -44.13,
+                -124.33,
+                360.0,
+                -112.27
+              ],
+              "mean": -28.24,
+              "sd": 181.56,
+              "se": 64.19,
+              "t": -0.44
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -84.0,
+                1.3,
+                39.93,
+                -262.4,
+                -44.13,
+                -124.33,
+                360.0,
+                -112.27
+              ],
+              "mean": -28.24,
+              "sd": 181.56,
+              "se": 64.19,
+              "t": -0.44
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -84.0,
+                1.3,
+                39.93,
+                -262.4,
+                -44.13,
+                -124.33,
+                360.0,
+                -112.27
+              ],
+              "mean": -28.24,
+              "sd": 181.56,
+              "se": 64.19,
+              "t": -0.44
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -72.69,
+            "paired_vs_floor": {
+              "diffs": [
+                73.8,
+                70.13,
+                161.63,
+                118.3,
+                110.97,
+                77.17,
+                151.93,
+                131.7
+              ],
+              "mean": 111.95,
+              "sd": 35.68,
+              "se": 12.62,
+              "t": 8.87
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -341.11,
+            "paired_vs_floor": {
+              "diffs": [
+                472.2,
+                350.84,
+                380.13,
+                341.67,
+                335.87,
+                234.57,
+                484.0,
+                443.73
+              ],
+              "mean": 380.38,
+              "sd": 83.49,
+              "se": 29.52,
+              "t": 12.89
+            }
+          }
+        }
+      },
+      "vs-station": {
+        "bb_per_100": 43.46,
+        "champion_mean_bb_per_100": 311.54,
+        "fresh_champion_bb_per_100": 250.82,
+        "fresh_champion_empirical_mde_bb_per_100": 47.44,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 273.95,
+        "fresh_incumbent_empirical_mde_bb_per_100": 42.81,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -282.0,
+            -294.95,
+            -242.91,
+            -297.83,
+            -262.95,
+            -210.03,
+            -238.3,
+            -315.35
+          ],
+          "mean": -268.04,
+          "sd": 35.76,
+          "se": 12.64,
+          "t": -21.2
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -150.82,
+            -222.55,
+            -171.74,
+            -212.32,
+            -292.63,
+            -99.1,
+            -214.34,
+            -295.35
+          ],
+          "mean": -207.36,
+          "sd": 67.09,
+          "se": 23.72,
+          "t": -8.74
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -170.5,
+            -227.51,
+            -309.17,
+            -296.23,
+            -232.52,
+            -272.47,
+            -198.63,
+            -136.92
+          ],
+          "mean": -230.49,
+          "sd": 60.54,
+          "se": 21.4,
+          "t": -10.77
+        },
+        "published_mde_bb_per_100": 42.13,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 179.89,
+            "paired_vs_floor": {
+              "diffs": [
+                -157.4,
+                -76.99,
+                -189.14,
+                -315.83,
+                -185.79,
+                29.02,
+                -105.74,
+                -89.61
+              ],
+              "mean": -136.44,
+              "sd": 101.33,
+              "se": 35.83,
+              "t": -3.81
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 155.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -162.79,
+                71.22,
+                -117.94,
+                -189.46,
+                -113.75,
+                -130.64,
+                -165.31,
+                -87.69
+              ],
+              "mean": -112.05,
+              "sd": 81.04,
+              "se": 28.65,
+              "t": -3.91
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 2.18,
+            "paired_vs_floor": {
+              "diffs": [
+                91.67,
+                -18.59,
+                102.41,
+                3.42,
+                44.0,
+                41.81,
+                8.26,
+                57.24
+              ],
+              "mean": 41.28,
+              "sd": 42.5,
+              "se": 15.03,
+              "t": 2.75
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -46.04,
+            "paired_vs_floor": {
+              "diffs": [
+                103.05,
+                70.25,
+                76.98,
+                70.97,
+                72.21,
+                125.12,
+                93.96,
+                103.44
+              ],
+              "mean": 89.5,
+              "sd": 20.13,
+              "se": 7.12,
+              "t": 12.58
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -489.7,
+            "paired_vs_floor": {
+              "diffs": [
+                508.47,
+                546.27,
+                499.43,
+                511.79,
+                508.56,
+                640.9,
+                542.23,
+                507.58
+              ],
+              "mean": 533.15,
+              "sd": 46.79,
+              "se": 16.54,
+              "t": 32.23
+            }
+          }
+        }
+      },
+      "vs-textured": {
+        "bb_per_100": 70.16,
+        "champion_mean_bb_per_100": 165.61,
+        "fresh_champion_bb_per_100": 111.12,
+        "fresh_champion_empirical_mde_bb_per_100": 21.17,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 102.71,
+        "fresh_incumbent_empirical_mde_bb_per_100": 9.95,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -101.93,
+            -105.69,
+            -72.66,
+            -74.71,
+            -75.19,
+            -135.24,
+            -114.69,
+            -102.37
+          ],
+          "mean": -97.81,
+          "sd": 22.24,
+          "se": 7.86,
+          "t": -12.44
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -32.04,
+            -57.92,
+            -16.03,
+            -32.25,
+            -22.63,
+            -39.06,
+            -107.58,
+            -20.2
+          ],
+          "mean": -40.96,
+          "sd": 29.94,
+          "se": 10.58,
+          "t": -3.87
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -48.12,
+            -34.39,
+            -31.38,
+            -2.68,
+            -39.7,
+            -26.43,
+            -32.64,
+            -45.08
+          ],
+          "mean": -32.55,
+          "sd": 14.07,
+          "se": 4.97,
+          "t": -6.55
+        },
+        "published_mde_bb_per_100": 17.13,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 397.1,
+            "paired_vs_floor": {
+              "diffs": [
+                -324.52,
+                -314.49,
+                -285.57,
+                -322.9,
+                -372.34,
+                -360.1,
+                -365.73,
+                -269.9
+              ],
+              "mean": -326.94,
+              "sd": 37.43,
+              "se": 13.23,
+              "t": -24.71
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 350.45,
+            "paired_vs_floor": {
+              "diffs": [
+                -338.55,
+                -253.74,
+                -260.94,
+                -258.87,
+                -273.56,
+                -267.3,
+                -308.75,
+                -280.63
+              ],
+              "mean": -280.29,
+              "sd": 29.17,
+              "se": 10.31,
+              "t": -27.18
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 4.61,
+            "paired_vs_floor": {
+              "diffs": [
+                51.73,
+                80.71,
+                89.39,
+                28.94,
+                49.15,
+                58.67,
+                87.32,
+                78.43
+              ],
+              "mean": 65.54,
+              "sd": 21.66,
+              "se": 7.66,
+              "t": 8.56
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -30.28,
+            "paired_vs_floor": {
+              "diffs": [
+                85.44,
+                104.61,
+                116.53,
+                127.25,
+                79.94,
+                89.89,
+                93.53,
+                106.32
+              ],
+              "mean": 100.44,
+              "sd": 16.19,
+              "se": 5.72,
+              "t": 17.55
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -141.38,
+            "paired_vs_floor": {
+              "diffs": [
+                185.54,
+                208.13,
+                241.28,
+                267.65,
+                225.24,
+                232.64,
+                145.87,
+                185.92
+              ],
+              "mean": 211.53,
+              "sd": 38.4,
+              "se": 13.58,
+              "t": 15.58
+            }
+          }
+        }
+      }
+    },
+    "c": {
+      "five-max-lineup": {
+        "bb_per_100": 94.88,
+        "champion_mean_bb_per_100": 214.93,
+        "fresh_champion_bb_per_100": 165.18,
+        "fresh_champion_empirical_mde_bb_per_100": 42.09,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 113.16,
+        "fresh_incumbent_empirical_mde_bb_per_100": 27.83,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -85.73,
+            -53.02,
+            -149.2,
+            -80.46,
+            -153.89,
+            -207.61,
+            -81.5,
+            -81.96
+          ],
+          "mean": -111.67,
+          "sd": 52.47,
+          "se": 18.55,
+          "t": -6.02
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            1.91,
+            -46.82,
+            -101.1,
+            11.78,
+            -164.71,
+            -118.24,
+            -80.4,
+            -64.86
+          ],
+          "mean": -70.31,
+          "sd": 59.52,
+          "se": 21.04,
+          "t": -3.34
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -30.46,
+            12.88,
+            18.66,
+            -28.62,
+            -72.89,
+            38.79,
+            -63.04,
+            -21.55
+          ],
+          "mean": -18.28,
+          "sd": 39.36,
+          "se": 13.92,
+          "t": -1.31
+        },
+        "published_mde_bb_per_100": 40.67,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 438.06,
+            "paired_vs_floor": {
+              "diffs": [
+                -319.19,
+                -467.08,
+                -512.26,
+                -85.49,
+                -396.02,
+                -153.07,
+                -463.82,
+                -348.5
+              ],
+              "mean": -343.18,
+              "sd": 153.27,
+              "se": 54.19,
+              "t": -6.33
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 399.09,
+            "paired_vs_floor": {
+              "diffs": [
+                -334.74,
+                -356.17,
+                -413.32,
+                -28.58,
+                -378.6,
+                -364.8,
+                -290.34,
+                -267.14
+              ],
+              "mean": -304.21,
+              "sd": 120.88,
+              "se": 42.74,
+              "t": -7.12
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 43.48,
+            "paired_vs_floor": {
+              "diffs": [
+                28.22,
+                47.23,
+                0.84,
+                5.49,
+                -130.6,
+                194.23,
+                171.1,
+                94.65
+              ],
+              "mean": 51.39,
+              "sd": 103.47,
+              "se": 36.58,
+              "t": 1.4
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -28.58,
+            "paired_vs_floor": {
+              "diffs": [
+                130.61,
+                172.21,
+                116.92,
+                97.7,
+                82.09,
+                113.2,
+                143.91,
+                131.05
+              ],
+              "mean": 123.46,
+              "sd": 27.84,
+              "se": 9.84,
+              "t": 12.54
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -491.12,
+            "paired_vs_floor": {
+              "diffs": [
+                834.45,
+                833.2,
+                530.55,
+                575.62,
+                207.76,
+                431.06,
+                737.44,
+                537.9
+              ],
+              "mean": 586.0,
+              "sd": 213.25,
+              "se": 75.4,
+              "t": 7.77
+            }
+          }
+        }
+      },
+      "vs-median": {
+        "bb_per_100": 74.19,
+        "champion_mean_bb_per_100": 149.72,
+        "fresh_champion_bb_per_100": 116.45,
+        "fresh_champion_empirical_mde_bb_per_100": 14.04,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 103.46,
+        "fresh_incumbent_empirical_mde_bb_per_100": 7.04,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -70.28,
+            -75.27,
+            -84.36,
+            -90.53,
+            -65.37,
+            -33.95,
+            -100.67,
+            -60.89
+          ],
+          "mean": -72.66,
+          "sd": 20.51,
+          "se": 7.25,
+          "t": -10.02
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -31.74,
+            -42.4,
+            -82.49,
+            -50.87,
+            -29.66,
+            -18.19,
+            -51.76,
+            -31.03
+          ],
+          "mean": -42.27,
+          "sd": 19.85,
+          "se": 7.02,
+          "t": -6.02
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -28.29,
+            -18.98,
+            -21.63,
+            -21.14,
+            -46.57,
+            -34.45,
+            -23.64,
+            -39.51
+          ],
+          "mean": -29.28,
+          "sd": 9.96,
+          "se": 3.52,
+          "t": -8.32
+        },
+        "published_mde_bb_per_100": 17.06,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 399.2,
+            "paired_vs_floor": {
+              "diffs": [
+                -310.04,
+                -294.0,
+                -324.27,
+                -317.24,
+                -371.68,
+                -325.3,
+                -325.89,
+                -331.68
+              ],
+              "mean": -325.01,
+              "sd": 22.26,
+              "se": 7.87,
+              "t": -41.29
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 334.53,
+            "paired_vs_floor": {
+              "diffs": [
+                -300.19,
+                -269.71,
+                -232.11,
+                -251.59,
+                -283.35,
+                -276.35,
+                -245.56,
+                -223.87
+              ],
+              "mean": -260.34,
+              "sd": 26.41,
+              "se": 9.34,
+              "t": -27.88
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -2.64,
+            "paired_vs_floor": {
+              "diffs": [
+                127.21,
+                11.78,
+                97.91,
+                62.71,
+                67.1,
+                139.17,
+                70.17,
+                38.54
+              ],
+              "mean": 76.82,
+              "sd": 42.94,
+              "se": 15.18,
+              "t": 5.06
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -28.44,
+            "paired_vs_floor": {
+              "diffs": [
+                109.11,
+                87.03,
+                109.72,
+                115.61,
+                92.65,
+                102.15,
+                107.63,
+                97.14
+              ],
+              "mean": 102.63,
+              "sd": 9.7,
+              "se": 3.43,
+              "t": 29.92
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -107.65,
+            "paired_vs_floor": {
+              "diffs": [
+                182.26,
+                251.03,
+                148.27,
+                195.22,
+                154.38,
+                173.75,
+                165.79,
+                184.01
+              ],
+              "mean": 181.84,
+              "sd": 32.02,
+              "se": 11.32,
+              "t": 16.06
+            }
+          }
+        }
+      },
+      "vs-nit": {
+        "bb_per_100": 56.04,
+        "champion_mean_bb_per_100": 79.72,
+        "fresh_champion_bb_per_100": 62.3,
+        "fresh_champion_empirical_mde_bb_per_100": 6.97,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 65.81,
+        "fresh_incumbent_empirical_mde_bb_per_100": 5.32,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -13.64,
+            -20.59,
+            -25.59,
+            -24.0,
+            -14.99,
+            -33.31,
+            -34.48,
+            -24.76
+          ],
+          "mean": -23.92,
+          "sd": 7.56,
+          "se": 2.67,
+          "t": -8.95
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -3.75,
+            -2.31,
+            -12.09,
+            0.27,
+            8.35,
+            -21.51,
+            -17.11,
+            -1.93
+          ],
+          "mean": -6.26,
+          "sd": 9.86,
+          "se": 3.49,
+          "t": -1.8
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -8.25,
+            -16.65,
+            -4.65,
+            -11.9,
+            -1.55,
+            -7.72,
+            -24.04,
+            -3.35
+          ],
+          "mean": -9.76,
+          "sd": 7.53,
+          "se": 2.66,
+          "t": -3.67
+        },
+        "published_mde_bb_per_100": 3.22,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 105.89,
+            "paired_vs_floor": {
+              "diffs": [
+                -42.7,
+                -44.85,
+                -49.75,
+                -48.05,
+                -45.1,
+                -56.15,
+                -59.5,
+                -52.69
+              ],
+              "mean": -49.85,
+              "sd": 5.89,
+              "se": 2.08,
+              "t": -23.94
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 95.48,
+            "paired_vs_floor": {
+              "diffs": [
+                -31.15,
+                -42.25,
+                -35.9,
+                -41.75,
+                -34.1,
+                -41.8,
+                -42.35,
+                -46.15
+              ],
+              "mean": -39.43,
+              "sd": 5.1,
+              "se": 1.8,
+              "t": -21.87
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 14.6,
+            "paired_vs_floor": {
+              "diffs": [
+                42.01,
+                75.05,
+                50.82,
+                23.49,
+                33.38,
+                59.67,
+                6.35,
+                40.81
+              ],
+              "mean": 41.45,
+              "sd": 21.28,
+              "se": 7.52,
+              "t": 5.51
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -5.41,
+            "paired_vs_floor": {
+              "diffs": [
+                67.25,
+                61.1,
+                64.75,
+                58.8,
+                67.55,
+                59.7,
+                53.65,
+                58.8
+              ],
+              "mean": 61.45,
+              "sd": 4.78,
+              "se": 1.69,
+              "t": 36.38
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 1.2,
+            "paired_vs_floor": {
+              "diffs": [
+                67.4,
+                44.47,
+                56.98,
+                60.29,
+                47.67,
+                69.41,
+                17.6,
+                74.9
+              ],
+              "mean": 54.84,
+              "sd": 18.33,
+              "se": 6.48,
+              "t": 8.46
+            }
+          }
+        }
+      },
+      "vs-shover": {
+        "bb_per_100": 24.12,
+        "champion_mean_bb_per_100": 158.29,
+        "fresh_champion_bb_per_100": 84.57,
+        "fresh_champion_empirical_mde_bb_per_100": 27.79,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 50.54,
+        "fresh_incumbent_empirical_mde_bb_per_100": 33.8,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -116.64,
+            -164.58,
+            -179.73,
+            -95.8,
+            -114.46,
+            -228.92,
+            -147.18,
+            -48.0
+          ],
+          "mean": -136.91,
+          "sd": 55.65,
+          "se": 19.68,
+          "t": -6.96
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -109.19,
+            -96.12,
+            -70.47,
+            -58.84,
+            -61.83,
+            -79.63,
+            7.71,
+            -15.2
+          ],
+          "mean": -60.45,
+          "sd": 39.3,
+          "se": 13.9,
+          "t": -4.35
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -77.13,
+            -100.77,
+            -56.27,
+            -26.93,
+            0.84,
+            38.97,
+            7.73,
+            2.2
+          ],
+          "mean": -26.42,
+          "sd": 47.8,
+          "se": 16.9,
+          "t": -1.56
+        },
+        "published_mde_bb_per_100": 46.58,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -89.33,
+                -20.87,
+                -60.47,
+                -300.0,
+                -50.73,
+                -101.13,
+                343.5,
+                -68.0
+              ],
+              "mean": -43.38,
+              "sd": 178.26,
+              "se": 63.02,
+              "t": -0.69
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -89.33,
+                -20.87,
+                -60.47,
+                -300.0,
+                -50.73,
+                -101.13,
+                343.5,
+                -68.0
+              ],
+              "mean": -43.38,
+              "sd": 178.26,
+              "se": 63.02,
+              "t": -0.69
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 67.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -89.33,
+                -20.87,
+                -60.47,
+                -300.0,
+                -50.73,
+                -101.13,
+                343.5,
+                -68.0
+              ],
+              "mean": -43.38,
+              "sd": 178.26,
+              "se": 63.02,
+              "t": -0.69
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -72.69,
+            "paired_vs_floor": {
+              "diffs": [
+                68.47,
+                47.96,
+                61.23,
+                80.7,
+                104.37,
+                100.37,
+                135.43,
+                175.97
+              ],
+              "mean": 96.81,
+              "sd": 42.33,
+              "se": 14.97,
+              "t": 6.47
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -341.11,
+            "paired_vs_floor": {
+              "diffs": [
+                466.87,
+                328.67,
+                279.73,
+                304.07,
+                329.27,
+                257.77,
+                467.5,
+                488.0
+              ],
+              "mean": 365.24,
+              "sd": 93.42,
+              "se": 33.03,
+              "t": 11.06
+            }
+          }
+        }
+      },
+      "vs-station": {
+        "bb_per_100": 16.19,
+        "champion_mean_bb_per_100": 311.54,
+        "fresh_champion_bb_per_100": 250.82,
+        "fresh_champion_empirical_mde_bb_per_100": 47.14,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 273.95,
+        "fresh_incumbent_empirical_mde_bb_per_100": 38.76,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -333.36,
+            -303.88,
+            -275.87,
+            -263.36,
+            -294.89,
+            -268.59,
+            -258.74,
+            -363.76
+          ],
+          "mean": -295.31,
+          "sd": 37.14,
+          "se": 13.13,
+          "t": -22.49
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -202.18,
+            -231.48,
+            -204.7,
+            -177.85,
+            -324.57,
+            -157.66,
+            -234.78,
+            -343.76
+          ],
+          "mean": -234.62,
+          "sd": 66.66,
+          "se": 23.57,
+          "t": -9.96
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -221.86,
+            -236.44,
+            -342.13,
+            -261.76,
+            -264.46,
+            -331.03,
+            -219.07,
+            -185.33
+          ],
+          "mean": -257.76,
+          "sd": 54.82,
+          "se": 19.38,
+          "t": -13.3
+        },
+        "published_mde_bb_per_100": 42.13,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 179.89,
+            "paired_vs_floor": {
+              "diffs": [
+                -208.76,
+                -85.92,
+                -222.1,
+                -281.36,
+                -217.73,
+                -29.54,
+                -126.18,
+                -138.02
+              ],
+              "mean": -163.7,
+              "sd": 83.08,
+              "se": 29.37,
+              "t": -5.57
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 155.5,
+            "paired_vs_floor": {
+              "diffs": [
+                -214.15,
+                62.29,
+                -150.9,
+                -154.99,
+                -145.69,
+                -189.2,
+                -185.75,
+                -136.1
+              ],
+              "mean": -139.31,
+              "sd": 85.62,
+              "se": 30.27,
+              "t": -4.6
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 2.18,
+            "paired_vs_floor": {
+              "diffs": [
+                40.31,
+                -27.52,
+                69.45,
+                37.89,
+                12.06,
+                -16.75,
+                -12.18,
+                8.83
+              ],
+              "mean": 14.01,
+              "sd": 33.22,
+              "se": 11.74,
+              "t": 1.19
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -46.04,
+            "paired_vs_floor": {
+              "diffs": [
+                51.69,
+                61.32,
+                44.02,
+                105.44,
+                40.27,
+                66.56,
+                73.52,
+                55.03
+              ],
+              "mean": 62.23,
+              "sd": 20.67,
+              "se": 7.31,
+              "t": 8.52
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -489.7,
+            "paired_vs_floor": {
+              "diffs": [
+                457.11,
+                537.34,
+                466.47,
+                546.26,
+                476.62,
+                582.34,
+                521.79,
+                459.17
+              ],
+              "mean": 505.89,
+              "sd": 47.34,
+              "se": 16.74,
+              "t": 30.22
+            }
+          }
+        }
+      },
+      "vs-textured": {
+        "bb_per_100": 71.94,
+        "champion_mean_bb_per_100": 165.61,
+        "fresh_champion_bb_per_100": 111.12,
+        "fresh_champion_empirical_mde_bb_per_100": 20.16,
+        "fresh_champion_label": "heuristic-aggressive-v6",
+        "fresh_incumbent_bb_per_100": 102.71,
+        "fresh_incumbent_empirical_mde_bb_per_100": 18.11,
+        "fresh_incumbent_label": "candidate-v7-0001c",
+        "paired_vs_champion": {
+          "diffs": [
+            -102.32,
+            -104.28,
+            -103.81,
+            -113.0,
+            -35.1,
+            -123.52,
+            -75.27,
+            -110.89
+          ],
+          "mean": -96.02,
+          "sd": 28.22,
+          "se": 9.98,
+          "t": -9.62
+        },
+        "paired_vs_fresh_champion": {
+          "diffs": [
+            -32.43,
+            -56.51,
+            -47.18,
+            -70.54,
+            17.46,
+            -27.34,
+            -68.16,
+            -28.72
+          ],
+          "mean": -39.18,
+          "sd": 28.51,
+          "se": 10.08,
+          "t": -3.89
+        },
+        "paired_vs_fresh_incumbent": {
+          "diffs": [
+            -48.51,
+            -32.98,
+            -62.53,
+            -40.97,
+            0.39,
+            -14.71,
+            6.78,
+            -53.6
+          ],
+          "mean": -30.77,
+          "sd": 25.61,
+          "se": 9.06,
+          "t": -3.4
+        },
+        "published_mde_bb_per_100": 17.13,
+        "trivial_floors": {
+          "always_aggress_large": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 397.1,
+            "paired_vs_floor": {
+              "diffs": [
+                -324.91,
+                -313.08,
+                -316.72,
+                -361.19,
+                -332.25,
+                -348.38,
+                -326.31,
+                -278.42
+              ],
+              "mean": -325.16,
+              "sd": 24.76,
+              "se": 8.75,
+              "t": -37.15
+            }
+          },
+          "always_aggress_small": {
+            "beats_floor_mean": false,
+            "floor_bb_per_100": 350.45,
+            "paired_vs_floor": {
+              "diffs": [
+                -338.94,
+                -252.33,
+                -292.09,
+                -297.16,
+                -233.47,
+                -255.58,
+                -269.33,
+                -289.15
+              ],
+              "mean": -278.51,
+              "sd": 33.0,
+              "se": 11.67,
+              "t": -23.87
+            }
+          },
+          "always_check_call": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": 4.61,
+            "paired_vs_floor": {
+              "diffs": [
+                51.34,
+                82.12,
+                58.24,
+                -9.35,
+                89.24,
+                70.39,
+                126.74,
+                69.91
+              ],
+              "mean": 67.33,
+              "sd": 38.66,
+              "se": 13.67,
+              "t": 4.93
+            }
+          },
+          "always_fold": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -30.28,
+            "paired_vs_floor": {
+              "diffs": [
+                85.05,
+                106.02,
+                85.38,
+                88.96,
+                120.03,
+                101.61,
+                132.95,
+                97.8
+              ],
+              "mean": 102.22,
+              "sd": 17.11,
+              "se": 6.05,
+              "t": 16.9
+            }
+          },
+          "uniform_random_legal": {
+            "beats_floor_mean": true,
+            "floor_bb_per_100": -141.38,
+            "paired_vs_floor": {
+              "diffs": [
+                185.15,
+                209.54,
+                210.13,
+                229.36,
+                265.33,
+                244.36,
+                185.29,
+                177.4
+              ],
+              "mean": 213.32,
+              "sd": 31.21,
+              "se": 11.04,
+              "t": 19.33
+            }
+          }
+        }
+      }
+    }
+  },
+  "candidates": [
+    "candidate-v8-0002a",
+    "candidate-v8-0002b",
+    "candidate-v8-0002c"
+  ],
+  "duel": [
+    {
+      "empirical_mde_bb_per_100": 6.26,
+      "init_seed": 401,
+      "margin_bb_per_100": -32.75,
+      "member": "a",
+      "resolvable_spread_bb_per_100": 16.78,
+      "sd": 12.52,
+      "se": 3.13,
+      "seeds": 16,
+      "t": -10.46,
+      "verdict": "incumbent wins"
+    },
+    {
+      "empirical_mde_bb_per_100": 6.15,
+      "init_seed": 402,
+      "margin_bb_per_100": -21.44,
+      "member": "b",
+      "resolvable_spread_bb_per_100": 16.78,
+      "sd": 12.3,
+      "se": 3.08,
+      "seeds": 16,
+      "t": -6.97,
+      "verdict": "incumbent wins"
+    },
+    {
+      "empirical_mde_bb_per_100": 5.99,
+      "init_seed": 403,
+      "margin_bb_per_100": -31.55,
+      "member": "c",
+      "resolvable_spread_bb_per_100": 16.78,
+      "sd": 11.98,
+      "se": 3.0,
+      "seeds": 16,
+      "t": -10.53,
+      "verdict": "incumbent wins"
+    }
+  ],
+  "duel_across_seed_spread_bb_per_100": 11.31,
+  "field_separation_benchmark": {
+    "per_scope": {
+      "flop": 0.275,
+      "overall": 0.386,
+      "preflop": 0.406,
+      "river": 0.331,
+      "turn": 0.17
+    },
+    "source": "artifacts/evaluations/field-separation-canonical-2026-08-16.json"
+  },
+  "generated_at": "2026-08-17",
+  "incumbent": "candidate-v7-0001c",
+  "init_seeds": {
+    "a": 401,
+    "b": 402,
+    "c": 403
+  },
+  "p3_channel": {
+    "a": {
+      "arms": {
+        "candidate-v7-0001c": {
+          "bb_per_100": 64.65,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 64.65,
+            "bust_rate_per_session": 0.0694,
+            "busts": 15,
+            "busts_per_100_hands": 0.0938,
+            "mean_session_hands": 74.1,
+            "sessions": 216
+          },
+          "seeds": [
+            62.65,
+            36.35,
+            77.8,
+            43.91,
+            81.87,
+            44.51,
+            104.05,
+            75.32,
+            59.18,
+            81.62,
+            74.35,
+            49.1,
+            51.23,
+            73.84,
+            48.82,
+            69.84
+          ]
+        },
+        "candidate-v8-0002a": {
+          "bb_per_100": 50.76,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 50.76,
+            "bust_rate_per_session": 0.0201,
+            "busts": 3,
+            "busts_per_100_hands": 0.0187,
+            "mean_session_hands": 107.4,
+            "sessions": 149
+          },
+          "seeds": [
+            59.88,
+            50.72,
+            58.79,
+            51.87,
+            45.25,
+            39.94,
+            43.41,
+            62.74,
+            59.1,
+            49.98,
+            53.6,
+            56.9,
+            65.45,
+            33.74,
+            48.25,
+            32.6
+          ]
+        },
+        "trivial-always_aggress_large": {
+          "bb_per_100": 123.87,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 123.87,
+            "bust_rate_per_session": 0.2672,
+            "busts": 198,
+            "busts_per_100_hands": 1.2375,
+            "mean_session_hands": 21.6,
+            "sessions": 741
+          },
+          "seeds": [
+            121.79,
+            114.93,
+            146.74,
+            185.65,
+            99.89,
+            98.35,
+            119.75,
+            92.39,
+            91.62,
+            90.25,
+            93.36,
+            192.0,
+            117.0,
+            126.95,
+            126.31,
+            165.03
+          ]
+        },
+        "trivial-always_aggress_small": {
+          "bb_per_100": 120.65,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 120.65,
+            "bust_rate_per_session": 0.2693,
+            "busts": 195,
+            "busts_per_100_hands": 1.2188,
+            "mean_session_hands": 22.1,
+            "sessions": 724
+          },
+          "seeds": [
+            90.4,
+            186.4,
+            98.61,
+            122.34,
+            112.89,
+            76.41,
+            154.84,
+            129.34,
+            87.22,
+            72.1,
+            129.92,
+            170.17,
+            60.0,
+            151.0,
+            156.5,
+            132.34
+          ]
+        },
+        "trivial-always_check_call": {
+          "bb_per_100": -11.31,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -11.31,
+            "bust_rate_per_session": 0.5189,
+            "busts": 288,
+            "busts_per_100_hands": 1.8,
+            "mean_session_hands": 28.8,
+            "sessions": 555
+          },
+          "seeds": [
+            -21.88,
+            26.16,
+            56.8,
+            40.37,
+            -69.01,
+            -54.23,
+            -59.67,
+            -43.09,
+            -42.79,
+            -46.7,
+            -12.1,
+            40.26,
+            -72.89,
+            47.9,
+            13.69,
+            16.27
+          ]
+        },
+        "trivial-always_fold": {
+          "bb_per_100": -26.02,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -26.02,
+            "bust_rate_per_session": 0.8,
+            "busts": 64,
+            "busts_per_100_hands": 0.4,
+            "mean_session_hands": 200.0,
+            "sessions": 80
+          },
+          "seeds": [
+            -24.85,
+            -24.7,
+            -24.8,
+            -24.85,
+            -27.45,
+            -27.75,
+            -25.35,
+            -27.3,
+            -28.4,
+            -24.25,
+            -29.0,
+            -24.85,
+            -25.9,
+            -26.5,
+            -26.35,
+            -24.05
+          ]
+        },
+        "trivial-uniform_random_legal": {
+          "bb_per_100": -135.89,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -135.89,
+            "bust_rate_per_session": 0.8482,
+            "busts": 419,
+            "busts_per_100_hands": 2.6187,
+            "mean_session_hands": 32.4,
+            "sessions": 494
+          },
+          "seeds": [
+            -81.67,
+            -119.85,
+            -120.0,
+            -117.31,
+            -182.17,
+            -168.0,
+            -95.79,
+            -173.88,
+            -120.05,
+            -139.97,
+            -80.96,
+            -173.35,
+            -178.8,
+            -125.85,
+            -162.05,
+            -134.53
+          ]
+        }
+      },
+      "channel": "vs-p3",
+      "fit": "artifacts\\p3\\p3-fit.json",
+      "paired_vs_candidate": {
+        "candidate-v7-0001c": {
+          "diffs": [
+            2.77,
+            -14.37,
+            19.01,
+            -7.96,
+            36.62,
+            4.57,
+            60.64,
+            12.58,
+            0.08,
+            31.64,
+            20.75,
+            -7.8,
+            -14.22,
+            40.1,
+            0.57,
+            37.24
+          ],
+          "mean": 13.89,
+          "sd": 22.27,
+          "se": 5.57,
+          "t": 2.49
+        },
+        "trivial-always_aggress_large": {
+          "diffs": [
+            61.91,
+            64.21,
+            87.95,
+            133.78,
+            54.64,
+            58.41,
+            76.34,
+            29.65,
+            32.52,
+            40.27,
+            39.76,
+            135.1,
+            51.55,
+            93.21,
+            78.06,
+            132.43
+          ],
+          "mean": 73.11,
+          "sd": 35.27,
+          "se": 8.82,
+          "t": 8.29
+        },
+        "trivial-always_aggress_small": {
+          "diffs": [
+            30.52,
+            135.68,
+            39.82,
+            70.47,
+            67.64,
+            36.47,
+            111.43,
+            66.6,
+            28.12,
+            22.12,
+            76.32,
+            113.27,
+            -5.45,
+            117.26,
+            108.25,
+            99.74
+          ],
+          "mean": 69.89,
+          "sd": 41.53,
+          "se": 10.38,
+          "t": 6.73
+        },
+        "trivial-always_check_call": {
+          "diffs": [
+            -81.76,
+            -24.56,
+            -1.99,
+            -11.5,
+            -114.26,
+            -94.17,
+            -103.08,
+            -105.83,
+            -101.89,
+            -96.68,
+            -65.7,
+            -16.64,
+            -138.34,
+            14.16,
+            -34.56,
+            -16.33
+          ],
+          "mean": -62.07,
+          "sd": 48.06,
+          "se": 12.02,
+          "t": -5.17
+        },
+        "trivial-always_fold": {
+          "diffs": [
+            -84.73,
+            -75.42,
+            -83.59,
+            -76.72,
+            -72.7,
+            -67.69,
+            -68.76,
+            -90.04,
+            -87.5,
+            -74.23,
+            -82.6,
+            -81.75,
+            -91.35,
+            -60.24,
+            -74.6,
+            -56.65
+          ],
+          "mean": -76.79,
+          "sd": 10.09,
+          "se": 2.52,
+          "t": -30.44
+        },
+        "trivial-uniform_random_legal": {
+          "diffs": [
+            -141.55,
+            -170.57,
+            -178.79,
+            -169.18,
+            -227.42,
+            -207.94,
+            -139.2,
+            -236.62,
+            -179.15,
+            -189.95,
+            -134.56,
+            -230.25,
+            -244.25,
+            -159.59,
+            -210.3,
+            -167.13
+          ],
+          "mean": -186.65,
+          "sd": 35.77,
+          "se": 8.94,
+          "t": -20.87
+        }
+      },
+      "seed_count": 16
+    },
+    "b": {
+      "arms": {
+        "candidate-v7-0001c": {
+          "bb_per_100": 64.65,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 64.65,
+            "bust_rate_per_session": 0.0694,
+            "busts": 15,
+            "busts_per_100_hands": 0.0938,
+            "mean_session_hands": 74.1,
+            "sessions": 216
+          },
+          "seeds": [
+            62.65,
+            36.35,
+            77.8,
+            43.91,
+            81.87,
+            44.51,
+            104.05,
+            75.32,
+            59.18,
+            81.62,
+            74.35,
+            49.1,
+            51.23,
+            73.84,
+            48.82,
+            69.84
+          ]
+        },
+        "candidate-v8-0002b": {
+          "bb_per_100": 48.84,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 48.84,
+            "bust_rate_per_session": 0.0613,
+            "busts": 10,
+            "busts_per_100_hands": 0.0625,
+            "mean_session_hands": 98.2,
+            "sessions": 163
+          },
+          "seeds": [
+            38.94,
+            64.66,
+            27.7,
+            52.26,
+            47.42,
+            30.38,
+            47.58,
+            63.53,
+            54.11,
+            56.04,
+            53.86,
+            71.6,
+            31.73,
+            64.01,
+            47.84,
+            29.8
+          ]
+        },
+        "trivial-always_aggress_large": {
+          "bb_per_100": 123.87,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 123.87,
+            "bust_rate_per_session": 0.2672,
+            "busts": 198,
+            "busts_per_100_hands": 1.2375,
+            "mean_session_hands": 21.6,
+            "sessions": 741
+          },
+          "seeds": [
+            121.79,
+            114.93,
+            146.74,
+            185.65,
+            99.89,
+            98.35,
+            119.75,
+            92.39,
+            91.62,
+            90.25,
+            93.36,
+            192.0,
+            117.0,
+            126.95,
+            126.31,
+            165.03
+          ]
+        },
+        "trivial-always_aggress_small": {
+          "bb_per_100": 120.65,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 120.65,
+            "bust_rate_per_session": 0.2693,
+            "busts": 195,
+            "busts_per_100_hands": 1.2188,
+            "mean_session_hands": 22.1,
+            "sessions": 724
+          },
+          "seeds": [
+            90.4,
+            186.4,
+            98.61,
+            122.34,
+            112.89,
+            76.41,
+            154.84,
+            129.34,
+            87.22,
+            72.1,
+            129.92,
+            170.17,
+            60.0,
+            151.0,
+            156.5,
+            132.34
+          ]
+        },
+        "trivial-always_check_call": {
+          "bb_per_100": -11.31,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -11.31,
+            "bust_rate_per_session": 0.5189,
+            "busts": 288,
+            "busts_per_100_hands": 1.8,
+            "mean_session_hands": 28.8,
+            "sessions": 555
+          },
+          "seeds": [
+            -21.88,
+            26.16,
+            56.8,
+            40.37,
+            -69.01,
+            -54.23,
+            -59.67,
+            -43.09,
+            -42.79,
+            -46.7,
+            -12.1,
+            40.26,
+            -72.89,
+            47.9,
+            13.69,
+            16.27
+          ]
+        },
+        "trivial-always_fold": {
+          "bb_per_100": -26.02,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -26.02,
+            "bust_rate_per_session": 0.8,
+            "busts": 64,
+            "busts_per_100_hands": 0.4,
+            "mean_session_hands": 200.0,
+            "sessions": 80
+          },
+          "seeds": [
+            -24.85,
+            -24.7,
+            -24.8,
+            -24.85,
+            -27.45,
+            -27.75,
+            -25.35,
+            -27.3,
+            -28.4,
+            -24.25,
+            -29.0,
+            -24.85,
+            -25.9,
+            -26.5,
+            -26.35,
+            -24.05
+          ]
+        },
+        "trivial-uniform_random_legal": {
+          "bb_per_100": -135.89,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -135.89,
+            "bust_rate_per_session": 0.8482,
+            "busts": 419,
+            "busts_per_100_hands": 2.6187,
+            "mean_session_hands": 32.4,
+            "sessions": 494
+          },
+          "seeds": [
+            -81.67,
+            -119.85,
+            -120.0,
+            -117.31,
+            -182.17,
+            -168.0,
+            -95.79,
+            -173.88,
+            -120.05,
+            -139.97,
+            -80.96,
+            -173.35,
+            -178.8,
+            -125.85,
+            -162.05,
+            -134.53
+          ]
+        }
+      },
+      "channel": "vs-p3",
+      "fit": "artifacts\\p3\\p3-fit.json",
+      "paired_vs_candidate": {
+        "candidate-v7-0001c": {
+          "diffs": [
+            23.71,
+            -28.31,
+            50.1,
+            -8.35,
+            34.45,
+            14.13,
+            56.47,
+            11.79,
+            5.07,
+            25.58,
+            20.49,
+            -22.5,
+            19.5,
+            9.83,
+            0.98,
+            40.04
+          ],
+          "mean": 15.81,
+          "sd": 23.59,
+          "se": 5.9,
+          "t": 2.68
+        },
+        "trivial-always_aggress_large": {
+          "diffs": [
+            82.85,
+            50.27,
+            119.04,
+            133.39,
+            52.47,
+            67.97,
+            72.17,
+            28.86,
+            37.51,
+            34.21,
+            39.5,
+            120.4,
+            85.27,
+            62.94,
+            78.47,
+            135.23
+          ],
+          "mean": 75.03,
+          "sd": 35.59,
+          "se": 8.9,
+          "t": 8.43
+        },
+        "trivial-always_aggress_small": {
+          "diffs": [
+            51.46,
+            121.74,
+            70.91,
+            70.08,
+            65.47,
+            46.03,
+            107.26,
+            65.81,
+            33.11,
+            16.06,
+            76.06,
+            98.57,
+            28.27,
+            86.99,
+            108.66,
+            102.54
+          ],
+          "mean": 71.81,
+          "sd": 31.28,
+          "se": 7.82,
+          "t": 9.18
+        },
+        "trivial-always_check_call": {
+          "diffs": [
+            -60.82,
+            -38.5,
+            29.1,
+            -11.89,
+            -116.43,
+            -84.61,
+            -107.25,
+            -106.62,
+            -96.9,
+            -102.74,
+            -65.96,
+            -31.34,
+            -104.62,
+            -16.11,
+            -34.15,
+            -13.53
+          ],
+          "mean": -60.15,
+          "sd": 44.5,
+          "se": 11.12,
+          "t": -5.41
+        },
+        "trivial-always_fold": {
+          "diffs": [
+            -63.79,
+            -89.36,
+            -52.5,
+            -77.11,
+            -74.87,
+            -58.13,
+            -72.93,
+            -90.83,
+            -82.51,
+            -80.29,
+            -82.86,
+            -96.45,
+            -57.63,
+            -90.51,
+            -74.19,
+            -53.85
+          ],
+          "mean": -74.86,
+          "sd": 14.09,
+          "se": 3.52,
+          "t": -21.25
+        },
+        "trivial-uniform_random_legal": {
+          "diffs": [
+            -120.61,
+            -184.51,
+            -147.7,
+            -169.57,
+            -229.59,
+            -198.38,
+            -143.37,
+            -237.41,
+            -174.16,
+            -196.01,
+            -134.82,
+            -244.95,
+            -210.53,
+            -189.86,
+            -209.89,
+            -164.33
+          ],
+          "mean": -184.73,
+          "sd": 36.96,
+          "se": 9.24,
+          "t": -19.99
+        }
+      },
+      "seed_count": 16
+    },
+    "c": {
+      "arms": {
+        "candidate-v7-0001c": {
+          "bb_per_100": 64.65,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 64.65,
+            "bust_rate_per_session": 0.0694,
+            "busts": 15,
+            "busts_per_100_hands": 0.0938,
+            "mean_session_hands": 74.1,
+            "sessions": 216
+          },
+          "seeds": [
+            62.65,
+            36.35,
+            77.8,
+            43.91,
+            81.87,
+            44.51,
+            104.05,
+            75.32,
+            59.18,
+            81.62,
+            74.35,
+            49.1,
+            51.23,
+            73.84,
+            48.82,
+            69.84
+          ]
+        },
+        "candidate-v8-0002c": {
+          "bb_per_100": 55.86,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 55.86,
+            "bust_rate_per_session": 0.046,
+            "busts": 8,
+            "busts_per_100_hands": 0.05,
+            "mean_session_hands": 92.0,
+            "sessions": 174
+          },
+          "seeds": [
+            47.94,
+            47.58,
+            42.0,
+            52.13,
+            57.71,
+            24.75,
+            90.15,
+            65.8,
+            63.43,
+            46.39,
+            54.91,
+            65.44,
+            50.74,
+            60.45,
+            69.17,
+            55.25
+          ]
+        },
+        "trivial-always_aggress_large": {
+          "bb_per_100": 123.87,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 123.87,
+            "bust_rate_per_session": 0.2672,
+            "busts": 198,
+            "busts_per_100_hands": 1.2375,
+            "mean_session_hands": 21.6,
+            "sessions": 741
+          },
+          "seeds": [
+            121.79,
+            114.93,
+            146.74,
+            185.65,
+            99.89,
+            98.35,
+            119.75,
+            92.39,
+            91.62,
+            90.25,
+            93.36,
+            192.0,
+            117.0,
+            126.95,
+            126.31,
+            165.03
+          ]
+        },
+        "trivial-always_aggress_small": {
+          "bb_per_100": 120.65,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": 120.65,
+            "bust_rate_per_session": 0.2693,
+            "busts": 195,
+            "busts_per_100_hands": 1.2188,
+            "mean_session_hands": 22.1,
+            "sessions": 724
+          },
+          "seeds": [
+            90.4,
+            186.4,
+            98.61,
+            122.34,
+            112.89,
+            76.41,
+            154.84,
+            129.34,
+            87.22,
+            72.1,
+            129.92,
+            170.17,
+            60.0,
+            151.0,
+            156.5,
+            132.34
+          ]
+        },
+        "trivial-always_check_call": {
+          "bb_per_100": -11.31,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -11.31,
+            "bust_rate_per_session": 0.5189,
+            "busts": 288,
+            "busts_per_100_hands": 1.8,
+            "mean_session_hands": 28.8,
+            "sessions": 555
+          },
+          "seeds": [
+            -21.88,
+            26.16,
+            56.8,
+            40.37,
+            -69.01,
+            -54.23,
+            -59.67,
+            -43.09,
+            -42.79,
+            -46.7,
+            -12.1,
+            40.26,
+            -72.89,
+            47.9,
+            13.69,
+            16.27
+          ]
+        },
+        "trivial-always_fold": {
+          "bb_per_100": -26.02,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -26.02,
+            "bust_rate_per_session": 0.8,
+            "busts": 64,
+            "busts_per_100_hands": 0.4,
+            "mean_session_hands": 200.0,
+            "sessions": 80
+          },
+          "seeds": [
+            -24.85,
+            -24.7,
+            -24.8,
+            -24.85,
+            -27.45,
+            -27.75,
+            -25.35,
+            -27.3,
+            -28.4,
+            -24.25,
+            -29.0,
+            -24.85,
+            -25.9,
+            -26.5,
+            -26.35,
+            -24.05
+          ]
+        },
+        "trivial-uniform_random_legal": {
+          "bb_per_100": -135.89,
+          "hands_per_seed": 1000,
+          "ruin": {
+            "bb_per_100": -135.89,
+            "bust_rate_per_session": 0.8482,
+            "busts": 419,
+            "busts_per_100_hands": 2.6187,
+            "mean_session_hands": 32.4,
+            "sessions": 494
+          },
+          "seeds": [
+            -81.67,
+            -119.85,
+            -120.0,
+            -117.31,
+            -182.17,
+            -168.0,
+            -95.79,
+            -173.88,
+            -120.05,
+            -139.97,
+            -80.96,
+            -173.35,
+            -178.8,
+            -125.85,
+            -162.05,
+            -134.53
+          ]
+        }
+      },
+      "channel": "vs-p3",
+      "fit": "artifacts\\p3\\p3-fit.json",
+      "paired_vs_candidate": {
+        "candidate-v7-0001c": {
+          "diffs": [
+            14.71,
+            -11.23,
+            35.8,
+            -8.22,
+            24.16,
+            19.76,
+            13.9,
+            9.52,
+            -4.25,
+            35.23,
+            19.44,
+            -16.34,
+            0.49,
+            13.39,
+            -20.35,
+            14.59
+          ],
+          "mean": 8.79,
+          "sd": 17.18,
+          "se": 4.29,
+          "t": 2.05
+        },
+        "trivial-always_aggress_large": {
+          "diffs": [
+            73.85,
+            67.35,
+            104.74,
+            133.52,
+            42.18,
+            73.6,
+            29.6,
+            26.59,
+            28.19,
+            43.86,
+            38.45,
+            126.56,
+            66.26,
+            66.5,
+            57.14,
+            109.78
+          ],
+          "mean": 68.01,
+          "sd": 34.55,
+          "se": 8.64,
+          "t": 7.87
+        },
+        "trivial-always_aggress_small": {
+          "diffs": [
+            42.46,
+            138.82,
+            56.61,
+            70.21,
+            55.18,
+            51.66,
+            64.69,
+            63.54,
+            23.79,
+            25.71,
+            75.01,
+            104.73,
+            9.26,
+            90.55,
+            87.33,
+            77.09
+          ],
+          "mean": 64.79,
+          "sd": 32.31,
+          "se": 8.08,
+          "t": 8.02
+        },
+        "trivial-always_check_call": {
+          "diffs": [
+            -69.82,
+            -21.42,
+            14.8,
+            -11.76,
+            -126.72,
+            -78.98,
+            -149.82,
+            -108.89,
+            -106.22,
+            -93.09,
+            -67.01,
+            -25.18,
+            -123.63,
+            -12.55,
+            -55.48,
+            -38.98
+          ],
+          "mean": -67.17,
+          "sd": 48.45,
+          "se": 12.11,
+          "t": -5.55
+        },
+        "trivial-always_fold": {
+          "diffs": [
+            -72.79,
+            -72.28,
+            -66.8,
+            -76.98,
+            -85.16,
+            -52.5,
+            -115.5,
+            -93.1,
+            -91.83,
+            -70.64,
+            -83.91,
+            -90.29,
+            -76.64,
+            -86.95,
+            -95.52,
+            -79.3
+          ],
+          "mean": -81.89,
+          "sd": 14.38,
+          "se": 3.6,
+          "t": -22.78
+        },
+        "trivial-uniform_random_legal": {
+          "diffs": [
+            -129.61,
+            -167.43,
+            -162.0,
+            -169.44,
+            -239.88,
+            -192.75,
+            -185.94,
+            -239.68,
+            -183.48,
+            -186.36,
+            -135.87,
+            -238.79,
+            -229.54,
+            -186.3,
+            -231.22,
+            -189.78
+          ],
+          "mean": -191.75,
+          "sd": 35.53,
+          "se": 8.88,
+          "t": -21.59
+        }
+      },
+      "seed_count": 16
+    }
+  },
+  "per_seed_reports": {
+    "a": "artifacts/evaluations/candidate-v8-0002a-gauntlet.json",
+    "b": "artifacts/evaluations/candidate-v8-0002b-gauntlet.json",
+    "c": "artifacts/evaluations/candidate-v8-0002c-gauntlet.json"
+  },
+  "strength_separation": {
+    "a": {
+      "candidate-v7-0001c": {
+        "all_streets": {
+          "ci95": [
+            0.1492,
+            0.1899
+          ],
+          "decisions": 4523,
+          "families": {
+            "aggress": {
+              "count": 2921,
+              "mean_strength": 0.5663
+            },
+            "check_call": {
+              "count": 762,
+              "mean_strength": 0.3827
+            },
+            "fold": {
+              "count": 840,
+              "mean_strength": 0.3968
+            }
+          },
+          "se": 0.0104,
+          "separation_aggress_minus_fold": 0.1695
+        },
+        "flop": {
+          "ci95": [
+            0.1193,
+            0.198
+          ],
+          "decisions": 1127,
+          "families": {
+            "aggress": {
+              "count": 726,
+              "mean_strength": 0.5707
+            },
+            "check_call": {
+              "count": 194,
+              "mean_strength": 0.4062
+            },
+            "fold": {
+              "count": 207,
+              "mean_strength": 0.4121
+            }
+          },
+          "se": 0.0201,
+          "separation_aggress_minus_fold": 0.1586
+        },
+        "preflop": {
+          "ci95": [
+            0.126,
+            0.1791
+          ],
+          "decisions": 2554,
+          "families": {
+            "aggress": {
+              "count": 1733,
+              "mean_strength": 0.5463
+            },
+            "check_call": {
+              "count": 288,
+              "mean_strength": 0.4268
+            },
+            "fold": {
+              "count": 533,
+              "mean_strength": 0.3938
+            }
+          },
+          "se": 0.0136,
+          "separation_aggress_minus_fold": 0.1526
+        },
+        "river": {
+          "ci95": [
+            0.231,
+            0.3766
+          ],
+          "decisions": 327,
+          "families": {
+            "aggress": {
+              "count": 171,
+              "mean_strength": 0.6567
+            },
+            "check_call": {
+              "count": 118,
+              "mean_strength": 0.2847
+            },
+            "fold": {
+              "count": 38,
+              "mean_strength": 0.3529
+            }
+          },
+          "se": 0.0372,
+          "separation_aggress_minus_fold": 0.3038
+        },
+        "turn": {
+          "ci95": [
+            0.154,
+            0.2912
+          ],
+          "decisions": 515,
+          "families": {
+            "aggress": {
+              "count": 291,
+              "mean_strength": 0.6212
+            },
+            "check_call": {
+              "count": 162,
+              "mean_strength": 0.3476
+            },
+            "fold": {
+              "count": 62,
+              "mean_strength": 0.3986
+            }
+          },
+          "se": 0.035,
+          "separation_aggress_minus_fold": 0.2226
+        }
+      },
+      "candidate-v8-0002a": {
+        "all_streets": {
+          "ci95": [
+            0.0661,
+            0.1057
+          ],
+          "decisions": 6069,
+          "families": {
+            "aggress": {
+              "count": 2198,
+              "mean_strength": 0.5063
+            },
+            "check_call": {
+              "count": 2829,
+              "mean_strength": 0.5414
+            },
+            "fold": {
+              "count": 1042,
+              "mean_strength": 0.4204
+            }
+          },
+          "se": 0.0101,
+          "separation_aggress_minus_fold": 0.0859
+        },
+        "flop": {
+          "ci95": [
+            -0.0049,
+            0.0747
+          ],
+          "decisions": 1577,
+          "families": {
+            "aggress": {
+              "count": 558,
+              "mean_strength": 0.4472
+            },
+            "check_call": {
+              "count": 774,
+              "mean_strength": 0.5762
+            },
+            "fold": {
+              "count": 245,
+              "mean_strength": 0.4123
+            }
+          },
+          "se": 0.0203,
+          "separation_aggress_minus_fold": 0.0349
+        },
+        "preflop": {
+          "ci95": [
+            0.0499,
+            0.1051
+          ],
+          "decisions": 2761,
+          "families": {
+            "aggress": {
+              "count": 1259,
+              "mean_strength": 0.5107
+            },
+            "check_call": {
+              "count": 963,
+              "mean_strength": 0.508
+            },
+            "fold": {
+              "count": 539,
+              "mean_strength": 0.4332
+            }
+          },
+          "se": 0.0141,
+          "separation_aggress_minus_fold": 0.0775
+        },
+        "river": {
+          "ci95": [
+            0.1901,
+            0.3147
+          ],
+          "decisions": 717,
+          "families": {
+            "aggress": {
+              "count": 154,
+              "mean_strength": 0.6283
+            },
+            "check_call": {
+              "count": 462,
+              "mean_strength": 0.5421
+            },
+            "fold": {
+              "count": 101,
+              "mean_strength": 0.3759
+            }
+          },
+          "se": 0.0318,
+          "separation_aggress_minus_fold": 0.2524
+        },
+        "turn": {
+          "ci95": [
+            0.0716,
+            0.1818
+          ],
+          "decisions": 1014,
+          "families": {
+            "aggress": {
+              "count": 227,
+              "mean_strength": 0.5444
+            },
+            "check_call": {
+              "count": 630,
+              "mean_strength": 0.5493
+            },
+            "fold": {
+              "count": 157,
+              "mean_strength": 0.4177
+            }
+          },
+          "se": 0.0281,
+          "separation_aggress_minus_fold": 0.1267
+        }
+      }
+    },
+    "b": {
+      "candidate-v7-0001c": {
+        "all_streets": {
+          "ci95": [
+            0.1492,
+            0.1899
+          ],
+          "decisions": 4523,
+          "families": {
+            "aggress": {
+              "count": 2921,
+              "mean_strength": 0.5663
+            },
+            "check_call": {
+              "count": 762,
+              "mean_strength": 0.3827
+            },
+            "fold": {
+              "count": 840,
+              "mean_strength": 0.3968
+            }
+          },
+          "se": 0.0104,
+          "separation_aggress_minus_fold": 0.1695
+        },
+        "flop": {
+          "ci95": [
+            0.1193,
+            0.198
+          ],
+          "decisions": 1127,
+          "families": {
+            "aggress": {
+              "count": 726,
+              "mean_strength": 0.5707
+            },
+            "check_call": {
+              "count": 194,
+              "mean_strength": 0.4062
+            },
+            "fold": {
+              "count": 207,
+              "mean_strength": 0.4121
+            }
+          },
+          "se": 0.0201,
+          "separation_aggress_minus_fold": 0.1586
+        },
+        "preflop": {
+          "ci95": [
+            0.126,
+            0.1791
+          ],
+          "decisions": 2554,
+          "families": {
+            "aggress": {
+              "count": 1733,
+              "mean_strength": 0.5463
+            },
+            "check_call": {
+              "count": 288,
+              "mean_strength": 0.4268
+            },
+            "fold": {
+              "count": 533,
+              "mean_strength": 0.3938
+            }
+          },
+          "se": 0.0136,
+          "separation_aggress_minus_fold": 0.1526
+        },
+        "river": {
+          "ci95": [
+            0.231,
+            0.3766
+          ],
+          "decisions": 327,
+          "families": {
+            "aggress": {
+              "count": 171,
+              "mean_strength": 0.6567
+            },
+            "check_call": {
+              "count": 118,
+              "mean_strength": 0.2847
+            },
+            "fold": {
+              "count": 38,
+              "mean_strength": 0.3529
+            }
+          },
+          "se": 0.0372,
+          "separation_aggress_minus_fold": 0.3038
+        },
+        "turn": {
+          "ci95": [
+            0.154,
+            0.2912
+          ],
+          "decisions": 515,
+          "families": {
+            "aggress": {
+              "count": 291,
+              "mean_strength": 0.6212
+            },
+            "check_call": {
+              "count": 162,
+              "mean_strength": 0.3476
+            },
+            "fold": {
+              "count": 62,
+              "mean_strength": 0.3986
+            }
+          },
+          "se": 0.035,
+          "separation_aggress_minus_fold": 0.2226
+        }
+      },
+      "candidate-v8-0002b": {
+        "all_streets": {
+          "ci95": [
+            0.0889,
+            0.1262
+          ],
+          "decisions": 6252,
+          "families": {
+            "aggress": {
+              "count": 2457,
+              "mean_strength": 0.5259
+            },
+            "check_call": {
+              "count": 2707,
+              "mean_strength": 0.55
+            },
+            "fold": {
+              "count": 1088,
+              "mean_strength": 0.4183
+            }
+          },
+          "se": 0.0095,
+          "separation_aggress_minus_fold": 0.1076
+        },
+        "flop": {
+          "ci95": [
+            0.035,
+            0.1014
+          ],
+          "decisions": 1738,
+          "families": {
+            "aggress": {
+              "count": 867,
+              "mean_strength": 0.4786
+            },
+            "check_call": {
+              "count": 584,
+              "mean_strength": 0.6161
+            },
+            "fold": {
+              "count": 287,
+              "mean_strength": 0.4104
+            }
+          },
+          "se": 0.017,
+          "separation_aggress_minus_fold": 0.0682
+        },
+        "preflop": {
+          "ci95": [
+            0.0377,
+            0.0944
+          ],
+          "decisions": 2774,
+          "families": {
+            "aggress": {
+              "count": 880,
+              "mean_strength": 0.4929
+            },
+            "check_call": {
+              "count": 1322,
+              "mean_strength": 0.5372
+            },
+            "fold": {
+              "count": 572,
+              "mean_strength": 0.4269
+            }
+          },
+          "se": 0.0145,
+          "separation_aggress_minus_fold": 0.066
+        },
+        "river": {
+          "ci95": [
+            0.1724,
+            0.2819
+          ],
+          "decisions": 686,
+          "families": {
+            "aggress": {
+              "count": 316,
+              "mean_strength": 0.6515
+            },
+            "check_call": {
+              "count": 289,
+              "mean_strength": 0.4751
+            },
+            "fold": {
+              "count": 81,
+              "mean_strength": 0.4243
+            }
+          },
+          "se": 0.0279,
+          "separation_aggress_minus_fold": 0.2271
+        },
+        "turn": {
+          "ci95": [
+            0.1583,
+            0.2528
+          ],
+          "decisions": 1054,
+          "families": {
+            "aggress": {
+              "count": 394,
+              "mean_strength": 0.6027
+            },
+            "check_call": {
+              "count": 512,
+              "mean_strength": 0.5497
+            },
+            "fold": {
+              "count": 148,
+              "mean_strength": 0.3972
+            }
+          },
+          "se": 0.0241,
+          "separation_aggress_minus_fold": 0.2056
+        }
+      }
+    },
+    "c": {
+      "candidate-v7-0001c": {
+        "all_streets": {
+          "ci95": [
+            0.1492,
+            0.1899
+          ],
+          "decisions": 4523,
+          "families": {
+            "aggress": {
+              "count": 2921,
+              "mean_strength": 0.5663
+            },
+            "check_call": {
+              "count": 762,
+              "mean_strength": 0.3827
+            },
+            "fold": {
+              "count": 840,
+              "mean_strength": 0.3968
+            }
+          },
+          "se": 0.0104,
+          "separation_aggress_minus_fold": 0.1695
+        },
+        "flop": {
+          "ci95": [
+            0.1193,
+            0.198
+          ],
+          "decisions": 1127,
+          "families": {
+            "aggress": {
+              "count": 726,
+              "mean_strength": 0.5707
+            },
+            "check_call": {
+              "count": 194,
+              "mean_strength": 0.4062
+            },
+            "fold": {
+              "count": 207,
+              "mean_strength": 0.4121
+            }
+          },
+          "se": 0.0201,
+          "separation_aggress_minus_fold": 0.1586
+        },
+        "preflop": {
+          "ci95": [
+            0.126,
+            0.1791
+          ],
+          "decisions": 2554,
+          "families": {
+            "aggress": {
+              "count": 1733,
+              "mean_strength": 0.5463
+            },
+            "check_call": {
+              "count": 288,
+              "mean_strength": 0.4268
+            },
+            "fold": {
+              "count": 533,
+              "mean_strength": 0.3938
+            }
+          },
+          "se": 0.0136,
+          "separation_aggress_minus_fold": 0.1526
+        },
+        "river": {
+          "ci95": [
+            0.231,
+            0.3766
+          ],
+          "decisions": 327,
+          "families": {
+            "aggress": {
+              "count": 171,
+              "mean_strength": 0.6567
+            },
+            "check_call": {
+              "count": 118,
+              "mean_strength": 0.2847
+            },
+            "fold": {
+              "count": 38,
+              "mean_strength": 0.3529
+            }
+          },
+          "se": 0.0372,
+          "separation_aggress_minus_fold": 0.3038
+        },
+        "turn": {
+          "ci95": [
+            0.154,
+            0.2912
+          ],
+          "decisions": 515,
+          "families": {
+            "aggress": {
+              "count": 291,
+              "mean_strength": 0.6212
+            },
+            "check_call": {
+              "count": 162,
+              "mean_strength": 0.3476
+            },
+            "fold": {
+              "count": 62,
+              "mean_strength": 0.3986
+            }
+          },
+          "se": 0.035,
+          "separation_aggress_minus_fold": 0.2226
+        }
+      },
+      "candidate-v8-0002c": {
+        "all_streets": {
+          "ci95": [
+            0.0789,
+            0.1186
+          ],
+          "decisions": 5780,
+          "families": {
+            "aggress": {
+              "count": 2520,
+              "mean_strength": 0.5214
+            },
+            "check_call": {
+              "count": 2371,
+              "mean_strength": 0.5505
+            },
+            "fold": {
+              "count": 889,
+              "mean_strength": 0.4227
+            }
+          },
+          "se": 0.0101,
+          "separation_aggress_minus_fold": 0.0987
+        },
+        "flop": {
+          "ci95": [
+            0.023,
+            0.1006
+          ],
+          "decisions": 1455,
+          "families": {
+            "aggress": {
+              "count": 672,
+              "mean_strength": 0.4755
+            },
+            "check_call": {
+              "count": 559,
+              "mean_strength": 0.6031
+            },
+            "fold": {
+              "count": 224,
+              "mean_strength": 0.4137
+            }
+          },
+          "se": 0.0198,
+          "separation_aggress_minus_fold": 0.0618
+        },
+        "preflop": {
+          "ci95": [
+            0.0652,
+            0.1192
+          ],
+          "decisions": 2682,
+          "families": {
+            "aggress": {
+              "count": 1521,
+              "mean_strength": 0.5261
+            },
+            "check_call": {
+              "count": 699,
+              "mean_strength": 0.4949
+            },
+            "fold": {
+              "count": 462,
+              "mean_strength": 0.4338
+            }
+          },
+          "se": 0.0138,
+          "separation_aggress_minus_fold": 0.0922
+        },
+        "river": {
+          "ci95": [
+            0.2144,
+            0.3491
+          ],
+          "decisions": 724,
+          "families": {
+            "aggress": {
+              "count": 141,
+              "mean_strength": 0.6665
+            },
+            "check_call": {
+              "count": 496,
+              "mean_strength": 0.5507
+            },
+            "fold": {
+              "count": 87,
+              "mean_strength": 0.3847
+            }
+          },
+          "se": 0.0344,
+          "separation_aggress_minus_fold": 0.2818
+        },
+        "turn": {
+          "ci95": [
+            0.0521,
+            0.1789
+          ],
+          "decisions": 919,
+          "families": {
+            "aggress": {
+              "count": 186,
+              "mean_strength": 0.5396
+            },
+            "check_call": {
+              "count": 617,
+              "mean_strength": 0.5658
+            },
+            "fold": {
+              "count": 116,
+              "mean_strength": 0.4242
+            }
+          },
+          "se": 0.0323,
+          "separation_aggress_minus_fold": 0.1155
+        }
+      }
+    }
+  },
+  "study": "candidate-v8-0002-gauntlet",
+  "value_objective_diagnostic": {
+    "corpus": "C:\\Users\\user\\Fold-ver-4 (multiway)\\artifacts\\phase_b\\candidate-v8-0002.phase-b.jsonl.gz",
+    "invariants": {
+      "I1_targets_centered_max_abs_sum": 2.706168622523819e-16,
+      "I2_constant_predictor_loss_independent_of_constant": true,
+      "I3_self_scored_loss_zero": true
+    },
+    "path": "stdlib serve path (_forward_v3 + compose_branch_values), residual on",
+    "reduction": "per-decision mean of squared error over emitted branches, then mean over decisions (the trainer's value_loss)",
+    "seeds": [
+      {
+        "overall": {
+          "constant_predictor_mse": 0.009258104740035068,
+          "decisions": 506,
+          "model_mse": 0.009194796457101598,
+          "pct_better_than_constant": 0.6838147192232968
+        },
+        "per_street": {
+          "flop": {
+            "constant_predictor_mse": 0.019095229264048153,
+            "decisions": 87,
+            "model_mse": 0.018608970353288755,
+            "pct_better_than_constant": 2.5464942265705615
+          },
+          "preflop": {
+            "constant_predictor_mse": 0.007384433471077993,
+            "decisions": 388,
+            "model_mse": 0.007359953350983495,
+            "pct_better_than_constant": 0.3315097927332866
+          },
+          "river": {
+            "constant_predictor_mse": 0.001143026013845847,
+            "decisions": 15,
+            "model_mse": 0.0010463434941882157,
+            "pct_better_than_constant": 8.458470628532034
+          },
+          "turn": {
+            "constant_predictor_mse": 0.008813154718725472,
+            "decisions": 16,
+            "model_mse": 0.010139345872679117,
+            "pct_better_than_constant": -15.047859662963404
+          }
+        },
+        "seed": "a (401)",
+        "version": "candidate-v8-0002a"
+      },
+      {
+        "overall": {
+          "constant_predictor_mse": 0.009258104740035068,
+          "decisions": 506,
+          "model_mse": 0.009386319843885058,
+          "pct_better_than_constant": -1.3848958015731494
+        },
+        "per_street": {
+          "flop": {
+            "constant_predictor_mse": 0.019095229264048153,
+            "decisions": 87,
+            "model_mse": 0.019364804591060537,
+            "pct_better_than_constant": -1.4117417669340604
+          },
+          "preflop": {
+            "constant_predictor_mse": 0.007384433471077993,
+            "decisions": 388,
+            "model_mse": 0.007411784213272206,
+            "pct_better_than_constant": -0.37038375795970246
+          },
+          "river": {
+            "constant_predictor_mse": 0.001143026013845847,
+            "decisions": 15,
+            "model_mse": 0.001183419472700008,
+            "pct_better_than_constant": -3.5339054723918517
+          },
+          "turn": {
+            "constant_predictor_mse": 0.008813154718725472,
+            "decisions": 16,
+            "model_mse": 0.010701017171466423,
+            "pct_better_than_constant": -21.420961199396338
+          }
+        },
+        "seed": "b (402)",
+        "version": "candidate-v8-0002b"
+      },
+      {
+        "overall": {
+          "constant_predictor_mse": 0.009258104740035068,
+          "decisions": 506,
+          "model_mse": 0.009337369751074397,
+          "pct_better_than_constant": -0.8561688732744877
+        },
+        "per_street": {
+          "flop": {
+            "constant_predictor_mse": 0.019095229264048153,
+            "decisions": 87,
+            "model_mse": 0.018780090732839285,
+            "pct_better_than_constant": 1.6503521735777182
+          },
+          "preflop": {
+            "constant_predictor_mse": 0.007384433471077993,
+            "decisions": 388,
+            "model_mse": 0.007444001160782767,
+            "pct_better_than_constant": -0.8066656695883134
+          },
+          "river": {
+            "constant_predictor_mse": 0.001143026013845847,
+            "decisions": 15,
+            "model_mse": 0.0026366801842350896,
+            "pct_better_than_constant": -130.67543103097586
+          },
+          "turn": {
+            "constant_predictor_mse": 0.008813154718725472,
+            "decisions": 16,
+            "model_mse": 0.010188659196211857,
+            "pct_better_than_constant": -15.607401905288532
+          }
+        },
+        "seed": "c (403)",
+        "version": "candidate-v8-0002c"
+      }
+    ],
+    "split": {
+      "split_seed": 17,
+      "train_decisions": 4683,
+      "validation_decisions": 506,
+      "validation_fraction": 0.1
+    },
+    "study": "candidate-v8-0002-phase-b-value-diagnostic"
+  }
+}

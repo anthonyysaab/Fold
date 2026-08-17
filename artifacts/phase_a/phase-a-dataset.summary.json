@@ -1,0 +1,79 @@
+{
+  "schema_version": 3,
+  "input_size": 413,
+  "generator": {
+    "tool": "tools.build_phase_a_dataset",
+    "seed": 7,
+    "equity_trials": 500,
+    "potential_trials": 400,
+    "branch_small": [
+      0.5,
+      0.2
+    ],
+    "branch_large": [
+      1.0,
+      0.45
+    ],
+    "belief_provider": "NeutralBeliefProvider",
+    "roots": [
+      "foreign play data\\20260812T082057Z_poker-playground_s13_top15",
+      "foreign play data\\20260815T210237Z_poker-playground_s14_top15"
+    ],
+    "limit": null
+  },
+  "counts": {
+    "files": 1196,
+    "tables_with_rows": 1195,
+    "rows": 9084,
+    "label_coverage": {
+      "rows": 9084,
+      "fold_through_small": 1553,
+      "fold_through_large": 416,
+      "range_bucket": 8184,
+      "equity_called": 8184
+    }
+  },
+  "per_street": {
+    "preflop": {
+      "rows": 6591,
+      "fold_through_small": 930,
+      "fold_through_large": 304,
+      "range_bucket": 6088,
+      "equity_called": 6088
+    },
+    "flop": {
+      "rows": 1431,
+      "fold_through_small": 403,
+      "fold_through_large": 55,
+      "range_bucket": 1155,
+      "equity_called": 1155
+    },
+    "turn": {
+      "rows": 633,
+      "fold_through_small": 151,
+      "fold_through_large": 30,
+      "range_bucket": 553,
+      "equity_called": 553
+    },
+    "river": {
+      "rows": 429,
+      "fold_through_small": 69,
+      "fold_through_large": 27,
+      "range_bucket": 388,
+      "equity_called": 388
+    }
+  },
+  "per_collection": {
+    "20260812T082057Z_poker-playground_s13_top15": {
+      "tables_with_rows": 587,
+      "timeout_actions": 309
+    },
+    "20260815T210237Z_poker-playground_s14_top15": {
+      "tables_with_rows": 608,
+      "timeout_actions": 447
+    }
+  },
+  "files": {
+    "dataset": "phase-a-dataset.jsonl.gz"
+  }
+}

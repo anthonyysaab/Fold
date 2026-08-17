@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -284,3 +285,28 @@ class LearnedPolicyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApprovedPointerPortabilityTests(unittest.TestCase):
+    """The pointer is promoted on Windows and read by the Linux live host."""
+
+    def test_promotion_writes_posix_separators(self) -> None:
+        pointer = json.loads(
+            (Path("artifacts") / "approved.json").read_text(encoding="utf-8")
+        )
+
+        self.assertNotIn("\\", pointer["manifest_file"])
+
+    def test_load_approved_accepts_a_windows_written_pointer(self) -> None:
+        source = Path("artifacts")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(source / "candidates", root / "candidates")
+            pointer = json.loads((source / "approved.json").read_text(encoding="utf-8"))
+            # Re-introduce the legacy separator a Windows promotion produced.
+            pointer["manifest_file"] = pointer["manifest_file"].replace("/", "\\")
+            (root / "approved.json").write_text(json.dumps(pointer), encoding="utf-8")
+
+            policy = load_approved(root, equity_trials=1)
+
+        self.assertEqual(policy.policy_version, pointer["model_version"])

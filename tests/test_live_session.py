@@ -53,6 +53,54 @@ TOURNAMENT_BUYIN = {
 }
 
 
+def run_supervisor(
+    *,
+    runner_result,
+    list_answers=((200, [PLAYGROUND]),),
+    participants=({"chipState": "available", "totalChips": 966},),
+    argv=(),
+):
+    """Drive ``live_session.main`` against scripted Arena answers; no network.
+
+    ``list_answers`` and ``participants`` are consumed in order with the last
+    entry repeating, so a test can script a transient failure followed by a
+    steady state. Returns ``(exit code, stdout, runner mock, calls)``.
+    """
+
+    calls: list[tuple[str, str]] = []
+    lists = list(list_answers)
+    seats = list(participants)
+
+    def fake_request(_key, method, path, body=None):
+        calls.append((method, path))
+        if "list-active" in path:
+            return lists.pop(0) if len(lists) > 1 else lists[0]
+        if "pending-actions" in path:
+            seat = seats.pop(0) if len(seats) > 1 else seats[0]
+            return 200, {"participant": seat}
+        return 200, {}
+
+    out = io.StringIO()
+    with (
+        tempfile.TemporaryDirectory() as raw,
+        # Never let a test write into the repository's real runs/ archive.
+        patch.object(live_session, "ARCHIVE_ROOT", Path(raw)),
+        patch.object(
+            live_session.run_agent, "load_credentials", return_value=("k", "a")
+        ),
+        patch.object(live_session.run_agent, "request_arena", side_effect=fake_request),
+        patch.object(live_session.time, "sleep"),
+        patch.object(live_session.run_agent, "main") as runner,
+        contextlib.redirect_stdout(out),
+    ):
+        if isinstance(runner_result, list):
+            runner.side_effect = runner_result
+        else:
+            runner.return_value = runner_result
+        code = live_session.main(list(argv))
+    return code, out.getvalue(), runner, calls
+
+
 class CompetitionGuardTests(unittest.TestCase):
     def test_free_playground_is_accepted(self) -> None:
         self.assertTrue(live_session.is_free_playground(PLAYGROUND))
@@ -146,6 +194,7 @@ class SupervisorLoopTests(unittest.TestCase):
             patch.object(
                 live_session.run_agent, "request_arena", side_effect=fake_request
             ),
+            patch.object(live_session.time, "sleep"),
             patch.object(live_session.run_agent, "main") as runner,
         ):
             if isinstance(runner_result, list):
@@ -180,6 +229,189 @@ class SupervisorLoopTests(unittest.TestCase):
 
         for call in runner.call_args_list:
             self.assertEqual(call.args[0][0], PLAYGROUND["id"])
+
+
+class DiscoveryRetryTests(unittest.TestCase):
+    """Discovery is one HTTP call, so one failure says nothing.
+
+    It used to end the supervisor outright, and end it with exit 0 -- a
+    silent success on failure, indistinguishable from a clean shutdown.
+    """
+
+    def test_a_transient_list_failure_is_retried(self) -> None:
+        answers = [(500, {"error": "bad gateway"}), (200, [PLAYGROUND])]
+
+        def fake_request(_key, _method, _path, body=None):
+            return answers.pop(0) if len(answers) > 1 else answers[0]
+
+        with (
+            patch.object(
+                live_session.run_agent, "request_arena", side_effect=fake_request
+            ),
+            patch.object(live_session.time, "sleep") as sleep,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            competition, label = live_session.discover_competition_with_retry("k")
+
+        self.assertEqual(competition, PLAYGROUND["id"])
+        self.assertEqual(label, PLAYGROUND["name"])
+        sleep.assert_called_once_with(live_session.DISCOVERY_BACKOFF_S[0])
+
+    def test_a_momentarily_absent_playground_is_retried(self) -> None:
+        answers = [(200, [EVAL_OPEN_PAID]), (200, [EVAL_OPEN_PAID, PLAYGROUND])]
+
+        def fake_request(_key, _method, _path, body=None):
+            return answers.pop(0) if len(answers) > 1 else answers[0]
+
+        with (
+            patch.object(
+                live_session.run_agent, "request_arena", side_effect=fake_request
+            ),
+            patch.object(live_session.time, "sleep"),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            competition, _ = live_session.discover_competition_with_retry("k")
+
+        # A season rollover can make "no free Playground" briefly true; the
+        # paid competitions must still never be chosen.
+        self.assertEqual(competition, PLAYGROUND["id"])
+
+    def test_discovery_gives_up_only_after_the_whole_backoff(self) -> None:
+        with (
+            patch.object(
+                live_session.run_agent, "request_arena", return_value=(500, {})
+            ),
+            patch.object(live_session.time, "sleep") as sleep,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            competition, reason = live_session.discover_competition_with_retry("k")
+
+        self.assertIsNone(competition)
+        self.assertIn("gave up after", reason)
+        self.assertEqual(
+            [call.args[0] for call in sleep.call_args_list],
+            list(live_session.DISCOVERY_BACKOFF_S),
+        )
+
+    def test_one_failed_discovery_no_longer_ends_the_supervisor(self) -> None:
+        code, out, runner, _ = run_supervisor(
+            runner_result=[KeyboardInterrupt()],
+            list_answers=[(500, {"error": "bad gateway"}), (200, [PLAYGROUND])],
+        )
+
+        runner.assert_called_once()
+        self.assertEqual(code, live_session.EXIT_OK)
+        self.assertIn("competition discovery failed", out)
+
+    def test_a_permanent_discovery_failure_exits_nonzero_and_loudly(self) -> None:
+        code, out, runner, _ = run_supervisor(
+            runner_result=0,
+            list_answers=[(500, {"error": "bad gateway"})],
+        )
+
+        runner.assert_not_called()
+        self.assertEqual(code, live_session.EXIT_DISCOVERY_FAILED)
+        self.assertNotEqual(code, 0)
+        self.assertIn("SUPERVISOR FAILED", out)
+        self.assertIn("gave up after", out)
+
+
+class BankrollConfirmationTests(unittest.TestCase):
+    """A bankroll stop ends the whole supervisor, so one sample cannot cause it.
+
+    Same false signal the runner hit on 2026-08-14: a ``chipState: busted``
+    reading contradicted by the very next poll.
+    """
+
+    BUSTED = {"chipState": "busted", "totalChips": 0}
+    HEALTHY = {"chipState": "available", "totalChips": 2870}
+
+    def test_an_unconfirmed_busted_reading_starts_the_session_anyway(self) -> None:
+        code, out, runner, _ = run_supervisor(
+            runner_result=[KeyboardInterrupt()],
+            participants=[self.BUSTED, self.HEALTHY],
+        )
+
+        runner.assert_called_once()
+        self.assertIn("BANKROLL STOP REJECTED", out)
+        self.assertEqual(code, live_session.EXIT_OK)
+
+    def test_a_confirmed_bust_still_ends_the_supervisor(self) -> None:
+        code, out, runner, _ = run_supervisor(
+            runner_result=0,
+            participants=[self.BUSTED],
+        )
+
+        runner.assert_not_called()
+        self.assertIn("bankroll busted", out)
+        self.assertIn("rebuy is owner-gated", out)
+        # A deliberate money stop is not a failure: exit 0 keeps a service
+        # manager from restarting past it.
+        self.assertEqual(code, live_session.EXIT_OK)
+
+    def test_the_min_chips_floor_still_stops_when_confirmed(self) -> None:
+        code, _, runner, _ = run_supervisor(
+            runner_result=0,
+            participants=[{"chipState": "available", "totalChips": 40}],
+            argv=("--min-chips", "50"),
+        )
+
+        runner.assert_not_called()
+        self.assertEqual(code, live_session.EXIT_OK)
+
+    def test_confirmation_never_invents_a_stop_from_an_unreadable_poll(self) -> None:
+        with (
+            patch.object(live_session, "participant_state", return_value=None),
+            patch.object(live_session.time, "sleep"),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertIsNone(
+                live_session.confirm_bankroll_stop("k", "comp", "bankroll busted")
+            )
+
+
+class RetryMapTests(unittest.TestCase):
+    """PENDING_EDITS item 14: exits 5 and 6 are retried, on purpose."""
+
+    def test_the_new_exits_are_retried_and_the_reason_is_recorded(self) -> None:
+        self.assertIsNone(live_session.exit_code_stop_reason(5))
+        self.assertIsNone(live_session.exit_code_stop_reason(6))
+        self.assertIn("malformed", live_session.RETRY_NOTES[5])
+        self.assertIn("seated", live_session.RETRY_NOTES[6])
+
+    def test_an_unconfirmed_leave_is_retried_after_releasing_the_seat(self) -> None:
+        code, out, runner, calls = run_supervisor(
+            runner_result=[6, KeyboardInterrupt()]
+        )
+
+        self.assertEqual(runner.call_count, 2)
+        self.assertIn("could not confirm its leave", out)
+        # One recovery leave before the restart, plus the shutdown leave.
+        leaves = [call for call in calls if call == ("POST", "/api/arena/texas/leave")]
+        self.assertEqual(len(leaves), 2)
+        self.assertEqual(code, live_session.EXIT_OK)
+
+    def test_a_malformed_pending_exhaustion_is_retried_with_its_reason(self) -> None:
+        _, out, runner, _ = run_supervisor(runner_result=[5, KeyboardInterrupt()])
+
+        self.assertEqual(runner.call_count, 2)
+        self.assertIn("session exited 5; retrying", out)
+        self.assertIn("bounded retry on malformed HTTP 200s", out)
+
+    def test_consecutive_failed_sessions_exit_nonzero_and_loudly(self) -> None:
+        code, out, runner, _ = run_supervisor(runner_result=[1] * 6)
+
+        self.assertEqual(runner.call_count, len(live_session.RESTART_BACKOFF_S) + 1)
+        self.assertEqual(code, live_session.EXIT_SESSION_FAILURES)
+        self.assertNotEqual(code, 0)
+        self.assertIn("SUPERVISOR FAILED", out)
+
+    def test_a_money_stop_still_exits_zero(self) -> None:
+        for money_exit in (2, 3):
+            with self.subTest(exit=money_exit):
+                code, out, _, _ = run_supervisor(runner_result=money_exit)
+                self.assertEqual(code, live_session.EXIT_OK)
+                self.assertNotIn("SUPERVISOR FAILED", out)
 
 
 class StopSignalTests(unittest.TestCase):

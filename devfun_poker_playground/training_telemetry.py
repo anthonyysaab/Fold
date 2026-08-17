@@ -32,7 +32,14 @@ from devfun_poker_playground.learning_contract import (
 )
 from devfun_poker_playground.policy_features import FEATURE_NAMES, LABELS
 
-TELEMETRY_SCHEMA_VERSION = 1
+TELEMETRY_SCHEMA_VERSION = 2
+# Versions this process can still READ. Bumping the writer must never orphan a
+# journal: the live archive is the only record of how the deployed policy has
+# actually played, and a reader that accepts one exact version turns a schema
+# bump into silent data loss. Schema 2 adds `state.recent_actions`; every
+# field schema 1 carried is still written, so old records stay loadable and
+# consumers must treat the new field as optional.
+READABLE_TELEMETRY_SCHEMA_VERSIONS = frozenset({1, 2})
 CORPUS_SCHEMA_VERSION = 1
 MAX_REPLAY_RECEIPTS = 50
 
@@ -67,6 +74,13 @@ class TrainingExample:
     # Format-2 value branch for counterfactual rows: aggression is valued
     # per executed size, so two branches can share action_family_index 2.
     action_branch: str | None = None
+    # Where each candidate branch went once branches were emitted by
+    # executability and distinctness: `{candidate_label: surviving_label}`,
+    # identity for a branch that survived. Without it a consumer cannot map
+    # the action actually taken back onto a branch that carries a label --
+    # V(s) would read zero for every decision whose own action was absorbed,
+    # and the hybrid gate's reference action would vanish with it.
+    branch_absorption: tuple[tuple[str, str], ...] | None = None
 
 
 def _identifier(value: object, name: str) -> str:
@@ -167,6 +181,45 @@ def parse_replay_receipts(document: object) -> tuple[ReplayReceipt, ...]:
         table_ids.add(table_id)
         receipts.append(ReplayReceipt(hand_id, table_id, settled_at, chip_delta))
     return tuple(sorted(receipts, key=lambda item: (item.settled_at_ms, item.hand_id)))
+
+
+_RECENT_ACTIONS_LIMIT = 60
+
+
+def _recent_actions(table: Mapping[str, Any]) -> list[dict[str, object]]:
+    """Trimmed copy of the snapshot's ``recentEvents`` for the record.
+
+    Defensive rather than strict: by the time a record is being written the
+    engine has already parsed this table and decided on it, so a malformed
+    entry here is skipped instead of failing the record -- losing one event
+    from the log must never lose the decision. Bounded so a hostile or
+    bloated snapshot cannot balloon the journal.
+    """
+
+    events = table.get("recentEvents") or []
+    if not isinstance(events, (list, tuple)):
+        return []
+    trimmed: list[dict[str, object]] = []
+    for raw_event in events[-_RECENT_ACTIONS_LIMIT:]:
+        if not isinstance(raw_event, Mapping):
+            continue
+        summary = raw_event.get("summary")
+        if not isinstance(summary, Mapping):
+            continue
+        action = summary.get("action")
+        seat_number = summary.get("seatNumber")
+        if not isinstance(action, str) or not action:
+            continue
+        entry: dict[str, object] = {
+            "street": str(raw_event.get("street") or "").casefold(),
+            "seat_number": seat_number if isinstance(seat_number, int) else None,
+            "action": action.casefold(),
+        }
+        amount = summary.get("amount")
+        if isinstance(amount, int) and not isinstance(amount, bool):
+            entry["amount"] = amount
+        trimmed.append(entry)
+    return trimmed
 
 
 def make_decision_record(
@@ -293,6 +346,13 @@ def make_decision_record(
         "bluff_kind": decision.bluff_kind if decision is not None else None,
         "hyper_aggression": hyper_aggression,
         "state": {
+            # Schema 2: the betting that led to this decision. The snapshot
+            # already carries it and the engine already parses it (aggression
+            # counters, blind detection) -- it was simply discarded. Without
+            # it no live hand can be attributed: "ran into the top of their
+            # range" and "was outplayed" are indistinguishable, which is what
+            # made the 2026-08-15 drawdown forensics stop at hero's own side.
+            "recent_actions": _recent_actions(table),
             "hero_seat_number": _integer(
                 table.get("selfSeatNumber"), "selfSeatNumber", minimum=1
             ),
@@ -363,7 +423,10 @@ class TelemetryLog:
                     raise TelemetryError(
                         f"invalid telemetry JSON on line {line_number}"
                     ) from exc
-                if record.get("telemetry_schema_version") != TELEMETRY_SCHEMA_VERSION:
+                if (
+                    record.get("telemetry_schema_version")
+                    not in READABLE_TELEMETRY_SCHEMA_VERSIONS
+                ):
                     raise TelemetryError(
                         f"unsupported telemetry schema on line {line_number}"
                     )
@@ -449,7 +512,8 @@ def _records(path: str | Path):
                 ) from exc
             if (
                 not isinstance(record, Mapping)
-                or record.get("telemetry_schema_version") != TELEMETRY_SCHEMA_VERSION
+                or record.get("telemetry_schema_version")
+                not in READABLE_TELEMETRY_SCHEMA_VERSIONS
             ):
                 raise TelemetryError(
                     f"unsupported telemetry schema on line {line_number}"
@@ -629,6 +693,18 @@ def save_training_corpus(path: str | Path, examples: Sequence[TrainingExample]) 
                 "harvest_leg": example.harvest_leg,
                 "inclusion_count": example.inclusion_count,
                 "action_branch": example.action_branch,
+                # Must round-trip. Without it a persisted Option A corpus is
+                # indistinguishable from a legacy pre-Option-A one, and every
+                # consumer that resolves an intent through the absorption map
+                # silently falls back to `min(returns)` -- which under-scores
+                # the `always_aggress_*` trivial baselines and makes the
+                # BLOCKING promotion gate more permissive. That is the exact
+                # class of failure that closed candidate 0016.
+                "branch_absorption": (
+                    None
+                    if example.branch_absorption is None
+                    else [list(pair) for pair in example.branch_absorption]
+                ),
             }
             for example in rows
         ],
@@ -711,6 +787,21 @@ def load_training_corpus(path: str | Path) -> tuple[TrainingExample, ...]:
         action_branch = row.get("action_branch")
         if action_branch is not None:
             action_branch = _identifier(action_branch, f"{name} action_branch")
+        raw_absorption = row.get("branch_absorption")
+        branch_absorption = None
+        if raw_absorption is not None:
+            if not isinstance(raw_absorption, list):
+                raise TelemetryError(f"{name} branch_absorption must be a list")
+            branch_absorption = tuple(
+                (
+                    _identifier(pair[0], f"{name} branch_absorption key"),
+                    _identifier(pair[1], f"{name} branch_absorption value"),
+                )
+                for pair in raw_absorption
+                if isinstance(pair, (list, tuple)) and len(pair) == 2
+            )
+            if len(branch_absorption) != len(raw_absorption):
+                raise TelemetryError(f"{name} branch_absorption entries must be pairs")
         examples.append(
             TrainingExample(
                 table_id=_identifier(row.get("table_id"), f"{name} table_id"),
@@ -741,6 +832,7 @@ def load_training_corpus(path: str | Path) -> tuple[TrainingExample, ...]:
                     row.get("inclusion_count"), f"{name} inclusion_count"
                 ),
                 action_branch=action_branch,
+                branch_absorption=branch_absorption,
             )
         )
     return tuple(examples)

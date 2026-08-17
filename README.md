@@ -1,6 +1,11 @@
 # Fold-ver-4 poker agent
 
-This project runs a Texas Hold'em policy against live dev.fun Arena tables. The live runtime needs only Python. Its current decisions come from deterministic equity rules, shaped a bounded amount by the situational risk temperature, inside hard safety gates; the loaded legacy JSON network is not active with the shipped artifact.
+This project runs a Texas Hold'em policy against live dev.fun Arena tables. The live runtime needs only Python.
+
+> **This file is partly pre-reset. Read `CLAUDE.md` first, then `.handoff/CONTEXT.md`.**
+> The project was reset on 2026-08-16; `.handoff/` is authoritative for state, rules and plan.
+
+Decisions come from deterministic equity rules, shaped a bounded amount by the situational risk temperature, inside hard safety gates. A learned artifact (`candidate-v7-0001c`) was promoted on 2026-08-14 and served live until play was stopped on 2026-08-16; `artifacts/approved.json` still points at it, but nothing is running.
 
 ## What each root entry is or does
 
@@ -17,7 +22,7 @@ This project runs a Texas Hold'em policy against live dev.fun Arena tables. The 
 - `bundle.zip` is the ignored, regenerable Eval sandbox bundle written by `deploy/devfun-arena/build_bundle.py`.
 - `deploy/` contains deployment adapters: the Eval sandbox bundle flow and the Linux systemd unit.
 - `devfun_poker_playground/` contains policy, game-state, and hand-strength code: the live decision brain plus the training modules. Both live play and training depend on it; never delete or move it.
-- `foreign play data/` is the ignored public-replay corpus collected from Arena. The raw archive is 13.020 GB; the five validated season CSVs used by candidate 0015 are 0.210 GB.
+- `foreign play data/` is the ignored public-replay corpus collected from Arena. The raw archive is 16.638 GB; the seven validated season CSVs are 0.288 GB (259,539 eligible rows). It also holds final-table, tournament, and Playground S14 collections.
 - `lead_position.py` is the standalone -100..+100 player lead gauge: chip rank and chip share, accentuated by seat position. The engine computes it per decision and feeds it to the bluff advisor.
 - `live_session.py` supervises continuous live play: back-to-back sessions, free-Playground discovery, money hard-stops, clean table release, and the deployment-scoped run archive.
 - `play.cmd` / `play.sh` are the one-command launchers (Windows / Linux) for `live_session.py`.
@@ -28,7 +33,7 @@ This project runs a Texas Hold'em policy against live dev.fun Arena tables. The 
 - `tools/` contains manual Arena diagnosis and sandbox utilities.
 - `__pycache__/` is generated Python bytecode and can be ignored.
 
-Every maintained code or data subfolder has its own `README.md` with an entry-by-entry map. `.handoff/CONTEXT.md` maps the handoff folder without adding a fifth canonical note. Generated folders such as `.git`, `build`, `.ruff_cache`, and `__pycache__` do not contain project notes.
+Every maintained code or data subfolder has its own `README.md` with an entry-by-entry map. `.handoff/CONTEXT.md` gives cold-start facts and the documented read order for the handoff folder. Generated folders such as `.git`, `build`, `.ruff_cache`, and `__pycache__` do not contain project notes.
 
 ## Live runtime
 
@@ -48,7 +53,7 @@ The engine also keeps a session-scoped opponent model: each opponent's observed 
 
 `run_agent.py --learned` plays the approved learned artifact from `artifacts/approved.json` instead of the heuristic, verifies its checksum and engine parameters at load, and refreshes it between hands when a new version is approved, keeping the session's opponent evidence.
 
-Every deployed policy also carries a hardcoded 5% anti-modeling dice roll (`HYPER_AGGRESSION_CHANCE`): one decision in twenty plays hyper-aggressively inside the hard gates, so pattern-learning opponents chase noise. The roll is salted and reproducible, marked in telemetry, and excluded from training labels.
+Every deployed policy also carries a hardcoded anti-modeling dice roll (`HYPER_AGGRESSION_CHANCE`), **2% since 2026-08-15** (it was 5%; confirmed live at 20 fires in 1,073 decisions, with 5% ruled out at p = 7e-8). That fraction of decisions plays hyper-aggressively inside the hard gates, so pattern-learning opponents chase noise. The roll is salted and reproducible, marked in telemetry, and excluded from training labels.
 
 `torch_policy.py` and `torch_network.py` are optional checkpoint tools. They are outside the live import path and are candidates for replacement by the planned action-and-sizing model.
 
@@ -61,7 +66,7 @@ python -m tools.self_play_cycle --foreign-csv <csv> --sparring artifacts/candida
 python -m tools.promote_candidate artifacts/candidates/<v>.manifest.json --reason "<evaluation summary>"
 ```
 
-`table_simulator.py` deals seeded Arena-shaped hands against scripted archetypes calibrated from the foreign audit (plus a permanent shover), scores BB/100, and captures self-play training examples with settled rewards. The improvement loop is: harvest (simulator or live telemetry) -> train a candidate -> gauntlet it against the incumbent -> promote only a winner -> the runner picks it up between hands. Promotion is always an explicit, reasoned step; nothing self-deploys.
+`table_simulator.py` deals seeded Arena-shaped hands against scripted archetypes calibrated from the foreign audit (plus a permanent shover), scores BB/100, and captures self-play training examples with settled rewards. The improvement loop is: harvest (simulator or live telemetry) -> train a candidate -> gauntlet it against the incumbent -> promote only a winner -> the runner picks it up between hands. Promotion is always an explicit, reasoned step and nothing self-deploys, but note that **`tools/promote_candidate.py` does not itself enforce a gauntlet gate** — it validates the manifest and checksum and requires a free-form `--reason`. The winner-only rule is a human discipline, not an automated one.
 
 ## Run the agent
 

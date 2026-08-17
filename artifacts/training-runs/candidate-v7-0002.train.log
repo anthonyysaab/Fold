@@ -1,0 +1,57 @@
+training device: cuda (Quadro RTX 3000)
+state policy: heuristic-aggressive-v6
+loaded 1169 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T082657Z_poker-playground_s9_top15/top15_decisions.csv
+loaded 60053 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T082657Z_poker-playground_s9_top15/top15_decisions.delta.csv
+loaded 65367 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T082859Z_poker-playground_s10_top15/top15_decisions.csv
+loaded 40161 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T083023Z_poker-playground_s11_top15/top15_decisions.csv
+loaded 22893 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T083023Z_poker-playground_s11_top15/top15_decisions.delta.csv
+loaded 1203 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T083204Z_poker-playground_s12_top15/top15_decisions.csv
+loaded 68693 foreign teacher examples from foreign play data/last 5 seasons top 15/20260812T083313Z_poker-playground_s13_top15/top15_decisions.csv
+foreign teacher examples: 259539
+harvesting 6 legs across 6 worker processes
+five-max lineup: 53639 examples over 12000 hands in 195 carry-over sessions (hero +232.4 bb/100, busted 72x)
+heads-up vs shover: 68555 examples over 12000 hands in 1838 carry-over sessions (hero +132.5 bb/100, busted 786x)
+heads-up vs station: 82501 examples over 12000 hands in 1172 carry-over sessions (hero +341.8 bb/100, busted 244x)
+heads-up vs nit: 12566 examples over 4000 hands in 54 carry-over sessions (hero +79.8 bb/100, busted 0x)
+heads-up vs textured: 56497 examples over 12000 hands in 357 carry-over sessions (hero +149.5 bb/100, busted 29x)
+sparring: 108767 examples over 8000 hands in 345 carry-over sessions (hero -9.0 bb/100, busted 178x)
+wrote 642064 corpus examples to artifacts/corpora/candidate-v7-0002.corpus
+counterfactual reward examples: 237180; behavior-only examples: 404884
+examples: 642064
+train_loss: 0.041425
+validation_loss: 0.045279
+validation_degenerate_group_fraction: 0.271445
+  (accuracy and regret below exclude those groups; every branch ties there, so no predictor can be wrong)
+validation_best_action_accuracy: 0.466682
+validation_mean_regret_pct: 7.466643
+validation_action_value_mae_pct: 5.341125
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v7-0002a.manifest.json
+state: candidate (promotion requires the evaluation gate)
+=== training candidate-v7-0002b (init_seed 90) ===
+training device: cuda (Quadro RTX 3000)
+loaded 642064 corpus examples from artifacts/corpora/candidate-v7-0002.corpus
+counterfactual reward examples: 237180; behavior-only examples: 404884
+examples: 642064
+train_loss: 0.043193
+validation_loss: 0.045372
+validation_degenerate_group_fraction: 0.271445
+  (accuracy and regret below exclude those groups; every branch ties there, so no predictor can be wrong)
+validation_best_action_accuracy: 0.420327
+validation_mean_regret_pct: 7.816629
+validation_action_value_mae_pct: 5.360873
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v7-0002b.manifest.json
+state: candidate (promotion requires the evaluation gate)
+=== training candidate-v7-0002c (init_seed 91) ===
+training device: cuda (Quadro RTX 3000)
+loaded 642064 corpus examples from artifacts/corpora/candidate-v7-0002.corpus
+counterfactual reward examples: 237180; behavior-only examples: 404884
+examples: 642064
+train_loss: 0.042101
+validation_loss: 0.045415
+validation_degenerate_group_fraction: 0.271445
+  (accuracy and regret below exclude those groups; every branch ties there, so no predictor can be wrong)
+validation_best_action_accuracy: 0.430641
+validation_mean_regret_pct: 7.858218
+validation_action_value_mae_pct: 5.586220
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\candidates\candidate-v7-0002c.manifest.json
+state: candidate (promotion requires the evaluation gate)

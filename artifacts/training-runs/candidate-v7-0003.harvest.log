@@ -1,0 +1,23 @@
+MODE: harvest
+COMMAND: python -m tools.self_play_cycle --model-version candidate-v7-0003a --init-seed 89 --examples-out artifacts\corpora\candidate-v7-0003.corpus --architecture v7 --device cuda --batch-size 256 --epochs 40 --learning-rate 0.001 --reinforcement-multiplier 1.0 --behavior-warmup-epochs 0 --return-scale-pct 50 --split-seed 17 --equity-trials 80 --starting-stack 6000 --lineup-hands 12000 --shover-hands 12000 --station-hands 12000 --nit-hands 4000 --textured-hands 0 --sparring champion --sparring-hands 8000 --sparring-record-both --counterfactual-rollouts 2 --seed 89 --harvest-workers 0 --foreign-csv "foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.csv" --foreign-csv "foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.delta.csv" --foreign-csv "foreign play data\last 5 seasons top 15\20260812T082859Z_poker-playground_s10_top15\top15_decisions.csv" --foreign-csv "foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.csv" --foreign-csv "foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.delta.csv" --foreign-csv "foreign play data\last 5 seasons top 15\20260812T083204Z_poker-playground_s12_top15\top15_decisions.csv" --foreign-csv "foreign play data\last 5 seasons top 15\20260812T083313Z_poker-playground_s13_top15\top15_decisions.csv"
+----------------------------------------------------------------------
+training device: cuda (Quadro RTX 3000)
+state policy: heuristic-aggressive-v6
+loaded 1169 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.csv
+loaded 60053 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082657Z_poker-playground_s9_top15\top15_decisions.delta.csv
+loaded 65367 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T082859Z_poker-playground_s10_top15\top15_decisions.csv
+loaded 40161 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.csv
+loaded 22893 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083023Z_poker-playground_s11_top15\top15_decisions.delta.csv
+loaded 1203 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083204Z_poker-playground_s12_top15\top15_decisions.csv
+loaded 68693 foreign teacher examples from foreign play data\last 5 seasons top 15\20260812T083313Z_poker-playground_s13_top15\top15_decisions.csv
+foreign teacher examples: 259539
+harvesting 5 legs across 5 worker processes
+five-max lineup: 42870 examples over 12000 hands in 141 carry-over sessions (hero +190.5 bb/100, busted 39x) || DIAG single_branch_dropped=1304 emitted_branch_counts={1: 1304, 2: 1338, 3: 4906, 4: 1578}
+heads-up vs shover: 34042 examples over 12000 hands in 1198 carry-over sessions (hero +96.4 bb/100, busted 502x) || DIAG single_branch_dropped=7374 emitted_branch_counts={1: 7374, 2: 1766, 3: 1207, 4: 1646}
+heads-up vs station: 66826 examples over 12000 hands in 912 carry-over sessions (hero +257.1 bb/100, busted 198x) || DIAG single_branch_dropped=1623 emitted_branch_counts={1: 1623, 2: 1651, 3: 6944, 4: 1319}
+heads-up vs nit: 9355 examples over 4000 hands in 40 carry-over sessions (hero +59.5 bb/100, busted 0x) || DIAG single_branch_dropped=122 emitted_branch_counts={1: 122, 2: 517, 3: 755, 4: 665}
+sparring: 90710 examples over 8000 hands in 258 carry-over sessions (hero +0.1 bb/100, busted 128x) || DIAG single_branch_dropped=1092 emitted_branch_counts={1: 1092, 2: 2711, 3: 8523, 4: 3411}
+wrote 503342 corpus examples to artifacts\corpora\candidate-v7-0003.corpus
+counterfactual reward examples: 117447; behavior-only examples: 385895
+----------------------------------------------------------------------
+HARVEST COMPLETE; training deliberately not run.

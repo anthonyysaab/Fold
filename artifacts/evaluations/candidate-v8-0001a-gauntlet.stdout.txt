@@ -1,0 +1,11 @@
+[evaluate_v8] stage nullcheck starting
+[evaluate_v8] stage nullcheck done in 25.2s
+[evaluate_v8] stage trivial starting
+[evaluate_v8] stage trivial done in 12.1s
+[evaluate_v8] stage battery starting
+[evaluate_v8] stage battery done in 1472.9s
+[evaluate_v8] stage duel starting
+[evaluate_v8] stage duel done in 3258.4s
+[evaluate_v8] stage strength starting
+[evaluate_v8] stage strength done in 140.2s
+[evaluate_v8] report written to artifacts\evaluations\candidate-v8-0001a-gauntlet.json

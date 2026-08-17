@@ -13,6 +13,12 @@ HARD STOPS (owner-gated money; never retried automatically):
   needs a buy-in), so discovery refuses anything whose name or description
   looks paid, and an explicit ``--competition`` is required to override.
 
+EXIT CODES. 0 means a deliberate stop: you interrupted it, or an owner-gated
+money guard fired. Anything else is a failure and says so loudly on the way
+out -- 7 when competition discovery never recovered, 8 when consecutive
+sessions kept failing. A supervisor that dies on failure must never report
+success, because "exited 0" is what a clean shutdown looks like.
+
 This is a foreground console process, not a daemon or a service: it holds the
 window it runs in and ends with your login session.
 
@@ -40,7 +46,7 @@ import shutil
 import signal
 import sys
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -68,13 +74,42 @@ FREE_COMPETITION_MARKER = "playground"
 
 RESTART_BACKOFF_S = (5, 15, 45, 120, 300)
 
+# Competition discovery is a network call, so one bad answer is expected and
+# only a run of them is real. Retried on this backoff before giving up; giving
+# up exits nonzero, because a supervisor that ends on failure with a success
+# code is indistinguishable from a clean shutdown.
+DISCOVERY_BACKOFF_S = (5, 15, 45, 120, 300)
+
+# Supervisor exit codes. 0 is reserved for a deliberate stop -- you pressed
+# Ctrl+C, or an owner-gated money guard fired -- so a service manager
+# configured with Restart=on-failure never restarts past one of those.
+EXIT_OK = 0
+EXIT_DISCOVERY_FAILED = 7
+EXIT_SESSION_FAILURES = 8
+
+# A bankroll stop ends the supervisor, so it gets the same confirmation the
+# runner now applies to a busted reading: one transient sample must not end
+# an unattended run. See run_agent.confirm_bust.
+BANKROLL_CONFIRMATION_POLLS = 2
+BANKROLL_CONFIRMATION_DELAY_S = 2.0
+
 ARCHIVE_ROOT = Path(__file__).resolve().parent / "runs"
+ARTIFACTS_ROOT = Path(__file__).resolve().parent / "artifacts"
 DEPLOYMENT_MARKER = "DEPLOYED"
 
 
-def policy_identity(standard: bool) -> str:
-    """The deployed policy version the archive is studying."""
+def policy_identity(standard: bool, learned: bool = False) -> str:
+    """The deployed policy version the archive is studying.
 
+    With ``learned`` the identity comes from the approved pointer, so the
+    archive is scoped to the artifact actually being served and a promotion
+    counts as a deployment change like any other version bump.
+    """
+
+    if learned:
+        from devfun_poker_playground.learned_policy import load_approved
+
+        return str(load_approved("artifacts", equity_trials=1).policy_version)
     chosen = (
         poker_policy.PokerPolicy if standard else poker_policy.AggressivePokerPolicy
     )
@@ -147,8 +182,16 @@ class RunArchive:
         self._run: dict[str, Any] = {
             "launched_at": _utc_stamp(launched_at),
             "session_seconds": args.session_seconds,
-            "policy": "standard" if args.standard else "aggressive",
-            "policy_version": policy_identity(args.standard),
+            "policy": (
+                "learned"
+                if getattr(args, "learned", False)
+                else "standard"
+                if args.standard
+                else "aggressive"
+            ),
+            "policy_version": policy_identity(
+                args.standard, getattr(args, "learned", False)
+            ),
             "min_chips": args.min_chips,
             "telemetry": not args.no_telemetry,
             "sessions": 0,
@@ -222,7 +265,9 @@ def is_free_playground(competition: Mapping[str, Any]) -> bool:
     return not any(marker in haystack for marker in PAID_MARKERS)
 
 
-def bankroll_stop_reason(participant: Mapping[str, Any] | None) -> str | None:
+def bankroll_stop_reason(
+    participant: Mapping[str, Any] | None, *, min_chips: int = 0
+) -> str | None:
     """Reason to stop before joining again, or None to keep playing."""
 
     if not participant:
@@ -230,18 +275,87 @@ def bankroll_stop_reason(participant: Mapping[str, Any] | None) -> str | None:
     if str(participant.get("chipState") or "").casefold() == "busted":
         return f"bankroll busted (totalChips={participant.get('totalChips')})"
     total = participant.get("totalChips")
-    if isinstance(total, int) and total <= 0:
+    if isinstance(total, bool) or not isinstance(total, int):
+        return None
+    if total <= 0:
         return "bankroll is empty"
+    if total <= min_chips:
+        return f"bankroll {total} reached the --min-chips floor"
     return None
 
 
+def confirm_bankroll_stop(
+    api_key: str,
+    competition: str,
+    reason: str,
+    *,
+    min_chips: int = 0,
+    polls: int = BANKROLL_CONFIRMATION_POLLS,
+    delay_s: float = BANKROLL_CONFIRMATION_DELAY_S,
+) -> str | None:
+    """The bankroll stop reason if re-polls agree, else ``None`` to play on.
+
+    Ending the supervisor is the most expensive thing this loop can do, and a
+    single ``chipState: busted`` sample has been observed to be wrong (see
+    ``run_agent.confirm_bust``). A real empty bankroll reads the same way on
+    every poll, so confirmation costs seconds and never suppresses it.
+    """
+
+    for attempt in range(1, polls + 1):
+        time.sleep(delay_s)
+        participant = participant_state(api_key, competition)
+        if participant is None:
+            print(
+                f"  !! BANKROLL STOP REJECTED: re-poll {attempt}/{polls} was "
+                f"unreadable, so {reason!r} is unconfirmed. Playing on."
+            )
+            return None
+        again = bankroll_stop_reason(participant, min_chips=min_chips)
+        if again is None:
+            print(
+                f"  !! BANKROLL STOP REJECTED: {reason!r} was contradicted by "
+                f"re-poll {attempt}/{polls} (chipState="
+                f"{participant.get('chipState')!r}, totalChips="
+                f"{participant.get('totalChips')}). Playing on."
+            )
+            return None
+        reason = again
+    return reason
+
+
 def exit_code_stop_reason(code: int) -> str | None:
-    """Runner exit codes that must never be retried automatically."""
+    """Runner exit codes that must never be retried automatically.
+
+    Only the owner-gated money guards live here. Everything else is retried
+    on ``RESTART_BACKOFF_S``; ``RETRY_NOTES`` records why for the exits where
+    the choice is not obvious.
+    """
 
     return {
         2: "Arena asked for an entry fee (402); owner approval needed",
         3: "Arena refused access (403)",
     }.get(code)
+
+
+# Why the non-obvious runner exits are auto-retried rather than fatal
+# (PENDING_EDITS item 14). Recorded in code so the decision is auditable.
+RETRY_NOTES = {
+    5: (
+        "the runner exhausted its bounded retry on malformed HTTP 200s. A new "
+        "session opens new connections and the restart backoff grows, and a "
+        "run of consecutive failures still ends the supervisor nonzero, so "
+        "retrying is bounded and correct"
+    ),
+    6: (
+        "the runner could not confirm its leave, so the agent may still be "
+        "seated. Retrying re-attaches a runner to that seat and answers its "
+        "hands; halting instead would leave the agent seated with nobody "
+        "answering, which is strictly worse. Money is not the exposure: the "
+        "supervisor only ever auto-joins the free Playground "
+        "(is_free_playground), and paid entry still hard-stops on 402/403. The "
+        "supervisor tries one more leave before restarting"
+    ),
+}
 
 
 def discover_competition(api_key: str) -> tuple[str | None, str]:
@@ -264,6 +378,42 @@ def discover_competition(api_key: str) -> tuple[str | None, str]:
     free.sort(key=lambda item: item.get("seasonNumber") or 0, reverse=True)
     chosen = free[0]
     return str(chosen.get("id")), str(chosen.get("name"))
+
+
+def discover_competition_with_retry(
+    api_key: str,
+    *,
+    backoff_s: Sequence[float] = DISCOVERY_BACKOFF_S,
+) -> tuple[str | None, str]:
+    """Discovery, retried through transient failures before giving up.
+
+    A single failed list call used to end the supervisor silently, and with
+    exit 0. Discovery is one HTTP call against a live service, so one failure
+    says nothing; only a run of them does. Both failure shapes are retried --
+    an unreadable list response and a list with no free Playground in it --
+    because a season rollover can make the second one momentarily true.
+
+    Returns ``(competition id, label)`` or ``(None, reason)`` once the whole
+    backoff is spent; the caller must treat ``None`` as a nonzero exit.
+    """
+
+    attempts = len(backoff_s) + 1
+    reason = "competition discovery was never attempted"
+    for attempt in range(1, attempts + 1):
+        competition, label = discover_competition(api_key)
+        if competition is not None:
+            if attempt > 1:
+                print(f"competition discovery recovered on attempt {attempt}")
+            return competition, label
+        reason = label
+        if attempt < attempts:
+            delay = backoff_s[attempt - 1]
+            print(
+                f"competition discovery failed (attempt {attempt}/{attempts}): "
+                f"{reason}; retrying in {delay}s"
+            )
+            time.sleep(delay)
+    return None, f"{reason} (gave up after {attempts} attempts)"
 
 
 def participant_state(api_key: str, competition: str) -> Mapping[str, Any] | None:
@@ -378,6 +528,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="stop when the bankroll falls to this many chips (default 0)",
     )
     parser.add_argument(
+        "--learned",
+        action="store_true",
+        help=(
+            "serve the approved learned artifact from artifacts/approved.json. "
+            "This is already the default whenever an approved artifact exists, "
+            "so pass it only to fail loudly when one does not"
+        ),
+    )
+    parser.add_argument(
+        "--aggressive",
+        action="store_true",
+        help=(
+            "force the heuristic aggressive policy even when an approved "
+            "learned artifact exists"
+        ),
+    )
+    parser.add_argument(
         "--standard",
         action="store_true",
         help="play the standard policy instead of the aggressive one",
@@ -403,6 +570,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(argv)
     if args.session_seconds <= 0:
         parser.error("--session-seconds must be greater than zero")
+    explicit = sum((args.learned, args.aggressive, args.standard))
+    if explicit > 1:
+        parser.error(
+            "--learned, --aggressive, and --standard select different policies"
+        )
+    approved = (ARTIFACTS_ROOT / "approved.json").exists()
+    if args.learned and not approved:
+        parser.error(
+            "--learned needs an approved artifact; run tools/promote_candidate.py first"
+        )
+    # "Play" means play what is deployed. Once a candidate is promoted, a bare
+    # invocation must not silently serve a different policy than the approved
+    # pointer names; the heuristics stay available behind an explicit flag.
+    if explicit == 0 and approved:
+        args.learned = True
+        args.policy_defaulted = True
+    else:
+        args.policy_defaulted = False
     return args
 
 
@@ -430,11 +615,12 @@ def main(argv: list[str] | None = None) -> int:
     sessions = 0
     failures = 0
     stop_reason = "interrupted"
+    exit_code = EXIT_OK
 
     archive: RunArchive | None = None
     if not args.no_archive:
         try:
-            identity = policy_identity(args.standard)
+            identity = policy_identity(args.standard, args.learned)
             purged, previous = sync_archive_to_deployment(
                 ARCHIVE_ROOT, identity, keep=args.keep_old_runs
             )
@@ -450,29 +636,35 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as error:
             print(f"archive disabled (cannot write runs/): {error}")
 
+    if args.learned:
+        served = f"learned:{policy_identity(args.standard, True)}"
+        if getattr(args, "policy_defaulted", False):
+            served += " (approved artifact; --aggressive or --standard to override)"
+    else:
+        served = "standard" if args.standard else "aggressive"
     print(
         "continuous live play; Ctrl+C to stop cleanly. "
-        f"session length {args.session_seconds}s, "
-        f"policy {'standard' if args.standard else 'aggressive'}"
+        f"session length {args.session_seconds}s, policy {served}"
     )
     try:
         while True:
             competition = args.competition
             if competition is None:
-                competition, label = discover_competition(api_key)
+                competition, label = discover_competition_with_retry(api_key)
                 if competition is None:
                     stop_reason = label
+                    exit_code = EXIT_DISCOVERY_FAILED
                     break
             else:
                 label = competition
             seat["competition"] = competition
 
             participant = participant_state(api_key, competition)
-            reason = bankroll_stop_reason(participant)
-            if reason is None and participant is not None:
-                total = participant.get("totalChips")
-                if isinstance(total, int) and total <= args.min_chips:
-                    reason = f"bankroll {total} reached the --min-chips floor"
+            reason = bankroll_stop_reason(participant, min_chips=args.min_chips)
+            if reason is not None:
+                reason = confirm_bankroll_stop(
+                    api_key, competition, reason, min_chips=args.min_chips
+                )
             if reason is not None:
                 stop_reason = f"{reason}; rebuy is owner-gated"
                 break
@@ -486,7 +678,9 @@ def main(argv: list[str] | None = None) -> int:
             )
 
             runner_argv = [competition, "--seconds", str(args.session_seconds)]
-            if not args.standard:
+            if args.learned:
+                runner_argv.append("--learned")
+            elif not args.standard:
                 runner_argv.append("--aggressive")
             if not args.no_telemetry:
                 runner_argv.append("--telemetry")
@@ -535,12 +729,23 @@ def main(argv: list[str] | None = None) -> int:
             failures += 1
             if failures > len(RESTART_BACKOFF_S):
                 stop_reason = f"{failures} consecutive failed sessions"
+                exit_code = EXIT_SESSION_FAILURES
                 break
+            if code == 6:
+                # The runner could not confirm its own leave; try once more
+                # from here so the restart begins from a released seat.
+                print("  unconfirmed leave: releasing the seat once more")
+                leave_quietly(api_key, competition)
             delay = RESTART_BACKOFF_S[failures - 1]
-            print(f"session exited {code}; retrying in {delay}s")
+            note = RETRY_NOTES.get(code)
+            print(
+                f"session exited {code}; retrying in {delay}s"
+                + (f" -- {note}" if note else "")
+            )
             time.sleep(delay)
     except KeyboardInterrupt:
         stop_reason = "stopped by you"
+        exit_code = EXIT_OK
     finally:
         release_table()
         if archive is not None:
@@ -550,7 +755,12 @@ def main(argv: list[str] | None = None) -> int:
             f"\n=== STOPPED: {stop_reason}. "
             f"{sessions} session(s) over {(time.time() - started) / 3600:.1f}h ==="
         )
-    return 0
+        if exit_code != EXIT_OK:
+            print(
+                f"!!! SUPERVISOR FAILED (exit {exit_code}): {stop_reason}. "
+                "This is not a clean shutdown -- nothing is playing. !!!"
+            )
+    return exit_code
 
 
 if __name__ == "__main__":

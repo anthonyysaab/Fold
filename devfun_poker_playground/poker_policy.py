@@ -25,6 +25,7 @@ from devfun_poker_playground.decision_engine import (
     DecisionEngine,
     DEFAULT_SAFETY_GATES,
     SafetyGates,
+    SharedEquityCache,
     TemperatureShaping,
 )
 from devfun_poker_playground.hand_strength import prewarm
@@ -156,6 +157,7 @@ class PokerPolicy(DecisionEngine):
         opponent_tracker: AggressionTracker | None = None,
         bluff_settings: BluffSettings | None = None,
         hyper_aggression_chance: float | None = None,
+        equity_cache: SharedEquityCache | None = None,
     ) -> None:
         super().__init__(
             equity_trials=equity_trials,
@@ -165,6 +167,7 @@ class PokerPolicy(DecisionEngine):
             opponent_tracker=opponent_tracker,
             bluff_settings=bluff_settings,
             hyper_aggression_chance=hyper_aggression_chance,
+            equity_cache=equity_cache,
         )
         if weights is None:
             path = self._weights_path(weights_path)
@@ -264,12 +267,28 @@ def build_policy(
     aggressive: bool = False,
     weights_path: str | Path | None = None,
     equity_trials: int = 200,
+    equity_cache: SharedEquityCache | None = None,
+    hyper_aggression_chance: float | None = None,
 ) -> PokerPolicy:
-    """Prepare hand evaluation and build the selected live policy."""
+    """Prepare hand evaluation and build the selected live policy.
+
+    ``equity_cache`` opts into memoized equity estimates (see
+    :class:`DecisionEngine`); the harvest passes a fresh dict per policy,
+    live construction leaves it ``None``.
+
+    ``hyper_aggression_chance`` overrides the anti-modeling floor; ``None``
+    keeps ``HYPER_AGGRESSION_CHANCE``. The harvest passes ``0.0`` because its
+    opponents cannot model anyone, live construction leaves it ``None``.
+    """
 
     prewarm()
     policy_type = AggressivePokerPolicy if aggressive else PokerPolicy
-    return policy_type(weights_path=weights_path, equity_trials=equity_trials)
+    return policy_type(
+        weights_path=weights_path,
+        equity_trials=equity_trials,
+        equity_cache=equity_cache,
+        hyper_aggression_chance=hyper_aggression_chance,
+    )
 
 
 __all__ = [

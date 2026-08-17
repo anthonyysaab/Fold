@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from devfun_poker_playground.decision_engine import SharedEquityCache
 from devfun_poker_playground.offline_trainer import TRAINING_OBJECTIVE, TrainingConfig
 from devfun_poker_playground.training_telemetry import (
     save_training_corpus,
@@ -170,7 +171,12 @@ class SparringSeatTests(unittest.TestCase):
             partner = self._sparring_factory(
                 self._spec(sparring="champion", sparring_record_both=True)
             )()
-        build.assert_called_once_with(aggressive=True, equity_trials=4)
+        build.assert_called_once_with(
+            aggressive=True, equity_trials=4, equity_cache=SharedEquityCache()
+        )
+        # dict equality would accept a plain {}, which deep-copies per rollout
+        # and silently forfeits the cross-rollout hits; require the shared type.
+        self.assertIsInstance(build.call_args.kwargs["equity_cache"], SharedEquityCache)
         load.assert_not_called()
         self.assertIs(partner.policy, sentinel)
         self.assertTrue(partner.record_examples)
@@ -181,6 +187,79 @@ class SparringSeatTests(unittest.TestCase):
             partner = self._sparring_factory(self._spec(sparring_record_both=True))()
         self.assertIs(partner.policy, sentinel)
         self.assertTrue(partner.record_examples)
+
+
+class TexturedHarvestLegTests(unittest.TestCase):
+    """P3 phase two: the card-aware leg must be additive, not a re-parameterisation."""
+
+    @staticmethod
+    def _args(**overrides):
+        values = {
+            "lineup_hands": 3000,
+            "shover_hands": 2000,
+            "station_hands": 1000,
+            "nit_hands": 1000,
+            "textured_hands": 1000,
+            "sparring": None,
+            "sparring_hands": 0,
+            "sparring_record_both": False,
+            "seed": 5,
+            "equity_trials": 80,
+            "starting_stack": 6000,
+            "on_policy": None,
+            "counterfactual_rollouts": 2,
+        }
+        values.update(overrides)
+        return SimpleNamespace(**values)
+
+    def test_textured_leg_builds_a_textured_agent(self) -> None:
+        from tools.self_play_cycle import harvest_specs
+
+        spec = next(
+            s for s in harvest_specs(self._args()) if s.name == "heads-up vs textured"
+        )
+        self.assertTrue(spec.textured)
+        agents = [agent for _, agent in spec.opponents()]
+        self.assertEqual([type(a).__name__ for a in agents], ["TexturedAgent"])
+        self.assertIs(agents[0].reads_cards, False)
+
+    def test_every_other_leg_is_unchanged_by_the_addition(self) -> None:
+        # The corpus must stay comparable to candidate-v7-0001's: adding P3
+        # may not perturb any pre-existing leg's opponents, seeds, or hands.
+        from tools.self_play_cycle import harvest_specs
+
+        with_p3 = {s.name: s for s in harvest_specs(self._args())}
+        without = {s.name: s for s in harvest_specs(self._args(textured_hands=0))}
+        for name, spec in without.items():
+            if name == "heads-up vs textured":
+                continue
+            with self.subTest(leg=name):
+                self.assertEqual(spec, with_p3[name])
+
+    def test_zero_hands_disables_the_leg(self) -> None:
+        from tools.self_play_cycle import _run_leg, harvest_specs
+
+        spec = next(
+            s
+            for s in harvest_specs(self._args(textured_hands=0))
+            if s.name == "heads-up vs textured"
+        )
+        summary, examples = _run_leg(spec)
+        self.assertEqual((summary, examples), ("", []))
+
+    def test_textured_leg_seed_collides_with_no_other_leg(self) -> None:
+        from tools.self_play_cycle import harvest_specs
+
+        seeds = [s.seed for s in harvest_specs(self._args())]
+        self.assertEqual(len(seeds), len(set(seeds)))
+
+    def test_default_scripted_legs_never_become_textured(self) -> None:
+        from tools.self_play_cycle import harvest_specs
+
+        for spec in harvest_specs(self._args()):
+            if spec.name != "heads-up vs textured":
+                with self.subTest(leg=spec.name):
+                    self.assertFalse(spec.textured)
 
 
 class CorpusCycleTests(unittest.TestCase):
@@ -236,6 +315,7 @@ class CorpusCycleTests(unittest.TestCase):
                 validation_best_action_accuracy=0.5,
                 validation_mean_regret_pct=1.0,
                 validation_action_value_mae_pct=2.0,
+                validation_degenerate_group_fraction=0.25,
                 manifest_path=Path(directory) / "manifest.json",
             )
             with (

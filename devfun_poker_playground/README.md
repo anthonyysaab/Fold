@@ -1,5 +1,11 @@
 # Poker policy package
 
+> **Partly pre-reset.** References below to a "128-64 shared trunk" and "three
+> model heads" describe the v6 shape; every v7 artifact on disk uses trunk
+> `[256, 256, 128]` with four heads, and `learned_policy.py` carries a format-2
+> runtime (`LearnedPokerPolicyV7`) beside the v6 one. `.handoff/CONTEXT.md` is
+> authoritative for current state.
+
 This folder contains poker decisions and their inputs. It performs no Arena network requests.
 
 - `README.md` is this folder map.

@@ -20,6 +20,7 @@ from devfun_poker_playground.decision_engine import (
     DEFAULT_TEMPERATURE_SHAPING,
 )
 from devfun_poker_playground.learning_contract import (
+    BRANCH_FAMILIES,
     BRANCH_LABELS,
     context_feature_indices,
     default_v7_architecture,
@@ -113,6 +114,10 @@ class TrainingSummary:
     weights_sha256: str
     manifest_path: Path
     weights_path: Path
+    # Format 2 only: the share of validation decision groups whose branches
+    # all tie, on which accuracy and regret are undefined. None under
+    # format 1, which has no branch-degeneracy concept.
+    validation_degenerate_group_fraction: float | None = None
 
 
 def _check_config(config: TrainingConfig) -> None:
@@ -1034,6 +1039,51 @@ def _branch_index(example: TrainingExample) -> int:
     return family_to_branch[example.action_family_index]
 
 
+def _intent_branch(
+    label: str, absorption: Mapping[str, str], returns: Mapping[int, float]
+) -> int:
+    """Resolve a trivial policy's intended branch to one the group emitted."""
+
+    survivor = absorption.get(label, label)
+    index = BRANCH_LABELS.index(survivor)
+    if index in returns:
+        return index
+    # Legacy corpus with no absorption map, or an intent whose branch was
+    # never a candidate here: fall back to the lowest emitted branch.
+    return min(returns)
+
+
+def _absorbing_family(
+    example: TrainingExample, by_family: Mapping[int, Sequence[float]]
+) -> dict[int, int]:
+    """Map each family onto the family whose branch carries its value.
+
+    A branch dropped for naming an action that another branch already
+    executes still has a value -- the survivor's. A family stands for itself
+    whenever it kept any branch; otherwise it follows the absorption map
+    recorded at harvest. Legacy corpora carry no map, and there every family
+    that is present stands for itself, which is the pre-Option-A behaviour.
+    """
+
+    absorption = dict(example.branch_absorption or ())
+    mapping: dict[int, int] = {}
+    for family_index, family_name in enumerate(LABELS):
+        if family_index in by_family:
+            mapping[family_index] = family_index
+            continue
+        for branch_index, label in enumerate(BRANCH_LABELS):
+            if BRANCH_FAMILIES[branch_index] != family_name:
+                continue
+            survivor = absorption.get(label)
+            if survivor is None:
+                continue
+            target = LABELS.index(BRANCH_FAMILIES[BRANCH_LABELS.index(survivor)])
+            if target in by_family:
+                mapping[family_index] = target
+                break
+    return mapping
+
+
 def _branch_class_weight(example: TrainingExample, config: TrainingConfig) -> float:
     if config.class_weights is None:
         return 1.0
@@ -1116,17 +1166,122 @@ def _forward_v2(
     return outputs
 
 
+@dataclass(frozen=True, slots=True)
+class BranchMetricsV7:
+    """Branch metrics split by whether the group can discriminate at all.
+
+    A *degenerate* group is one whose every branch ties for best. On such a
+    group best-action accuracy and regret are constants -- 1 and 0 -- for
+    every possible predictor, including the trivial baselines, so including
+    them adds a fixed bonus to each contender and compresses the differences
+    the metric exists to resolve. The primary figures therefore score only
+    the groups where the metric is defined; ``all_groups`` keeps the old
+    tie-credited numbers visible, and the degenerate counts travel with
+    every figure so the inflation can never go unnoticed again.
+    """
+
+    total_groups: int
+    degenerate_groups: int
+    scored_groups: int
+    best_action_accuracy: float | None
+    mean_regret_pct: float | None
+    chance_accuracy: float | None
+    best_action_accuracy_all_groups: float
+    mean_regret_pct_all_groups: float
+    action_value_mae_pct: float
+    # Groups that emitted a single branch. Also unscorable, but for a
+    # different reason -- no choice existed rather than every choice tying --
+    # and they are counted apart because the degeneracy rate is the headline
+    # diagnostic for the branch-set work, and mixing "nothing to choose" into
+    # "everything ties" would make that measurement unreadable.
+    single_branch_groups: int = 0
+
+    @property
+    def degenerate_group_fraction(self) -> float:
+        return self.degenerate_groups / max(1, self.total_groups)
+
+    def to_mapping(self) -> dict[str, object]:
+        return {
+            "scoring": (
+                "primary figures exclude degenerate groups (every branch ties "
+                "for best), where accuracy and regret are 1 and 0 for every "
+                "predictor; all_groups repeats them with ties credited"
+            ),
+            "total_groups": self.total_groups,
+            "degenerate_groups": self.degenerate_groups,
+            "single_branch_groups": self.single_branch_groups,
+            "scored_groups": self.scored_groups,
+            "degenerate_group_fraction": round(self.degenerate_group_fraction, 6),
+            "best_action_accuracy": _round_or_none(self.best_action_accuracy),
+            "mean_regret_pct": _round_or_none(self.mean_regret_pct),
+            "chance_accuracy": _round_or_none(self.chance_accuracy),
+            "action_value_mae_pct": round(self.action_value_mae_pct, 6),
+            "all_groups": {
+                "best_action_accuracy": round(self.best_action_accuracy_all_groups, 6),
+                "mean_regret_pct": round(self.mean_regret_pct_all_groups, 6),
+            },
+        }
+
+
+def _round_or_none(value: float | None, digits: int = 6) -> float | None:
+    return None if value is None else round(value, digits)
+
+
+def print_branch_summary(summary: "TrainingSummary") -> None:
+    """Print the validation branch metrics with their degenerate context.
+
+    The degenerate share always prints beside accuracy and regret: those two
+    figures are computed on the complementary subset, and quoting either
+    without it is how the inflated 60.28% headline survived review.
+    """
+
+    def show(name: str, value: float | None) -> None:
+        print(f"{name}: {'n/a' if value is None else format(value, '.6f')}")
+
+    fraction = summary.validation_degenerate_group_fraction
+    if fraction is not None:
+        print(f"validation_degenerate_group_fraction: {fraction:.6f}")
+        print(
+            "  (accuracy and regret below exclude those groups; every branch "
+            "ties there, so no predictor can be wrong)"
+        )
+    show("validation_best_action_accuracy", summary.validation_best_action_accuracy)
+    show("validation_mean_regret_pct", summary.validation_mean_regret_pct)
+    show("validation_action_value_mae_pct", summary.validation_action_value_mae_pct)
+
+
+def _optimal_branches(returns: Mapping[int, float]) -> set[int]:
+    """Branches tied for best, using the metric's own equality tolerance."""
+
+    best = max(returns.values())
+    return {
+        branch
+        for branch, value in returns.items()
+        if math.isclose(value, best, abs_tol=1e-12)
+    }
+
+
 def _branch_metrics_v7(
     examples: Sequence[TrainingExample],
     score_rows: Sequence[Sequence[float]],
-) -> tuple[float, float, float]:
-    """Best-branch accuracy, mean regret pct, and value MAE over groups."""
+) -> BranchMetricsV7:
+    """Best-branch accuracy, mean regret pct, and value MAE over groups.
+
+    Degenerate groups -- every branch tied for best -- are excluded from the
+    headline accuracy and regret because no predictor can be wrong on them;
+    see :class:`BranchMetricsV7`.
+    """
 
     grouped: dict[object, list[tuple[TrainingExample, Sequence[float]]]] = {}
     for example, scores in zip(examples, score_rows):
         grouped.setdefault(_decision_key(example), []).append((example, scores))
     correct = 0
     total_regret = 0.0
+    correct_all = 0
+    total_regret_all = 0.0
+    chance = 0.0
+    degenerate = 0
+    single_branch = 0
     total_value_error = 0.0
     value_count = 0
     for rows in grouped.values():
@@ -1137,8 +1292,19 @@ def _branch_metrics_v7(
         scores = rows[0][1]
         predicted = max(returns, key=lambda branch: scores[branch])
         best_return = max(returns.values())
-        correct += int(math.isclose(returns[predicted], best_return, abs_tol=1e-12))
-        total_regret += 100.0 * (best_return - returns[predicted])
+        optimal = _optimal_branches(returns)
+        hit = int(predicted in optimal)
+        regret = 100.0 * (best_return - returns[predicted])
+        correct_all += hit
+        total_regret_all += regret
+        if len(returns) < 2:
+            single_branch += 1
+        elif len(optimal) == len(returns):
+            degenerate += 1
+        else:
+            correct += hit
+            total_regret += regret
+            chance += len(optimal) / len(returns)
         centered = {
             branch: scores[branch] - sum(scores[b] for b in returns) / len(returns)
             for branch in returns
@@ -1150,55 +1316,120 @@ def _branch_metrics_v7(
                 (returns[branch] - target_mean) - centered[branch]
             )
             value_count += 1
-    group_count = max(1, len(grouped))
-    return (
-        correct / group_count,
-        total_regret / group_count,
-        total_value_error / max(1, value_count),
+    total_groups = len(grouped)
+    scored = total_groups - degenerate - single_branch
+    return BranchMetricsV7(
+        total_groups=total_groups,
+        degenerate_groups=degenerate,
+        single_branch_groups=single_branch,
+        scored_groups=scored,
+        best_action_accuracy=None if scored == 0 else correct / scored,
+        mean_regret_pct=None if scored == 0 else total_regret / scored,
+        chance_accuracy=None if scored == 0 else chance / scored,
+        best_action_accuracy_all_groups=correct_all / max(1, total_groups),
+        mean_regret_pct_all_groups=total_regret_all / max(1, total_groups),
+        action_value_mae_pct=total_value_error / max(1, value_count),
     )
 
 
 def _baseline_floor_v7(
     examples: Sequence[TrainingExample],
     seed: int,
-) -> dict[str, dict[str, float]]:
+) -> dict[str, object]:
     """Trivial predictors every candidate must beat before a gauntlet runs.
 
     Candidate 0016 lost to `always aggress` on both offline metrics without
     anyone noticing; this table makes that failure blocking and visible.
+    Scored on the same footing as :func:`_branch_metrics_v7`: degenerate
+    groups are excluded from the headline figures, because they hand every
+    contender the same free point and shrink the gap the floor must resolve.
     """
 
     grouped: dict[object, dict[int, float]] = {}
+    absorption_by_group: dict[object, dict[str, str]] = {}
     for example in examples:
-        grouped.setdefault(_decision_key(example), {})[_branch_index(example)] = (
-            _purse_return_fraction(example)
+        key = _decision_key(example)
+        grouped.setdefault(key, {})[_branch_index(example)] = _purse_return_fraction(
+            example
         )
+        if key not in absorption_by_group:
+            absorption_by_group[key] = dict(example.branch_absorption or ())
+    optimal_by_group = {
+        key: _optimal_branches(returns) for key, returns in grouped.items()
+    }
+    # Same footing as :func:`_branch_metrics_v7`: unscorable groups are the
+    # ones where every branch ties *or* where only one branch was emitted.
+    single_branch = {key for key, returns in grouped.items() if len(returns) < 2}
+    degenerate = {
+        key
+        for key, optimal in optimal_by_group.items()
+        if key not in single_branch and len(optimal) == len(grouped[key])
+    }
     rng = random.Random(seed)
-    policies: dict[str, object] = {
-        "always_fold": 0,
-        "always_check_call": 1,
-        "always_aggress_half_pot": 2,
-        "always_aggress_pot": 3,
+    # A trivial policy names an intent, not a branch index. When the branch
+    # it wants was dropped for naming an action a surviving branch already
+    # executes, the honest score is the survivor's -- that *is* what the
+    # engine plays for that intent. Guessing a fallback chain instead
+    # mis-scores the floor, and this table is the blocking promotion gate.
+    policies: dict[str, str | None] = {
+        "always_fold": "fold",
+        "always_check_call": "check_call",
+        "always_aggress_half_pot": "aggress_half_pot",
+        "always_aggress_pot": "aggress_pot",
         "uniform_random_legal": None,
     }
-    table: dict[str, dict[str, float]] = {}
-    for name, fixed in policies.items():
+    total = len(grouped)
+    scored = total - len(degenerate) - len(single_branch)
+    table: dict[str, dict[str, float | None]] = {}
+    for name, intent in policies.items():
         correct = 0
         regret = 0.0
-        for returns in grouped.values():
-            if fixed is not None:
-                chosen = fixed if fixed in returns else min(returns)
+        correct_all = 0
+        regret_all = 0.0
+        for key, returns in grouped.items():
+            absorption = absorption_by_group.get(key) or {}
+            if intent is not None:
+                chosen = _intent_branch(intent, absorption, returns)
+            elif absorption:
+                # Uniform over the LEGAL actions, which is what the contract
+                # name promises: the absorption map's keys are exactly the
+                # candidate branches, so sample those and follow each to the
+                # branch that carries its value. Sampling survivors directly
+                # would silently re-weight toward whichever survivor absorbed
+                # the most candidates.
+                chosen = _intent_branch(
+                    rng.choice(sorted(absorption)), absorption, returns
+                )
             else:
                 chosen = rng.choice(sorted(returns))
             best = max(returns.values())
-            correct += int(math.isclose(returns[chosen], best, abs_tol=1e-12))
-            regret += 100.0 * (best - returns[chosen])
-        count = max(1, len(grouped))
+            hit = int(chosen in optimal_by_group[key])
+            gap = 100.0 * (best - returns[chosen])
+            correct_all += hit
+            regret_all += gap
+            if key not in degenerate and key not in single_branch:
+                correct += hit
+                regret += gap
         table[name] = {
-            "best_action_accuracy": round(correct / count, 6),
-            "mean_regret_pct": round(regret / count, 6),
+            "best_action_accuracy": _round_or_none(
+                None if scored == 0 else correct / scored
+            ),
+            "mean_regret_pct": _round_or_none(None if scored == 0 else regret / scored),
+            "best_action_accuracy_all_groups": round(correct_all / max(1, total), 6),
+            "mean_regret_pct_all_groups": round(regret_all / max(1, total), 6),
         }
-    return table
+    return {
+        "scoring": (
+            "primary figures exclude degenerate groups, matching "
+            "evaluation.branch_metrics"
+        ),
+        "total_groups": total,
+        "degenerate_groups": len(degenerate),
+        "single_branch_groups": len(single_branch),
+        "scored_groups": scored,
+        "degenerate_group_fraction": round(len(degenerate) / max(1, total), 6),
+        "policies": table,
+    }
 
 
 def _margin_quantiles_v7(
@@ -1338,8 +1569,8 @@ def _train_cuda_v7(
     config: TrainingConfig,
 ) -> tuple[
     dict[str, object],
-    tuple[float, float, float, float],
-    tuple[float, float, float, float] | None,
+    tuple[float, BranchMetricsV7],
+    tuple[float, BranchMetricsV7] | None,
     list[list[float]],
     str,
     dict[str, object],
@@ -1477,9 +1708,24 @@ def _train_cuda_v7(
                     _action_value_target(examples[row], config)
                 )
             probabilities = examples[rows[0]].behavior_probabilities
+            # V(s) = E_{a~pi}[Q(s, a)], and `behavior_probabilities` is
+            # one-hot by construction (decision_engine builds it as
+            # `float(label == family)`), so this is exactly the value of the
+            # branch the actor really played.
+            #
+            # Under legality-and-distinctness-aware branch sets that branch
+            # may carry no label of its own: it was dropped as a duplicate of
+            # a branch the engine executes identically. Follow the absorption
+            # map to the survivor that holds its value. Renormalizing the
+            # probabilities instead is a no-op on a one-hot distribution --
+            # it silently writes V(s) = 0 for exactly the decisions whose own
+            # action was absorbed, which is most of them.
+            absorbed = _absorbing_family(examples[rows[0]], by_family)
             expected = sum(
-                probabilities[family] * (sum(targets) / len(targets))
-                for family, targets in by_family.items()
+                probabilities[family]
+                * (sum(by_family[target]) / len(by_family[target]))
+                for family, target in absorbed.items()
+                if target in by_family
             )
             for row in rows:
                 values[row] = expected
@@ -1512,7 +1758,13 @@ def _train_cuda_v7(
         betas=(0.9, 0.95),
         eps=1e-8,
     )
-    group_batches = max(1, config.batch_size // 4)
+    # Batches are group-coherent, so the configured example batch size has to
+    # be converted into a group count. This used to divide by a hardcoded 4;
+    # with legality-and-distinctness-aware branch sets the mean group is
+    # smaller than that, and the constant would quietly shrink the effective
+    # batch and raise gradient noise without any recipe change being recorded.
+    mean_group_rows = len(train_reward_examples) / max(1, len(train_groups))
+    group_batches = max(1, int(config.batch_size / max(1.0, mean_group_rows)))
     steps_per_epoch = max(1, math.ceil(len(train_groups) / group_batches))
     if behavior_data is not None:
         steps_per_epoch += max(
@@ -1679,18 +1931,18 @@ def _train_cuda_v7(
     def summarize(
         examples: Sequence[TrainingExample],
         data: dict[str, object] | None,
-    ) -> tuple[tuple[float, float, float, float], list[list[float]]] | None:
+    ) -> tuple[tuple[float, BranchMetricsV7], list[list[float]]] | None:
         if data is None or not examples:
             return None
         rows = scores_for(data)
-        accuracy, regret, value_error = _branch_metrics_v7(examples, rows)
+        metrics = _branch_metrics_v7(examples, rows)
         with torch.no_grad():
             outputs = model(data["card"], data["ctx"])
             indexes = torch.arange(data["branch"].shape[0], device=device)
             predicted = outputs["action_value"][indexes, data["branch"]]
             weight = data["weight"]
             loss = (weight * (predicted - data["target"]).square()).sum() / weight.sum()
-        return (float(loss), accuracy, regret, value_error), rows
+        return (float(loss), metrics), rows
 
     train_summary = summarize(train_reward_examples, train_data)
     assert train_summary is not None
@@ -1783,10 +2035,24 @@ def _finish_v7(
     )
     train_loss = train_metrics[0]
     validation_loss = validation_metrics[0] if validation_metrics else None
-    validation_accuracy = validation_metrics[1] if validation_metrics else None
-    validation_regret_pct = validation_metrics[2] if validation_metrics else None
+    validation_branch_metrics = validation_metrics[1] if validation_metrics else None
+    validation_accuracy = (
+        validation_branch_metrics.best_action_accuracy
+        if validation_branch_metrics
+        else None
+    )
+    validation_regret_pct = (
+        validation_branch_metrics.mean_regret_pct if validation_branch_metrics else None
+    )
     validation_action_value_mae_pct = (
-        validation_metrics[3] if validation_metrics else None
+        validation_branch_metrics.action_value_mae_pct
+        if validation_branch_metrics
+        else None
+    )
+    validation_degenerate_fraction = (
+        validation_branch_metrics.degenerate_group_fraction
+        if validation_branch_metrics
+        else None
     )
     validation_calibration = _hybrid_calibration_v7(
         validation_reward_examples, validation_score_rows
@@ -1918,15 +2184,22 @@ def _finish_v7(
             "validation_loss": None
             if validation_loss is None
             else round(validation_loss, 6),
-            "validation_best_action_accuracy": None
-            if validation_accuracy is None
-            else round(validation_accuracy, 6),
-            "validation_mean_regret_pct": None
-            if validation_regret_pct is None
-            else round(validation_regret_pct, 6),
-            "validation_action_value_mae_pct": None
-            if validation_action_value_mae_pct is None
-            else round(validation_action_value_mae_pct, 6),
+            # Accuracy and regret exclude degenerate groups; the tie-credited
+            # figures they replace live under branch_metrics.all_groups.
+            "validation_best_action_accuracy": _round_or_none(validation_accuracy),
+            "validation_mean_regret_pct": _round_or_none(validation_regret_pct),
+            "validation_action_value_mae_pct": _round_or_none(
+                validation_action_value_mae_pct
+            ),
+            "validation_degenerate_group_fraction": _round_or_none(
+                validation_degenerate_fraction
+            ),
+            "branch_metrics": {
+                "train": train_metrics[1].to_mapping(),
+                "validation": None
+                if validation_branch_metrics is None
+                else validation_branch_metrics.to_mapping(),
+            },
             "trivial_baselines": baselines,
             "hybrid_confidence_calibration": validation_calibration,
         },
@@ -1946,6 +2219,7 @@ def _finish_v7(
         validation_best_action_accuracy=validation_accuracy,
         validation_mean_regret_pct=validation_regret_pct,
         validation_action_value_mae_pct=validation_action_value_mae_pct,
+        validation_degenerate_group_fraction=validation_degenerate_fraction,
         weights_sha256=weights_sha256,
         manifest_path=manifest_path,
         weights_path=weights_path,
@@ -2363,15 +2637,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"train_loss: {summary.train_loss:.6f}")
     if summary.validation_loss is not None:
         print(f"validation_loss: {summary.validation_loss:.6f}")
-        print(
-            "validation_best_action_accuracy: "
-            f"{summary.validation_best_action_accuracy:.6f}"
-        )
-        print(f"validation_mean_regret_pct: {summary.validation_mean_regret_pct:.6f}")
-        print(
-            "validation_action_value_mae_pct: "
-            f"{summary.validation_action_value_mae_pct:.6f}"
-        )
+        print_branch_summary(summary)
     print(f"manifest: {summary.manifest_path}")
     print(f"weights: {summary.weights_path}")
     print(f"weights_sha256: {summary.weights_sha256}")
@@ -2383,6 +2649,8 @@ if __name__ == "__main__":
 
 
 __all__ = [
+    "BranchMetricsV7",
+    "print_branch_summary",
     "TRAINING_OBJECTIVE",
     "TrainingConfig",
     "TrainingSummary",

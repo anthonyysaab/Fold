@@ -7,7 +7,9 @@ higher-volume policy settings.
 
 HARD STOPS (owner-gated money): a 402 entry fee on join, or busting so the
 bankroll can no longer cover a buy-in. Never rebuys, pays, or requeues on a
-bust on its own.
+bust on its own. A bust must be *confirmed* by consecutive re-polls before the
+session ends: a single spurious ``chipState: busted`` sample once threw away
+2.96 hours of a six-hour budget while the agent still held 2,870 chips.
 
 The session exits 0 only when Arena confirms the leave; repeated unusable
 pending-state responses and unconfirmed departures exit nonzero.
@@ -46,7 +48,25 @@ BASE = "https://arena.dev.fun"
 # Consecutive HTTP-200 responses with unusable bodies before the session stops
 # instead of treating them as "no pending turns".
 MAX_INVALID_PENDING_RESPONSES = 3
+# Polls (~1.5s each) with no lobby seat, no pending table, and no active table
+# before assuming the seat claim expired and re-joining. Twenty is about 30
+# seconds: long enough that ordinary between-hand gaps never trip it, short
+# enough that a lost queue entry costs seconds instead of a whole session.
+IDLE_POLLS_BEFORE_REJOIN = 20
+MAX_SESSION_REJOINS = 5
 LEAVE_ATTEMPTS = 2
+
+# A single ``chipState: busted`` sample is not evidence. On 2026-08-14 the
+# runner stopped on one at runs/2026-08-14T192344Z/session-001.log:522 while
+# the very next poll of the same participant read 2,870 chips; that false
+# reading cost 2.96 hours of a six-hour session budget, and losing then
+# regaining 2,857 chips in eight seconds is impossible. Arena also reports
+# ``busted`` as a lifecycle artifact in the Eval sandbox (PENDING_EDITS item
+# 15), so this is a known class of false signal. A bust is believed only when
+# this many independent re-polls all agree; a genuine bust keeps reading
+# busted, so it still stops within a few seconds.
+BUST_CONFIRMATION_POLLS = 3
+BUST_CONFIRMATION_DELAY_S = 1.5
 
 
 class MalformedResponse:
@@ -179,6 +199,83 @@ def participant_total_chips(payload: object) -> int | None:
     if isinstance(chips, bool) or not isinstance(chips, int):
         return None
     return chips
+
+
+def is_busted_reading(participant: object) -> bool:
+    """True when this participant snapshot claims the bankroll is gone."""
+
+    if not isinstance(participant, Mapping):
+        return False
+    return str(participant.get("chipState") or "").casefold() == "busted"
+
+
+def busted_reading_contradiction(participant: object) -> str | None:
+    """Why a busted snapshot refutes itself, or ``None`` if it is coherent.
+
+    A participant cannot be ``busted`` and still hold chips. That shape is a
+    reporting artifact, never a bankroll, so it is refused without spending
+    re-polls on it.
+    """
+
+    if not isinstance(participant, Mapping):
+        return None
+    chips = participant.get("totalChips")
+    if isinstance(chips, bool) or not isinstance(chips, int):
+        return None
+    if chips > 0:
+        return f"the same snapshot still reports totalChips={chips}"
+    return None
+
+
+def confirm_bust(
+    api_key: str,
+    competition: str,
+    *,
+    polls: int = BUST_CONFIRMATION_POLLS,
+    delay_s: float = BUST_CONFIRMATION_DELAY_S,
+) -> tuple[bool, str]:
+    """Re-poll Arena and report whether a busted reading survives scrutiny.
+
+    Returns ``(confirmed, detail)``. Confirmation needs ``polls`` independent
+    re-polls that all report ``busted`` with a non-positive ``totalChips``.
+    Anything else -- a healthy chip state, chips still in the stack, or a body
+    we cannot read -- refuses the bust, so one transient bad sample can no
+    longer end a session. A real bust keeps reading busted on every poll, so
+    it is still confirmed in about ``polls * delay_s`` seconds.
+
+    Stack size deliberately does **not** veto a bust: the genuine 2026-08-13
+    bust lost 1,512 chips in a single hand
+    (``.handoff/notes/evidence/2026-08-13-bust/session-001.log``), so a large
+    stack moments earlier is not evidence against a bust. Only a later poll
+    that disagrees is.
+    """
+
+    for attempt in range(1, polls + 1):
+        time.sleep(delay_s)
+        status, payload = request_arena(
+            api_key,
+            "GET",
+            f"/api/arena/texas/pending-actions?competitionId={competition}",
+        )
+        snapshot = validate_pending_snapshot(payload) if status == 200 else None
+        if snapshot is None:
+            return False, f"re-poll {attempt}/{polls} was unusable (HTTP {status})"
+        participant = snapshot.get("participant")
+        chips = participant_total_chips(snapshot)
+        if not is_busted_reading(participant):
+            state = (
+                participant.get("chipState")
+                if isinstance(participant, Mapping)
+                else None
+            )
+            return False, (
+                f"re-poll {attempt}/{polls} reports chipState={state!r} "
+                f"totalChips={chips}"
+            )
+        contradiction = busted_reading_contradiction(participant)
+        if contradiction is not None:
+            return False, f"re-poll {attempt}/{polls} says busted but {contradiction}"
+    return True, f"{polls} consecutive re-polls agree the bankroll is gone"
 
 
 def confirm_leave(api_key: str, competition: str) -> bool:
@@ -336,6 +433,10 @@ def main(argv=None):
     replay_check_needed = telemetry is not None
     invalid_pending_responses = 0
     session_exit = 0
+    idle_polls = 0
+    rejoins = 0
+    last_healthy_chips = start_chips
+    rejected_bust_readings = 0
 
     try:
         while time.time() < deadline:
@@ -367,14 +468,38 @@ def main(argv=None):
                 continue
             invalid_pending_responses = 0
             participant = pending.get("participant") or {}
+            observed_chips = participant_total_chips(pending)
             if start_chips is None:
-                start_chips = participant_total_chips(pending)
-            if participant.get("chipState") == "busted":
+                start_chips = observed_chips
+            if observed_chips is not None and observed_chips > 0:
+                # Kept for the rejection log: what the stack was before a
+                # busted reading is the fact that makes a false one obvious.
+                last_healthy_chips = observed_chips
+            if is_busted_reading(participant):
+                contradiction = busted_reading_contradiction(participant)
+                if contradiction is None:
+                    confirmed, detail = confirm_bust(api_key, competition)
+                else:
+                    confirmed, detail = False, contradiction
+                if confirmed:
+                    print(
+                        f"STOP: busted (totalChips={participant.get('totalChips')}), "
+                        f"confirmed by {detail}. Rebuy is owner-gated, pausing."
+                    )
+                    break
+                rejected_bust_readings += 1
                 print(
-                    f"STOP: busted (totalChips={participant.get('totalChips')}). "
-                    "Rebuy is owner-gated, pausing."
+                    f"  !! BUST READING REJECTED #{rejected_bust_readings}: Arena "
+                    f"said chipState=busted (totalChips="
+                    f"{participant.get('totalChips')}) but {detail}. Last healthy "
+                    f"stack this session: {last_healthy_chips}. Playing on -- an "
+                    "unconfirmed bust must not end the session."
                 )
-                break
+                if contradiction is not None:
+                    # That branch spends no re-polls, so pace it here: a stuck
+                    # response shape must not become a hot request loop.
+                    time.sleep(BUST_CONFIRMATION_DELAY_S)
+                continue
             pending_tables = [
                 table
                 for table in (pending.get("tables") or [])
@@ -412,6 +537,60 @@ def main(argv=None):
                             approved_token = token
                             print(
                                 f"  refreshed learned policy -> {policy.policy_version}"
+                            )
+                # Seated-or-queued is a claim with an expiry. A 409 at join
+                # time only means Arena saw a concurrent entry -- which is
+                # exactly what a session restart racing the previous
+                # session's teardown produces. If the entry then disappears,
+                # nothing re-queues us and the agent polls an empty state for
+                # the whole session. Observed live 2026-08-14: 30+ minutes
+                # idle with lobby null and no tables.
+                seated_or_queued = bool(
+                    pending.get("lobby")
+                    or pending.get("tables")
+                    or pending.get("activeTables")
+                )
+                if seated_or_queued:
+                    idle_polls = 0
+                else:
+                    idle_polls += 1
+                    if (
+                        idle_polls >= IDLE_POLLS_BEFORE_REJOIN
+                        and rejoins < MAX_SESSION_REJOINS
+                    ):
+                        idle_polls = 0
+                        rejoins += 1
+                        print(
+                            f"  idle with no lobby seat; re-joining "
+                            f"({rejoins}/{MAX_SESSION_REJOINS})"
+                        )
+                        rejoin_status, rejoin_body = request_arena(
+                            api_key,
+                            "POST",
+                            "/api/arena/texas/join",
+                            {"competitionId": competition},
+                        )
+                        if rejoin_status == 402:
+                            print(
+                                "STOP: entry fee (402) on re-join: "
+                                f"{rejoin_body}. Owner approval needed."
+                            )
+                            session_exit = 2
+                            break
+                        if rejoin_status == 403:
+                            print(
+                                f"STOP: access denied (403) on re-join: {rejoin_body}."
+                            )
+                            session_exit = 3
+                            break
+                        if rejoin_status in (200, 201):
+                            print("  re-joined the lobby")
+                        elif is_reconnectable_join_conflict(rejoin_status, rejoin_body):
+                            print("  re-join reports a concurrent entry; still waiting")
+                        else:
+                            print(
+                                f"  re-join failed HTTP {rejoin_status}: "
+                                f"{rejoin_body!r:.120}"
                             )
                 time.sleep(1.5)
                 continue
@@ -599,6 +778,11 @@ def main(argv=None):
             f"across ~{len(hand_ids)} observed hand/table ids; "
             f"chips {start_chips} -> {end_chips} (delta {delta}) ==="
         )
+        if rejected_bust_readings:
+            print(
+                f"NOTE: {rejected_bust_readings} unconfirmed busted reading(s) "
+                "were rejected this session; see the BUST READING REJECTED lines."
+            )
         if not departed:
             print(
                 "WARNING: Arena did not confirm the leave; the agent may still "

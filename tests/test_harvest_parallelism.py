@@ -21,6 +21,7 @@ def _args(**overrides) -> argparse.Namespace:
         "shover_hands": 6,
         "station_hands": 0,
         "nit_hands": 0,
+        "textured_hands": 0,
         "sparring": None,
         "sparring_hands": 0,
         "seed": 71,
@@ -74,7 +75,13 @@ class HarvestWorkerCountTests(unittest.TestCase):
 class HarvestSpecTests(unittest.TestCase):
     def test_specs_keep_their_fixed_order_and_seeds(self) -> None:
         specs = harvest_specs(
-            _args(station_hands=4, nit_hands=4, sparring="x.json", sparring_hands=4)
+            _args(
+                station_hands=4,
+                nit_hands=4,
+                textured_hands=4,
+                sparring="x.json",
+                sparring_hands=4,
+            )
         )
 
         self.assertEqual(
@@ -84,10 +91,14 @@ class HarvestSpecTests(unittest.TestCase):
                 "heads-up vs shover",
                 "heads-up vs station",
                 "heads-up vs nit",
+                "heads-up vs textured",
                 "sparring",
             ],
         )
-        self.assertEqual([spec.seed for spec in specs], [71, 91, 92, 93, 101])
+        self.assertEqual([spec.seed for spec in specs], [71, 91, 92, 93, 94, 101])
+        # Distinct leg seeds are what make parallel and sequential harvests
+        # produce identical examples; a collision would silently correlate legs.
+        self.assertEqual(len({spec.seed for spec in specs}), len(specs))
 
     def test_specs_are_picklable_by_value(self) -> None:
         # Worker processes rebuild opponents from the spec; shipping live

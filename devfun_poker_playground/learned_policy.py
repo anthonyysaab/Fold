@@ -31,6 +31,7 @@ from bluff import BluffSettings
 from devfun_poker_playground.decision_engine import (
     DecisionEngine,
     SafetyGates,
+    SharedEquityCache,
     TemperatureShaping,
 )
 from devfun_poker_playground.game_state import _integer, effective_stack_chips
@@ -101,6 +102,8 @@ class LearnedPokerPolicy(DecisionEngine):
         safety_gates: SafetyGates | None = None,
         opponent_tracker: AggressionTracker | None = None,
         bluff_settings: BluffSettings | None = None,
+        equity_cache: SharedEquityCache | None = None,
+        hyper_aggression_chance: float | None = None,
         action_head_semantics: str = "policy_logits",
         use_learned_sizing: bool = True,
         hybrid_min_value_advantage: float | None = None,
@@ -113,6 +116,8 @@ class LearnedPokerPolicy(DecisionEngine):
             safety_gates=safety_gates,
             opponent_tracker=opponent_tracker,
             bluff_settings=bluff_settings,
+            equity_cache=equity_cache,
+            hyper_aggression_chance=hyper_aggression_chance,
         )
         self.policy_version = str(model_version)
         self._weights = {
@@ -273,6 +278,8 @@ class LearnedPokerPolicyV7(DecisionEngine):
         safety_gates: SafetyGates | None = None,
         opponent_tracker: AggressionTracker | None = None,
         bluff_settings: BluffSettings | None = None,
+        equity_cache: SharedEquityCache | None = None,
+        hyper_aggression_chance: float | None = None,
         serve_mode: str = "argmax",
         hybrid_min_margin_quantile: str | None = None,
         hybrid_max_abs_z: float = 5.0,
@@ -284,6 +291,8 @@ class LearnedPokerPolicyV7(DecisionEngine):
             safety_gates=safety_gates,
             opponent_tracker=opponent_tracker,
             bluff_settings=bluff_settings,
+            equity_cache=equity_cache,
+            hyper_aggression_chance=hyper_aggression_chance,
         )
         self.policy_version = str(model_version)
         self._architecture = dict(architecture)
@@ -547,6 +556,8 @@ def load_policy(
     hybrid_max_abs_z: float = 5.0,
     serve_mode: str = "argmax",
     hybrid_min_margin_quantile: str | None = None,
+    equity_cache: SharedEquityCache | None = None,
+    hyper_aggression_chance: float | None = None,
 ) -> LearnedPokerPolicy | LearnedPokerPolicyV7:
     """Load, verify, and assemble a playing policy from one manifest.
 
@@ -603,6 +614,8 @@ def load_policy(
             serve_mode=serve_mode,
             hybrid_min_margin_quantile=hybrid_min_margin_quantile,
             hybrid_max_abs_z=hybrid_max_abs_z,
+            equity_cache=equity_cache,
+            hyper_aggression_chance=hyper_aggression_chance,
             **_load_engine_parameters(manifest),
         )
     training = manifest.get("training") or {}
@@ -623,6 +636,8 @@ def load_policy(
         use_learned_sizing=use_learned_sizing,
         hybrid_min_value_advantage=hybrid_min_value_advantage,
         hybrid_max_abs_z=hybrid_max_abs_z,
+        equity_cache=equity_cache,
+        hyper_aggression_chance=hyper_aggression_chance,
         **_load_engine_parameters(manifest),
     )
 
@@ -651,7 +666,11 @@ def load_approved(
         raise LearnedPolicyError(
             f"no readable approved pointer at {pointer_file}: {error}"
         ) from error
-    manifest_file = root / str(pointer.get("manifest_file") or "")
+    # Pointers written on Windows before 2026-08-14 carry backslashes, which
+    # are a filename character on POSIX rather than a separator; normalize so
+    # a pointer promoted on one platform loads on the other.
+    relative = str(pointer.get("manifest_file") or "").replace("\\", "/")
+    manifest_file = root.joinpath(*[part for part in relative.split("/") if part])
     policy = load_policy(manifest_file, equity_trials=equity_trials)
     expected = pointer.get("weights_sha256")
     _require(

@@ -137,6 +137,40 @@ class TrainingCorpusTests(unittest.TestCase):
         )
         self.assertEqual(loaded, expected)
 
+    def test_branch_absorption_survives_the_corpus_round_trip(self) -> None:
+        """A persisted Option A corpus must not read back as a legacy one.
+
+        `branch_absorption` was added to `TrainingExample` but not to the
+        sidecar, so 117,447 of 117,447 rows in the candidate-v7-0003 corpus
+        lost it on the way to disk. Consumers treat an absent map as
+        pre-Option-A and fall back to `min(returns)`, which under-scores the
+        `always_aggress_*` trivial baselines — the BLOCKING promotion gate.
+        The round-trip test above compares whole dataclasses and still missed
+        it, because its fixture never populated the field.
+        """
+
+        absorption = (
+            ("aggress_half_pot", "aggress_half_pot"),
+            ("aggress_pot", "aggress_half_pot"),
+            ("check_call", "check_call"),
+            ("fold", "check_call"),
+        )
+        examples = (
+            _example(action_branch="aggress_half_pot", branch_absorption=absorption),
+            _example(action_branch="check_call", branch_absorption=absorption),
+            # A legacy row carries no map and must stay None, not become ().
+            _example(action_branch=None, branch_absorption=None, counterfactual=False),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "corpus.gz"
+            save_training_corpus(path, examples)
+            loaded = load_training_corpus(path)
+        self.assertEqual(loaded[0].branch_absorption, absorption)
+        self.assertEqual(loaded[1].branch_absorption, absorption)
+        self.assertIsNone(loaded[2].branch_absorption)
+        # An Option A corpus must be distinguishable from a legacy one.
+        self.assertTrue(any(row.branch_absorption for row in loaded))
+
     def test_sidecar_row_mismatch_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "corpus.gz"
@@ -211,6 +245,111 @@ class TrainingTelemetryTests(unittest.TestCase):
         self.assertEqual(examples[0].reward_bb, -0.5)
         self.assertFalse(examples[0].counterfactual)
         self.assertEqual(examples[0].opponent_confidence, 0.75)
+
+    def test_schema_two_records_carry_the_betting_that_led_here(self) -> None:
+        """Schema 2 persists the snapshot's recentEvents into the record.
+
+        Without them no live hand can be attributed: "ran into the top of
+        their range" and "was outplayed" read identically, which is where
+        the 2026-08-15 drawdown forensics had to stop.
+        """
+
+        table = _table()
+        table["recentEvents"] = [
+            {
+                "street": "Preflop",
+                "summary": {"seatNumber": 2, "action": "raise", "amount": 300},
+            },
+            {"street": "Preflop", "summary": {"seatNumber": 1, "action": "call"}},
+            {
+                "street": "flop",
+                "summary": {"seatNumber": 2, "action": "check", "amount": None},
+            },
+            "garbage",  # malformed entries are skipped, never fatal
+            {"street": "flop", "summary": None},
+            {
+                "street": "flop",
+                "summary": {"seatNumber": None, "action": "bet", "amount": 150},
+            },
+        ]
+        decision = _decision()
+        record = make_decision_record(
+            competition_id="comp-1",
+            policy_version="heuristic-test-v1",
+            table=table,
+            payload=decision.to_payload(),
+            decision=decision,
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+            recorded_at_ms=1,
+        )
+        self.assertEqual(record["telemetry_schema_version"], 2)
+        self.assertEqual(
+            record["state"]["recent_actions"],
+            [
+                {
+                    "street": "preflop",
+                    "seat_number": 2,
+                    "action": "raise",
+                    "amount": 300,
+                },
+                {"street": "preflop", "seat_number": 1, "action": "call"},
+                {"street": "flop", "seat_number": 2, "action": "check"},
+                {"street": "flop", "seat_number": None, "action": "bet", "amount": 150},
+            ],
+        )
+
+    def test_schema_one_journals_still_load(self) -> None:
+        """The 4.7 MB live journal predates schema 2 and must stay loadable.
+
+        A reader that accepts only the writer's version turns a schema bump
+        into silent loss of the only record of how the deployed policy has
+        actually played.
+        """
+
+        decision = _decision()
+        record = make_decision_record(
+            competition_id="comp-1",
+            policy_version="heuristic-test-v1",
+            table=_table(),
+            payload=decision.to_payload(),
+            decision=decision,
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+            recorded_at_ms=1,
+        )
+        # Regress the record to schema 1: exactly what every existing line
+        # of the live journal looks like.
+        legacy = dict(record, telemetry_schema_version=1)
+        legacy["state"] = {
+            key: value
+            for key, value in record["state"].items()
+            if key != "recent_actions"
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(legacy) + "\n")
+            telemetry = TelemetryLog(path)  # re-index must accept schema 1
+            receipt = ReplayReceipt("hand-1", "table-1", 2, -50)
+            self.assertEqual(telemetry.append_settlements("comp-1", (receipt,)), 1)
+            examples = load_training_examples(path)
+        self.assertEqual(len(examples), 1)
+        self.assertEqual(examples[0].submitted_risk_fraction, 0.3)
+
+        # An actually unknown version must still be rejected loudly.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(dict(legacy, telemetry_schema_version=3)) + "\n"
+                )
+            with self.assertRaises(TelemetryError):
+                load_training_examples(path)
 
     def test_unverified_or_fallback_actions_are_not_training_samples(self) -> None:
         record = make_decision_record(
