@@ -1,12 +1,82 @@
 {
+  "decision": {
+    "boundary": 8.25,
+    "control_minus_treated": {
+      "ci_half_width": 4.105,
+      "diffs": [
+        6.46,
+        14.18,
+        13.49,
+        18.12,
+        8.93
+      ],
+      "mean": 12.236,
+      "sd": 4.59
+    },
+    "levels": {
+      "attribution": [
+        34.01,
+        26.65,
+        50.84,
+        26.69,
+        31.47
+      ],
+      "control": [
+        27.34,
+        29.49,
+        35.6,
+        31.68,
+        22.82
+      ],
+      "treated": [
+        20.88,
+        15.31,
+        22.11,
+        13.56,
+        13.89
+      ]
+    },
+    "random_minus_treated": {
+      "ci_half_width": 6.32,
+      "diffs": [
+        13.13,
+        11.34,
+        28.73,
+        13.13,
+        17.58
+      ],
+      "mean": 16.782,
+      "sd": 7.065
+    },
+    "seeds": 5,
+    "verdict": "CONFIRMED"
+  },
   "runs": [
     {
-      "arm": "control",
-      "model_version": "deadhead-control-s89",
-      "returncode": 1,
-      "seconds": 19.6,
+      "arm": "attribution",
+      "constant_pct": 34.01,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-attribution-s89.manifest.json",
+      "min_spread": 0.68238329,
+      "model_version": "deadhead-attribution-s89",
+      "returncode": 0,
+      "seconds": 442.2,
       "seed": 89,
-      "stderr_tail": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"C:\\Users\\user\\Fold-ver-4 (multiway)\\tools\\self_play_cycle.py\", line 615, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"C:\\Users\\user\\Fold-ver-4 (multiway)\\tools\\self_play_cycle.py\", line 604, in main\n    summary = train_candidate(tuple(examples), args.output_dir, config)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\user\\Fold-ver-4 (multiway)\\devfun_poker_playground\\offline_trainer.py\", line 2581, in train_candidate\n    raise FileExistsError(f\"candidate artifact already exists for {model_version}\")\nFileExistsError: candidate artifact already exists for deadhead-control-s89\n"
+      "state_value_constant_pct": 20.98,
+      "stderr_tail": ""
+    },
+    {
+      "arm": "control",
+      "constant_pct": 27.34,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-control-s89.manifest.json",
+      "min_spread": 0.5558954,
+      "model_version": "deadhead-control-s89",
+      "returncode": 0,
+      "seconds": 371.2,
+      "seed": 89,
+      "state_value_constant_pct": 25.19,
+      "stderr_tail": ""
     },
     {
       "arm": "treated",
@@ -23,15 +93,15 @@
     },
     {
       "arm": "attribution",
-      "constant_pct": 34.01,
+      "constant_pct": 26.65,
       "instrument_passed": true,
-      "manifest": "artifacts\\deadhead\\deadhead-attribution-s89.manifest.json",
-      "min_spread": 0.68238329,
-      "model_version": "deadhead-attribution-s89",
+      "manifest": "artifacts\\deadhead\\deadhead-attribution-s90.manifest.json",
+      "min_spread": 0.59651663,
+      "model_version": "deadhead-attribution-s90",
       "returncode": 0,
-      "seconds": 442.2,
-      "seed": 89,
-      "state_value_constant_pct": 20.98,
+      "seconds": 357.0,
+      "seed": 90,
+      "state_value_constant_pct": 20.79,
       "stderr_tail": ""
     },
     {
@@ -62,15 +132,15 @@
     },
     {
       "arm": "attribution",
-      "constant_pct": 26.65,
+      "constant_pct": 50.84,
       "instrument_passed": true,
-      "manifest": "artifacts\\deadhead\\deadhead-attribution-s90.manifest.json",
-      "min_spread": 0.59651663,
-      "model_version": "deadhead-attribution-s90",
+      "manifest": "artifacts\\deadhead\\deadhead-attribution-s91.manifest.json",
+      "min_spread": 0.5975418,
+      "model_version": "deadhead-attribution-s91",
       "returncode": 0,
-      "seconds": 357.0,
-      "seed": 90,
-      "state_value_constant_pct": 20.79,
+      "seconds": 476.3,
+      "seed": 91,
+      "state_value_constant_pct": 56.2,
       "stderr_tail": ""
     },
     {
@@ -101,15 +171,80 @@
     },
     {
       "arm": "attribution",
-      "constant_pct": 50.84,
+      "constant_pct": 26.69,
       "instrument_passed": true,
-      "manifest": "artifacts\\deadhead\\deadhead-attribution-s91.manifest.json",
-      "min_spread": 0.5975418,
-      "model_version": "deadhead-attribution-s91",
+      "manifest": "artifacts\\deadhead\\deadhead-attribution-s92.manifest.json",
+      "min_spread": 0.29051931,
+      "model_version": "deadhead-attribution-s92",
       "returncode": 0,
-      "seconds": 476.3,
-      "seed": 91,
-      "state_value_constant_pct": 56.2,
+      "seconds": 333.3,
+      "seed": 92,
+      "state_value_constant_pct": 32.66,
+      "stderr_tail": ""
+    },
+    {
+      "arm": "control",
+      "constant_pct": 31.68,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-control-s92.manifest.json",
+      "min_spread": 0.52961542,
+      "model_version": "deadhead-control-s92",
+      "returncode": 0,
+      "seconds": 423.7,
+      "seed": 92,
+      "state_value_constant_pct": 27.07,
+      "stderr_tail": ""
+    },
+    {
+      "arm": "treated",
+      "constant_pct": 13.56,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-treated-s92.manifest.json",
+      "min_spread": 0.67886444,
+      "model_version": "deadhead-treated-s92",
+      "returncode": 0,
+      "seconds": 440.8,
+      "seed": 92,
+      "state_value_constant_pct": 26.01,
+      "stderr_tail": ""
+    },
+    {
+      "arm": "attribution",
+      "constant_pct": 31.47,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-attribution-s93.manifest.json",
+      "min_spread": 0.29737112,
+      "model_version": "deadhead-attribution-s93",
+      "returncode": 0,
+      "seconds": 317.7,
+      "seed": 93,
+      "state_value_constant_pct": 6.15,
+      "stderr_tail": ""
+    },
+    {
+      "arm": "control",
+      "constant_pct": 22.82,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-control-s93.manifest.json",
+      "min_spread": 0.65521835,
+      "model_version": "deadhead-control-s93",
+      "returncode": 0,
+      "seconds": 386.8,
+      "seed": 93,
+      "state_value_constant_pct": 42.36,
+      "stderr_tail": ""
+    },
+    {
+      "arm": "treated",
+      "constant_pct": 13.89,
+      "instrument_passed": true,
+      "manifest": "artifacts\\deadhead\\deadhead-treated-s93.manifest.json",
+      "min_spread": 0.47551418,
+      "model_version": "deadhead-treated-s93",
+      "returncode": 0,
+      "seconds": 319.3,
+      "seed": 93,
+      "state_value_constant_pct": 14.54,
       "stderr_tail": ""
     }
   ]
