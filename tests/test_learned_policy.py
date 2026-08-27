@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
+import pathlib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from devfun_poker_playground.decision_engine import DEFAULT_SAFETY_GATES
 from devfun_poker_playground.learned_policy import (
+    DEFAULT_SERVE_EQUITY_TRIALS,
     approved_fingerprint,
     LearnedPolicyError,
     load_approved,
@@ -281,6 +283,57 @@ class LearnedPolicyTests(unittest.TestCase):
         self.assertTrue(parse_args(["comp", "--learned"]).learned)
         with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
             parse_args(["comp", "--learned", "--aggressive"])
+
+
+
+class ServeEquityTrialsPinTests(unittest.TestCase):
+    """An artifact may pin the precision of its own equity estimate.
+
+    `equity_trials` decides the precision of the number every safety gate
+    compares against, and until 2026-08-27 no approved artifact could
+    record it -- it lived only as a Python default. That is the same
+    unpinned-serve-parameter hole that let three unmeasured gate changes
+    ship under an approved manifest.
+
+    Precedence: explicit caller argument > `serve.equity_trials` in the
+    manifest > `DEFAULT_SERVE_EQUITY_TRIALS`.
+    """
+
+    MANIFEST = "artifacts/candidates/candidate-v7-0001c.approved.manifest.json"
+
+    def _with_serve(self, **serve):
+        source = pathlib.Path(self.MANIFEST)
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["serve"] = dict(manifest.get("serve") or {}, **serve)
+        target = source.parent / f"tmp-serve-pin-{self._counter()}.manifest.json"
+        target.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        self.addCleanup(lambda: target.unlink(missing_ok=True))
+        return target
+
+    _seq = 0
+
+    @classmethod
+    def _counter(cls) -> int:
+        cls._seq += 1
+        return cls._seq
+
+    def test_an_unpinned_manifest_keeps_the_module_default(self) -> None:
+        policy = load_policy(self.MANIFEST)
+        self.assertEqual(policy.equity_trials, DEFAULT_SERVE_EQUITY_TRIALS)
+
+    def test_a_pinned_manifest_wins_over_the_default(self) -> None:
+        policy = load_policy(self._with_serve(equity_trials=1_234))
+        self.assertEqual(policy.equity_trials, 1_234)
+
+    def test_an_explicit_argument_wins_over_the_pin(self) -> None:
+        policy = load_policy(self._with_serve(equity_trials=1_234), equity_trials=7)
+        self.assertEqual(policy.equity_trials, 7)
+
+    def test_a_nonsense_pin_is_refused_rather_than_served(self) -> None:
+        for bad in (0, -5, 2.5, True, "many"):
+            with self.subTest(bad=bad):
+                with self.assertRaises(LearnedPolicyError):
+                    load_policy(self._with_serve(equity_trials=bad))
 
 
 if __name__ == "__main__":

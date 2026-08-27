@@ -1,0 +1,173 @@
+{
+  "heads": {
+    "action_value": {
+      "acts_first_constant_pct": 68.96,
+      "at_bias": 1707,
+      "by_street": {
+        "flop": {
+          "constant_pct": 45.09,
+          "rows": 1324
+        },
+        "preflop": {
+          "constant_pct": 27.4,
+          "rows": 2759
+        },
+        "river": {
+          "constant_pct": 55.21,
+          "rows": 259
+        },
+        "turn": {
+          "constant_pct": 46.58,
+          "rows": 453
+        }
+      },
+      "constant_pct": 35.6,
+      "facing_a_bet_constant_pct": 22.27,
+      "folds_among_constant_rows": 76,
+      "min_spread": 0.32575121,
+      "out_b": [
+        -0.00940806,
+        0.002745442,
+        0.007029532,
+        0.001643136
+      ],
+      "output_spread": [
+        0.59317203,
+        0.47968883,
+        0.32575121,
+        0.62269253
+      ],
+      "rows": 4795
+    },
+    "behavior_prior": {
+      "acts_first_constant_pct": 0.0,
+      "at_bias": 0,
+      "by_street": {
+        "flop": {
+          "constant_pct": 0.0,
+          "rows": 1324
+        },
+        "preflop": {
+          "constant_pct": 0.0,
+          "rows": 2759
+        },
+        "river": {
+          "constant_pct": 0.0,
+          "rows": 259
+        },
+        "turn": {
+          "constant_pct": 0.0,
+          "rows": 453
+        }
+      },
+      "constant_pct": 0.0,
+      "facing_a_bet_constant_pct": 0.0,
+      "folds_among_constant_rows": 0,
+      "min_spread": 11.36513551,
+      "out_b": [
+        0.002447755,
+        0.013907731,
+        -0.005838932
+      ],
+      "output_spread": [
+        14.73947061,
+        11.36513551,
+        14.87853416
+      ],
+      "rows": 4795
+    },
+    "residual_scale": {
+      "acts_first_constant_pct": 0.0,
+      "at_bias": 0,
+      "by_street": {
+        "flop": {
+          "constant_pct": 0.0,
+          "rows": 1324
+        },
+        "preflop": {
+          "constant_pct": 0.0,
+          "rows": 2759
+        },
+        "river": {
+          "constant_pct": 0.0,
+          "rows": 259
+        },
+        "turn": {
+          "constant_pct": 0.0,
+          "rows": 453
+        }
+      },
+      "constant_pct": 0.0,
+      "facing_a_bet_constant_pct": 0.0,
+      "folds_among_constant_rows": 0,
+      "min_spread": 0.3743322,
+      "out_b": [
+        0.067830317,
+        0.05421631,
+        0.069103889,
+        0.077986971
+      ],
+      "output_spread": [
+        0.48011762,
+        0.3743322,
+        0.46601434,
+        0.49594635
+      ],
+      "rows": 4795
+    },
+    "state_value": {
+      "acts_first_constant_pct": 28.56,
+      "at_bias": 1590,
+      "by_street": {
+        "flop": {
+          "constant_pct": 35.35,
+          "rows": 1324
+        },
+        "preflop": {
+          "constant_pct": 35.85,
+          "rows": 2759
+        },
+        "river": {
+          "constant_pct": 7.72,
+          "rows": 259
+        },
+        "turn": {
+          "constant_pct": 24.94,
+          "rows": 453
+        }
+      },
+      "constant_pct": 33.16,
+      "facing_a_bet_constant_pct": 35.0,
+      "folds_among_constant_rows": 282,
+      "min_spread": 0.52431804,
+      "out_b": [
+        0.004659228
+      ],
+      "output_spread": [
+        0.52431804
+      ],
+      "rows": 4795
+    }
+  },
+  "instrument": {
+    "all_passed": true,
+    "degenerate_control_zero_out_w": {
+      "constant_pct": 100.0,
+      "must_be": 100.0,
+      "verdict": "PASS"
+    },
+    "live_control_forced_tower": {
+      "constant_pct": 0.0,
+      "must_be": 0.0,
+      "verdict": "PASS"
+    },
+    "rows_in_controls": 400,
+    "self_null": {
+      "identical": true,
+      "verdict": "PASS"
+    }
+  },
+  "journal": ".arena-training.jsonl",
+  "manifest": "artifacts\\candidates\\candidate-v7-0001c.approved.manifest.json",
+  "rows": 4795
+}

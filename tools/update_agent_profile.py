@@ -10,10 +10,25 @@ Owner rule (2026-08-13): the public ``quote`` and ``description`` stay exactly
 the policy. ``--quote``/``--description`` exist for a deliberate owner override
 and are not part of routine version updates.
 
+The display ``name`` and the public ``handle`` are separate fields and the
+handle does **not** follow a rename: the agent became ``0Fold`` on 2026-08-26
+while its handle stayed ``fold_ver_3``.
+
+**The handle cannot be changed here.** Measured 2026-08-26: sending it returns
+``HTTP 400 {"error":"Error","message":"body must not have additional
+properties"}``. The endpoint validates against a closed schema of
+``name``/``quote``/``description``, so ``handle`` is rejected rather than
+ignored, and the rejection discards the *whole* body -- a PATCH carrying a
+handle changes nothing at all. ``--handle`` is kept so the failure is
+reproducible rather than rediscovered, and the per-field verification after
+the PATCH reports which fields actually moved (an API that ignored an unknown
+key would answer 200 having done nothing).
+
 Usage::
 
     python tools/update_agent_profile.py                      # show profile
     python tools/update_agent_profile.py --name Fold-ver-5 --apply
+    python tools/update_agent_profile.py --handle 0fold --apply
 """
 
 from __future__ import annotations
@@ -77,6 +92,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Update the Arena agent profile.")
     parser.add_argument("--name", help="new display name, e.g. Fold-ver-5")
     parser.add_argument(
+        "--handle",
+        help=(
+            "new public handle, e.g. 0fold. SEPARATE from --name and it "
+            "does NOT follow it: the agent was renamed to '0Fold' on "
+            "2026-08-26 while the handle stayed 'fold_ver_3'. Handles are "
+            "public identifiers and may be immutable or unique-constrained, "
+            "so the server may reject this or accept the request and ignore "
+            "the field -- the per-field verification below is what tells "
+            "you which"
+        ),
+    )
+    parser.add_argument(
         "--quote", default=PUBLIC_TEXT, help=f"public tagline (default {PUBLIC_TEXT!r})"
     )
     parser.add_argument(
@@ -102,6 +129,8 @@ def main(argv: list[str] | None = None) -> int:
     body: dict[str, Any] = {"quote": args.quote, "description": args.description}
     if args.name:
         body["name"] = args.name
+    if args.handle:
+        body["handle"] = args.handle
     print(f"\n## intended PATCH body: {json.dumps(body)}")
     if not args.apply:
         print("dry run only; re-run with --apply to send")
@@ -116,6 +145,16 @@ def main(argv: list[str] | None = None) -> int:
     status, after = request(key, "GET", "/api/arena/agent/me")
     print(f"\n## verify GET -> HTTP {status}")
     print(json.dumps(redact(after), indent=2)[:3000])
+
+    # HTTP 200 is not proof a field changed. An API that ignores unknown
+    # keys answers 200 having done nothing, so compare what was asked for
+    # against what came back, field by field.
+    if isinstance(after, dict):
+        print("\n## per-field verification")
+        for field, wanted in body.items():
+            actual = after.get(field)
+            verdict = "APPLIED" if actual == wanted else "NOT APPLIED"
+            print(f"  {field}: asked {wanted!r}, now {actual!r} -> {verdict}")
     return 0
 
 

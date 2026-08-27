@@ -547,10 +547,29 @@ def _load_engine_parameters(manifest: Mapping[str, Any]) -> dict[str, Any]:
     return built
 
 
+#: Monte-Carlo trials per equity estimate when nothing pins the value.
+#:
+#: `equity_trials` governs the precision of the number every safety gate
+#: compares against, and until 2026-08-27 no approved artifact could
+#: record it -- it lived only as this Python default, exactly the
+#: unpinned-serve-parameter hole that let three unmeasured gate changes
+#: ship under an approved manifest on 2026-08-17.
+#:
+#: A manifest may now pin `serve.equity_trials`, which wins over this
+#: default and loses to an explicit caller argument. **The value itself
+#: is unchanged at 200 and is NOT settled**: on the 2026-08-26 hand a
+#: 521 BB call cleared its threshold by 0.0323 against an estimator
+#: standard deviation of 0.0327, and the same spot calls on 267 of 400
+#: seeds. Raising it is queued in `NEXT.md`; a proposed 2,048 was
+#: rejected because it was derived from the recorded 200-trial draw
+#: rather than from a high-precision equity.
+DEFAULT_SERVE_EQUITY_TRIALS = 200
+
+
 def load_policy(
     manifest_path: str | Path,
     *,
-    equity_trials: int = 200,
+    equity_trials: int | None = None,
     use_learned_sizing: bool | None = None,
     hybrid_min_value_advantage: float | None = None,
     hybrid_max_abs_z: float = 5.0,
@@ -573,6 +592,22 @@ def load_policy(
         manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise LearnedPolicyError(f"cannot read manifest: {error}") from error
+
+    # Explicit argument wins; then the artifact's own pin; then the
+    # module default. An artifact that records the value is one whose
+    # served precision can be audited from the artifact alone.
+    if equity_trials is None:
+        pinned = (manifest.get("serve") or {}).get("equity_trials")
+        if pinned is None:
+            equity_trials = DEFAULT_SERVE_EQUITY_TRIALS
+        else:
+            _require(
+                isinstance(pinned, int)
+                and not isinstance(pinned, bool)
+                and pinned > 0,
+                "serve.equity_trials must be a positive integer",
+            )
+            equity_trials = int(pinned)
     validate_artifact_manifest(manifest)
     weights_file = manifest_file.parent / str(manifest["weights_file"])
     try:
@@ -654,7 +689,7 @@ def approved_fingerprint(artifacts_dir: str | Path) -> str | None:
 
 
 def load_approved(
-    artifacts_dir: str | Path, *, equity_trials: int = 200
+    artifacts_dir: str | Path, *, equity_trials: int | None = None
 ) -> LearnedPokerPolicy:
     """Follow the approved pointer to a verified playing policy."""
 

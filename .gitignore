@@ -14,3 +14,14 @@ build/
 .antislop/
 .claude/
 artifacts/corpora/
+
+# Telemetry derivatives. `.arena-training.jsonl` is ignored above, but the
+# pattern is exact -- a backup or quarantine of it is not covered and would
+# otherwise commit 12 MB of live journal.
+.arena-training.jsonl.backup-*
+.arena-training.jsonl.repair-tmp
+# Retraining-experiment artifacts: 15 candidates x ~2.4 MB of weights, all
+# reproducible from the frozen recipe and seeds in
+# artifacts/evaluations/dead-head-retrain-prereg-2026-08-27.md. The result
+# that matters -- dead-head-retrain-2026-08-27.json -- is tracked.
+artifacts/deadhead/

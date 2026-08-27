@@ -46,6 +46,7 @@ from devfun_poker_playground.training_telemetry import (
 
 TRAINING_OBJECTIVE = "counterfactual_action_value_v6"
 TRAINING_OBJECTIVE_V7 = "centered_counterfactual_branch_value_v7"
+DEGENERATE_GROUP_FILTERS = ("off", "zero_weight", "drop", "random")
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,6 +92,39 @@ class TrainingConfig:
     state_value_weight: float = 0.1
     residual_scale_weight: float = 0.05
     serve_temperature: float | None = None
+    # Zero-signal decision groups -- every branch carrying the same weighted
+    # value target -- are exactly minimised by a CONSTANT action head, and off
+    # the constant they pull a discriminating head back toward one. They are
+    # 29.66% of the candidate-v7-0001 corpus and 27.76% of the action-loss
+    # gradient at a discriminating head. See
+    # artifacts/evaluations/dead-head-objective-2026-08-27.md.
+    #
+    #   "off"          every group trains the action head. Reproduces every
+    #                  artifact built before this option existed.
+    #   "zero_weight"  zero-signal groups stay in their batch but carry no
+    #                  action weight. Optimizer steps, the LR schedule, the
+    #                  behavior:reward update ratio, and the state_value and
+    #                  residual_scale supervision are all unchanged; only the
+    #                  action objective's row set moves.
+    #   "drop"         zero-signal groups leave the reward batches. That also
+    #                  removes their state_value and residual_scale rows and
+    #                  cuts reward steps per epoch (-10.1% on the v7-0001
+    #                  corpus at batch_size 256).
+    #
+    #   "random"       the ATTRIBUTION CONTROL. Mutes a uniformly random set
+    #                  of groups of exactly the same SIZE as the zero-signal
+    #                  set, using `degenerate_group_filter_seed`. Without
+    #                  this arm the experiment cannot separate "removing the
+    #                  attractor helped" from "removing 29.66% of the groups
+    #                  helped"; a treated arm that only matches this one has
+    #                  demonstrated nothing about degeneracy. It mutes like
+    #                  "zero_weight" so the two are comparable.
+    #
+    # v7 only: the v6 objective is not centered and has no such attractor.
+    degenerate_group_filter: str = "off"
+    #: Draw seed for the "random" arm. Recorded in the manifest so the mask
+    #: is reproducible; irrelevant in every other mode.
+    degenerate_group_filter_seed: int = 0
 
     @property
     def resolved_split_seed(self) -> int:
@@ -151,6 +185,15 @@ def _check_config(config: TrainingConfig) -> None:
         raise ValueError("reinforcement_multiplier must be finite and at least 1")
     if config.architecture not in {"v6", "v7"}:
         raise ValueError("architecture must be v6 or v7")
+    if config.degenerate_group_filter not in DEGENERATE_GROUP_FILTERS:
+        raise ValueError(
+            "degenerate_group_filter must be one of "
+            + ", ".join(DEGENERATE_GROUP_FILTERS)
+        )
+    if config.degenerate_group_filter != "off" and config.architecture != "v7":
+        raise ValueError(
+            "degenerate_group_filter applies to the v7 centered objective only"
+        )
     if config.architecture == "v7":
         if config.device != "cuda":
             raise ValueError("the v7 architecture trains on CUDA only")
@@ -1261,6 +1304,66 @@ def _optimal_branches(returns: Mapping[int, float]) -> set[int]:
     }
 
 
+def _zero_signal_group(
+    examples: Sequence[TrainingExample],
+    rows: Sequence[int],
+    config: TrainingConfig,
+) -> bool:
+    """True when a CONSTANT action head exactly minimises this group's loss.
+
+    The v7 action objective centers each prediction inside its decision
+    group::
+
+        centered = predicted - mean(predicted over the group)
+        loss     = sum_i w_i (centered_i - t_i)^2 / sum_i w_i
+
+    ``centered`` sums to zero by construction, so the derivative with respect
+    to ``predicted_i`` at a constant head is ``-2 (w_i t_i - mean_j(w_j
+    t_j))``. It vanishes for every row exactly when ``w_i * t_i`` is the same
+    on every row, and the per-group loss is convex, so that condition is
+    equivalent to "a constant head is this group's global minimiser". Such a
+    group supervises nothing, and away from the constant it pulls the head
+    back toward one.
+
+    Three consequences, each of which the obvious definition -- "every target
+    is zero" -- gets wrong:
+
+    * **Identical NON-zero targets qualify too**, whenever the row weights are
+      equal. The candidate-v7-0001 corpus happens to contain none, but a group
+      whose every branch clips to the same bound would be one, and
+      ``return_scale_fraction`` clips at +/-1.
+    * **A single-branch group always qualifies.** With one row ``centered`` is
+      identically zero, so no prediction can move its loss at all; it is a
+      permanent additive constant in the numerator and a permanent term in the
+      denominator. The harvester can emit 2-4 branches per group
+      (``.handoff/PENDING_EDITS.md`` 18h), so this is reachable.
+    * **A weight-zero row does not qualify its group on its own.** It still
+      shifts the group mean, so it still changes what the other rows are
+      centered against. Its product ``w_i * t_i`` is zero and has to match
+      every other row's product like any other row's does.
+
+    Equality is exact and deliberately untoleranced: a threshold would
+    reclassify a group that carries a little signal as one that carries none,
+    at an arbitrary cut. Measured on candidate-v7-0001, no group has a
+    weighted-target spread anywhere in ``(0, 1e-6)`` -- 14,842 sit at exactly
+    zero and the next 26 at 1e-6 or above -- so the cut is inert there and the
+    exact rule is the honest one.
+
+    Related but NOT the same as :attr:`BranchMetricsV7.degenerate_groups`,
+    which asks whether every branch ties for *best* on the raw purse return.
+    That is a metrics question (can any predictor be wrong here?); this is an
+    optimisation question (is a constant the minimiser here?). They coincide
+    on candidate-v7-0001 and need not in general.
+    """
+
+    products = [
+        _branch_value_weight(examples[row], config)
+        * _action_value_target(examples[row], config)
+        for row in rows
+    ]
+    return max(products) == min(products)
+
+
 def _branch_metrics_v7(
     examples: Sequence[TrainingExample],
     score_rows: Sequence[Sequence[float]],
@@ -1732,8 +1835,15 @@ def _train_cuda_v7(
         return torch.tensor(values, dtype=torch.float32, device=device)
 
     train_data = tensors(train_reward_examples)
-    train_groups = group_rows(train_reward_examples)
-    train_data["state_value"] = state_value_targets(train_reward_examples, train_groups)
+    all_train_groups = group_rows(train_reward_examples)
+    # state_value must see EVERY group. Its target is a property of the
+    # decision, not of the action objective, and the tensor it returns is
+    # indexed by row: handing it a filtered group list would silently leave
+    # 0.0 in every row the filter removed, which is a wrong label rather than
+    # an absent one.
+    train_data["state_value"] = state_value_targets(
+        train_reward_examples, all_train_groups
+    )
     behavior_data = (
         tensors(train_behavior_examples) if train_behavior_examples else None
     )
@@ -1743,6 +1853,106 @@ def _train_cuda_v7(
     validation_groups = (
         group_rows(validation_reward_examples) if validation_reward_examples else []
     )
+
+    # --- the zero-signal group filter -------------------------------------
+    #
+    # `action_weight` is a SEPARATE tensor from `weight`. The train_loss and
+    # validation_loss this function reports through `summarize()` are computed
+    # from `weight`, and they have to stay on the same footing as every
+    # artifact built before this option existed.
+    filter_mode = config.degenerate_group_filter
+    train_zero_signal = [
+        _zero_signal_group(train_reward_examples, rows, config)
+        for rows in all_train_groups
+    ]
+    validation_zero_signal = [
+        _zero_signal_group(validation_reward_examples, rows, config)
+        for rows in validation_groups
+    ]
+
+    #: How many groups the random arm actually caught that were degenerate.
+    #: Reported so an inert control is visible: a "random" mask that happens
+    #: to remove the whole zero-signal set, or none of it, is not a control.
+    random_arm_trace: dict[str, int] = {}
+
+    def _mask_flags(
+        groups: Sequence[Sequence[int]],
+        zero_signal: Sequence[bool],
+        label: str,
+    ) -> list[bool]:
+        """Which groups this mode mutes."""
+
+        if filter_mode != "random":
+            return list(zero_signal)
+        # Same COUNT as the zero-signal set, drawn uniformly over all
+        # groups, so the arm differs from the treated one in WHICH groups
+        # it mutes and in nothing else.
+        wanted = sum(1 for flat in zero_signal if flat)
+        # Deterministic and split-specific: train and validation must not
+        # receive the same draw, and the seed must be recoverable from the
+        # manifest. `hash()` is not used -- it is PYTHONHASHSEED-randomised
+        # and would make the mask irreproducible across processes.
+        chooser = random.Random(
+            config.degenerate_group_filter_seed * 1_000_003
+            + len(groups) * 7
+            + wanted
+            + (0 if label == "train" else 1)
+        )
+        picked = set(chooser.sample(range(len(groups)), wanted)) if wanted else set()
+        random_arm_trace[f"{label}_muted"] = len(picked)
+        random_arm_trace[f"{label}_muted_that_were_degenerate"] = sum(
+            1 for index in picked if zero_signal[index]
+        )
+        random_arm_trace[f"{label}_zero_signal"] = wanted
+        return [index in picked for index in range(len(groups))]
+
+    def action_weights(
+        data: dict[str, object],
+        groups: Sequence[Sequence[int]],
+        zero_signal: Sequence[bool],
+        label: str = "train",
+    ) -> "torch.Tensor":
+        weight = data["weight"].clone()
+        if filter_mode != "off":
+            flags = _mask_flags(groups, zero_signal, label)
+            muted = [
+                row
+                for rows, flat in zip(groups, flags)
+                if flat
+                for row in rows
+            ]
+            if muted:
+                weight[torch.tensor(muted, dtype=torch.long, device=device)] = 0.0
+        return weight
+
+    train_data["action_weight"] = action_weights(
+        train_data, all_train_groups, train_zero_signal, "train"
+    )
+    if validation_data is not None:
+        validation_data["action_weight"] = action_weights(
+            validation_data, validation_groups, validation_zero_signal, "validation"
+        )
+
+    # Zero-weighting and dropping give a group's batch the SAME action loss:
+    # a muted group contributes nothing to the numerator and nothing to the
+    # denominator either way. The two modes differ only in whether the rows
+    # stay in the batch -- and therefore in the step count, the
+    # behavior:reward update ratio, and whether state_value and
+    # residual_scale keep learning from them.
+    if filter_mode == "drop":
+        train_groups = [
+            rows for rows, flat in zip(all_train_groups, train_zero_signal) if not flat
+        ]
+    else:
+        train_groups = list(all_train_groups)
+    if filter_mode != "off" and not train_groups:
+        raise ValueError(
+            "degenerate_group_filter removed every training decision group"
+        )
+    if filter_mode != "off" and float(train_data["action_weight"].sum()) <= 0.0:
+        raise ValueError(
+            "degenerate_group_filter muted every training row's action weight"
+        )
 
     decay, no_decay = [], []
     for name, parameter in model.named_parameters():
@@ -1763,9 +1973,17 @@ def _train_cuda_v7(
     # with legality-and-distinctness-aware branch sets the mean group is
     # smaller than that, and the constant would quietly shrink the effective
     # batch and raise gradient noise without any recipe change being recorded.
-    mean_group_rows = len(train_reward_examples) / max(1, len(train_groups))
+    #
+    # It counts the rows actually batched, not len(train_reward_examples).
+    # Under "drop" the example list still holds the filtered rows, so the old
+    # expression would read 5.69 rows per group instead of 4.00 and quietly
+    # cut group_batches from 64 to 45 -- the same silent-shrink failure the
+    # paragraph above is about.
+    batched_rows = sum(len(rows) for rows in train_groups)
+    mean_group_rows = batched_rows / max(1, len(train_groups))
     group_batches = max(1, int(config.batch_size / max(1.0, mean_group_rows)))
-    steps_per_epoch = max(1, math.ceil(len(train_groups) / group_batches))
+    reward_steps_per_epoch = max(1, math.ceil(len(train_groups) / group_batches))
+    steps_per_epoch = reward_steps_per_epoch
     if behavior_data is not None:
         steps_per_epoch += max(
             1, math.ceil(len(train_behavior_examples) / config.batch_size)
@@ -1817,8 +2035,27 @@ def _train_cuda_v7(
         )
         centered = predicted - (sums / counts)[group_ids]
         target = train_data["target"][rows]
-        weight = train_data["weight"][rows]
-        action_loss = (weight * (centered - target).square()).sum() / weight.sum()
+        weight = train_data["action_weight"][rows]
+        # Normalize on the UNFILTERED weight, deliberately.
+        #
+        # Dividing by the muted sum would renormalize the surviving rows and
+        # make the action term ~1.38x larger relative to `state_loss` and
+        # `residual_loss`, which are weight-blind `.mean()`s at fixed
+        # weights. The filtered arm would then differ from the control in
+        # TWO ways -- which rows the action objective sees, AND the balance
+        # between the three heads -- and no result could be attributed to
+        # the intervention. With the filter off the two sums are equal, so
+        # this is bit-identical to the unfiltered trainer.
+        #
+        # The clamp stays for the "zero_weight" 0/0 case: a whole batch can
+        # be muted (measured 1.6e-34 at batch_size 256, but 7.7e-3 at 16 and
+        # 0.30 at 4). The numerator is zero there too, so a muted batch
+        # contributes no action gradient rather than a NaN that
+        # clip_grad_norm_ would raise on.
+        scale = train_data["weight"][rows]
+        action_loss = (weight * (centered - target).square()).sum() / torch.clamp(
+            scale.sum(), min=1e-12
+        )
         state = outputs["state_value"].squeeze(1)
         state_loss = (state - train_data["state_value"][rows]).square().mean()
         residual = outputs["residual_scale"][
@@ -1853,7 +2090,20 @@ def _train_cuda_v7(
         optimizer.step()
         step += 1
 
-    def validation_loss_weighted() -> float | None:
+    def validation_loss_weighted(*, filtered: bool) -> float | None:
+        """Weighted centered validation loss -- the best-epoch criterion.
+
+        ``filtered`` scores with the same action weights training uses.
+        Leaving the zero-signal groups in makes this criterion strictly more
+        tolerant of a constant head: they add nothing to the numerator that a
+        constant head incurs, while adding 27.8% to the denominator, so the
+        unfiltered criterion accepts sqrt(W_all/W_live) = 1.177x more
+        off-target spread (38.4% more spread variance) before it prefers the
+        constant. A training-side filter judged by an unfiltered criterion can
+        therefore still early-stop onto the dead checkpoint, which is the
+        failure the filter exists to remove.
+        """
+
         if validation_data is None:
             return None
         model.eval()
@@ -1872,10 +2122,15 @@ def _train_cuda_v7(
                 0, group_ids, predicted
             )
             centered = predicted - (sums / counts)[group_ids]
-            weight = validation_data["weight"]
+            weight = validation_data["action_weight" if filtered else "weight"]
+            # Same reasoning as the training term: the denominator is the
+            # unfiltered weight, so a filtered run's `best_validation_loss`
+            # stays on the same scale as the control's and the early-stopping
+            # criterion is not silently redefined under an unchanged key.
+            scale = validation_data["weight"]
             loss = (
                 weight * (centered - validation_data["target"]).square()
-            ).sum() / weight.sum()
+            ).sum() / torch.clamp(scale.sum(), min=1e-12)
         model.train()
         return float(loss)
 
@@ -1904,7 +2159,7 @@ def _train_cuda_v7(
         for parameter in model.parameters():
             if not torch.isfinite(parameter).all():
                 raise FloatingPointError("non-finite CUDA parameter during v7 training")
-        epoch_loss = validation_loss_weighted()
+        epoch_loss = validation_loss_weighted(filtered=filter_mode != "off")
         if epoch_loss is None:
             continue
         if epoch_loss < best_loss - 1e-9:
@@ -1921,6 +2176,10 @@ def _train_cuda_v7(
                 break
     if best_state is not None:
         model.load_state_dict(best_state)
+    # Both criteria on the selected checkpoint, so an artifact trained with
+    # the filter on stays comparable with every artifact trained without it.
+    final_validation_unfiltered = validation_loss_weighted(filtered=False)
+    final_validation_filtered = validation_loss_weighted(filtered=True)
     model.eval()
 
     def scores_for(data: dict[str, object]) -> list[list[float]]:
@@ -1988,6 +2247,41 @@ def _train_cuda_v7(
             None if best_loss is math.inf else round(best_loss, 6)
         ),
         "optimizer_steps": step,
+        "degenerate_group_filter": filter_mode,
+        "degenerate_group_filter_seed": (
+            config.degenerate_group_filter_seed if filter_mode == "random" else None
+        ),
+        "degenerate_group_filter_trace": dict(random_arm_trace) or None,
+        "degenerate_group_predicate": (
+            "weighted target (branch value weight x action value target) "
+            "identical across the group, so a constant head is its exact "
+            "minimiser; single-branch groups always qualify"
+        ),
+        "train_groups_total": len(all_train_groups),
+        "train_groups_zero_signal": sum(train_zero_signal),
+        "train_groups_batched": len(train_groups),
+        "validation_groups_total": len(validation_groups),
+        "validation_groups_zero_signal": sum(validation_zero_signal),
+        "group_batches": group_batches,
+        "reward_steps_per_epoch": reward_steps_per_epoch,
+        "best_epoch_criterion": (
+            "filtered centered validation loss"
+            if filter_mode != "off"
+            else "centered validation loss over every group"
+        ),
+        "validation_loss_weighted_unfiltered": _round_or_none(
+            final_validation_unfiltered
+        ),
+        "validation_loss_weighted_filtered": _round_or_none(
+            final_validation_filtered
+        ),
+        # Invariant, not a metric: state_value is supervised on every group
+        # regardless of the filter, so this figure must be identical across
+        # filter modes on the same split. If it moves, a filtered group list
+        # reached state_value_targets and 0.0 was written as a label.
+        "state_value_target_abs_sum": round(
+            float(train_data["state_value"].abs().sum()), 6
+        ),
     }
     return (
         weights,
@@ -2161,6 +2455,31 @@ def _finish_v7(
             "reward_examples": "counterfactual simulator rollouts only",
             "action_head_semantics": "counterfactual_value",
             "counterfactual_rollouts_per_family": config.counterfactual_rollouts,
+            "degenerate_group_filter": training_trace["degenerate_group_filter"],
+            "degenerate_group_predicate": training_trace[
+                "degenerate_group_predicate"
+            ],
+            "degenerate_group_counts": {
+                "train_total": training_trace["train_groups_total"],
+                "train_zero_signal": training_trace["train_groups_zero_signal"],
+                "train_batched": training_trace["train_groups_batched"],
+                "validation_total": training_trace["validation_groups_total"],
+                "validation_zero_signal": training_trace[
+                    "validation_groups_zero_signal"
+                ],
+            },
+            "group_batches": training_trace["group_batches"],
+            "reward_steps_per_epoch": training_trace["reward_steps_per_epoch"],
+            "state_value_target_abs_sum": training_trace[
+                "state_value_target_abs_sum"
+            ],
+            "best_epoch_criterion": training_trace["best_epoch_criterion"],
+            "validation_loss_weighted_unfiltered": training_trace[
+                "validation_loss_weighted_unfiltered"
+            ],
+            "validation_loss_weighted_filtered": training_trace[
+                "validation_loss_weighted_filtered"
+            ],
             "targets": {
                 "action": (
                     "four centered signed-log branch values; aggression is "

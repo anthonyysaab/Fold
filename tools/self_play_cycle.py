@@ -398,6 +398,35 @@ def main(argv: list[str] | None = None) -> int:
         help="train learned sizing; off by default until action values pass",
     )
     parser.add_argument(
+        "--degenerate-group-filter",
+        choices=("off", "zero_weight", "drop", "random"),
+        default="off",
+        # NOTE the doubled %%: argparse runs help through %-formatting, and a
+        # bare "29.66%" makes --help raise TypeError before printing anything.
+        help=(
+            "v7 only. A zero-signal decision group -- every branch carrying "
+            "the same weighted value target -- is exactly minimised by a "
+            "constant action head and pulls a discriminating one back toward "
+            "it (29.66%% of the v7-0001 corpus). 'zero_weight' strips their "
+            "action weight and leaves the batch schedule alone; 'drop' also "
+            "removes them from the reward batches, which cuts reward steps "
+            "per epoch and their state_value supervision with them. "
+            "'random' is the ATTRIBUTION CONTROL: it mutes a uniformly drawn "
+            "group set of the same SIZE, so a treated arm that only matches "
+            "it has shown nothing about degeneracy. 'off' is the default and "
+            "reproduces every pre-2026-08-27 artifact."
+        ),
+    )
+    parser.add_argument(
+        "--degenerate-group-filter-seed",
+        type=int,
+        default=0,
+        help=(
+            "draw seed for --degenerate-group-filter random; recorded in the "
+            "manifest so the mask is reproducible. Ignored otherwise."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="validate and print the session plan without harvesting or training",
@@ -411,6 +440,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--baseline-warmup-epochs must be zero for v6")
     if args.learning_rate <= 0:
         parser.error("--learning-rate must be positive")
+    if args.degenerate_group_filter != "off" and args.architecture != "v7":
+        parser.error("--degenerate-group-filter applies to --architecture v7 only")
     if args.examples_in and args.foreign_csv:
         parser.error(
             "--examples-in trains from the saved corpus alone; "
@@ -548,6 +579,27 @@ def main(argv: list[str] | None = None) -> int:
         config_kwargs["seed"] = args.init_seed
     if "architecture" in config_fields:
         config_kwargs["architecture"] = args.architecture
+    if "degenerate_group_filter" in config_fields:
+        config_kwargs["degenerate_group_filter"] = args.degenerate_group_filter
+    elif args.degenerate_group_filter != "off":
+        # The `config_fields` idiom above drops options the trainer does not
+        # carry. Silently is exactly how an unmeasured change ships: fail
+        # instead, so a run cannot claim a filter it never applied.
+        parser.error(
+            "this trainer has no degenerate_group_filter field; "
+            "--degenerate-group-filter cannot be honoured"
+        )
+    if "degenerate_group_filter_seed" in config_fields:
+        config_kwargs["degenerate_group_filter_seed"] = (
+            args.degenerate_group_filter_seed
+        )
+    elif args.degenerate_group_filter == "random":
+        # Same reasoning: a random arm whose draw seed was silently dropped
+        # is not reproducible, and an irreproducible control is not a control.
+        parser.error(
+            "this trainer has no degenerate_group_filter_seed field; "
+            "the random attribution arm cannot be reproduced"
+        )
     config = TrainingConfig(**config_kwargs)
     summary = train_candidate(tuple(examples), args.output_dir, config)
     print(f"examples: {summary.examples}")

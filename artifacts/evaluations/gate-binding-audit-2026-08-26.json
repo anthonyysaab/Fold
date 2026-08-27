@@ -1,0 +1,214 @@
+{
+  "binding": {
+    "by_street": {
+      "flop": {
+        "decisions": 1231,
+        "diverging_pct": 90.17
+      },
+      "preflop": {
+        "decisions": 2452,
+        "diverging_pct": 79.57
+      },
+      "river": {
+        "decisions": 235,
+        "diverging_pct": 91.91
+      },
+      "turn": {
+        "decisions": 415,
+        "diverging_pct": 92.05
+      }
+    },
+    "call_gates": {
+      "calls": 363,
+      "chips_at_stake_max": 2097,
+      "chips_at_stake_total": 4389,
+      "reaches_a_gate": 12,
+      "reaches_a_gate_distinct_decisions": 11,
+      "refusal_is_a_ceiling_because": "wildness is not recorded in the journal and w>0 strictly lowers the required equity, so refusals are evaluated at w=0",
+      "would_refuse_ceiling": 8,
+      "would_refuse_pct": 2.2
+    },
+    "decisions": 4333,
+    "denominator": {
+      "diverging": 3659,
+      "diverging_pct": 84.44,
+      "median_effective_stack": 1573,
+      "median_hero_stack": 5937
+    },
+    "reveal_slope": {
+      "calls_where_a_stack_gate_also_fires": 12,
+      "calls_with_expense": 360,
+      "max_penalty": 0.08,
+      "median_penalty": 0.001,
+      "slope": 0.12
+    },
+    "risk_cap": {
+      "below_near_nut": 2600,
+      "chips_removed_max": 3403,
+      "chips_removed_median": 269,
+      "chips_removed_total": 18673,
+      "sized_aggressive": 3016,
+      "would_clip": 35,
+      "would_clip_pct_of_capped": 1.35,
+      "would_decline_entirely": 19
+    }
+  },
+  "exposure": {
+    "all_hands": {
+      "chip_mean": 0.7,
+      "chip_median": 3.0,
+      "chip_total": 1348,
+      "hands": 1858,
+      "losing_hands": 494,
+      "losing_pct": 26.59,
+      "name": "every hand with a recorded result",
+      "worst": -5000
+    },
+    "call_gate_reaches_only": {
+      "chip_mean": -1311.4,
+      "chip_median": -1124.5,
+      "chip_total": -13114,
+      "hands": 10,
+      "losing_hands": 8,
+      "losing_pct": 80.0,
+      "name": "hands where the gate is merely REACHED",
+      "worst": -5000
+    },
+    "call_gate_would_refuse": {
+      "chip_mean": -1090.3,
+      "chip_median": -1054,
+      "chip_total": -7632,
+      "hands": 7,
+      "losing_hands": 6,
+      "losing_pct": 85.71,
+      "name": "hands the changed call gate would REFUSE (ceiling, w=0)",
+      "worst": -3768
+    },
+    "caveat": "Association, not a counterfactual saving: clipping a bet changes how the hand continues and this journal cannot replay a hand that never happened. The selection is also not random -- these gates fire on the largest prices, and large prices are mechanically where large losses live, so some concentration is expected before any judgement about the gate.",
+    "either_edit": {
+      "chip_mean": -228.3,
+      "chip_median": 37.0,
+      "chip_total": -8676,
+      "hands": 38,
+      "losing_hands": 17,
+      "losing_pct": 44.74,
+      "name": "hands either edit touches",
+      "worst": -3768
+    },
+    "reached_only_call_hands": [
+      713,
+      257,
+      -64,
+      -406,
+      -1054,
+      -1195,
+      -1205,
+      -1392,
+      -3768,
+      -5000
+    ],
+    "refused_call_hands": [
+      257,
+      -64,
+      -406,
+      -1054,
+      -1205,
+      -1392,
+      -3768
+    ],
+    "risk_cap_would_clip": {
+      "chip_mean": -36.2,
+      "chip_median": 49,
+      "chip_total": -1193,
+      "hands": 33,
+      "losing_hands": 12,
+      "losing_pct": 36.36,
+      "name": "hands the changed cap touches",
+      "worst": -1574
+    }
+  },
+  "gates": {
+    "call_stack_gates": [
+      [
+        0.78,
+        0.626
+      ],
+      [
+        0.455,
+        0.584
+      ]
+    ],
+    "inherited_from_dataclass_default": [
+      "call_gates_on_effective_stack",
+      "reveal_expense_equity_slope",
+      "risk_cap_on_effective_stack"
+    ],
+    "keys_in_manifest": [
+      "board_aggression_floor_kicker",
+      "board_aggression_floor_thin",
+      "board_margin_kicker",
+      "board_margin_thin",
+      "board_stackoff_kicker",
+      "board_stackoff_thin",
+      "call_stack_gates",
+      "near_nut_floor",
+      "rescue_call_floor",
+      "rescue_call_margin",
+      "risk_cap_stack_fraction"
+    ],
+    "near_nut_floor": 0.654,
+    "reveal_expense_equity_slope": 0.12,
+    "risk_cap_stack_fraction": 0.455,
+    "source": "artifacts\\candidates\\candidate-v7-0001c.approved.manifest.json"
+  },
+  "hands_with_results": 2069,
+  "instrument": {
+    "all_passed": true,
+    "effective_never_exceeds_hero": {
+      "verdict": "PASS",
+      "violations": 0
+    },
+    "engine_parity_on_the_hero_purse_cap": {
+      "of_which_within_the_effective_stack_cap": 0,
+      "over_the_hero_purse_cap": 0,
+      "sized_bets_checked": 2600,
+      "verdict": "PASS"
+    },
+    "equal_denominators_give_equal_verdicts": {
+      "differences": 0,
+      "records": 674,
+      "verdict": "PASS"
+    },
+    "reveal_expense_in_range": {
+      "out_of_range": 0,
+      "river_nonzero": 0,
+      "verdict": "PASS"
+    }
+  },
+  "journal": ".arena-training.jsonl",
+  "parse_accounting": {
+    "decision:other_policy": 404,
+    "event:decision": 4737,
+    "event:hand_result": 2173,
+    "lines": 6913,
+    "unparsable": 3
+  },
+  "policy_version": "candidate-v7-0001c",
+  "purse_buckets": {
+    "0-4000": {
+      "effective_stack_cap_binds_pct": 100.0,
+      "hero_purse_cap_binds_pct": 73.88,
+      "sub_near_nut_sizing_decisions": 670
+    },
+    "10000+": {
+      "effective_stack_cap_binds_pct": 100.0,
+      "hero_purse_cap_binds_pct": 3.08,
+      "sub_near_nut_sizing_decisions": 227
+    },
+    "4000-10000": {
+      "effective_stack_cap_binds_pct": 99.88,
+      "hero_purse_cap_binds_pct": 35.29,
+      "sub_near_nut_sizing_decisions": 1703
+    }
+  }
+}

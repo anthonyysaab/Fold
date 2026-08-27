@@ -121,6 +121,54 @@ def effective_stack_chips(table: Mapping[str, Any]) -> int:
     return min(stack, max(opponent_stacks, default=stack))
 
 
+def contested_stack_chips(table: Mapping[str, Any]) -> int:
+    """The effective stack measured at the top of this betting round.
+
+    ``effective_stack_chips`` counts chips *behind*. That is the right
+    unit for "how much more can still be wagered" and the wrong one for
+    "how much is contested": an all-in seat keeps ``status`` active with
+    ``stackChips: 0``, so the behind-count collapses to zero the moment
+    the last live opponent shoves -- i.e. exactly where the most chips
+    are at stake. Clamped to 1 by its callers, that collapse trips every
+    call stack gate at any positive price
+    (``.handoff/PENDING_EDITS.md``, 2026-08-26).
+
+    Counting each active opponent's ``currentBetChips`` alongside their
+    remaining stack restores the number a player means by "effective
+    stack": the pile that opponent brought to this round. All of it is
+    chips hero can still win from them, and up to all of it is chips
+    hero can still lose to them.
+
+    Hero's side stays on chips behind, deliberately. Hero's committed
+    chips are sunk -- they cannot be lost a second time -- and hero's
+    purse never collapses, so there is nothing on that side to repair;
+    adding them would loosen the gate on a short hero, which is a
+    separate change.
+
+    Invariant, and the reason this is testable: whenever ``callChips``
+    is positive the result is at least ``callChips``. The seat holding
+    the high bet is an active opponent whose ``currentBetChips`` is at
+    least hero's contribution plus the price, and the arena caps
+    ``callChips`` at hero's stack, so neither arm of the ``min`` can
+    fall below the price. The behind-only form has no such floor, which
+    is the defect.
+
+    **This is not wired to the live path by default.** It is reached
+    only through ``SafetyGates.gate_stack_counts_committed_chips``,
+    which ships ``False``; see that field.
+    """
+
+    hero, seats = _hero_and_seats(table)
+    behind = _integer(hero.get("stackChips"), "hero stackChips")
+    contested = [
+        _integer(seat.get("stackChips"), "opponent stackChips")
+        + _integer(seat.get("currentBetChips"), "opponent currentBetChips")
+        for seat in _active_seats(seats)
+        if seat is not hero
+    ]
+    return min(behind, max(contested, default=behind))
+
+
 # Board cards still to be dealt on each street. The river is 0 by
 # definition: paying there buys a showdown, not a card.
 _REVEALS_REMAINING = {"preflop": 3, "flop": 2, "turn": 1, "river": 0}

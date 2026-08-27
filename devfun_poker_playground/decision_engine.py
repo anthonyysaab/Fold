@@ -36,6 +36,7 @@ from devfun_poker_playground.game_state import (
     ArenaSnapshotError,
     _cards,
     card_reveal_expense,
+    contested_stack_chips,
     effective_stack_chips,
     _hero_and_seats,
     _integer,
@@ -240,7 +241,113 @@ class SafetyGates:
     # (`game_state.card_reveal_expense`): paying a large share of what you
     # can lose, with cards still to come, is a bet on unseen cards and is
     # priced as one. Zero reproduces the pre-2026-08-15 gates exactly.
+    #
+    # Reverted to 0.0 on 2026-08-26 after measurement
+    # (`gate-decision-2026-08-26.md`: reverting all three was +16.49
+    # BB/100 on the card-aware vs-p3 channel, t = 5.34), then **ROLLED
+    # BACK to 0.12 the same day** when the deployed revert busted the live
+    # bankroll 1,000 -> 0 in 36 hands. See the rollback note on
+    # `risk_cap_on_effective_stack` below; this slope travels with the
+    # call gates because it raises their floor and never creates a gate.
     reveal_expense_equity_slope: float = 0.12
+    # Denominator for the sizing risk cap and for the call stack gates:
+    # the EFFECTIVE stack (True, live since 2026-08-15) or hero's own
+    # purse (False, the pre-2026-08-15 form). False reproduces the old
+    # denominator exactly and exists so each change can be ablated rather
+    # than argued about -- see `.handoff/PENDING_EDITS.md`, "Three
+    # unmeasured gate changes sit in the live path". Both default to the
+    # live behaviour, so constructing gates without naming them changes
+    # nothing.
+    #
+    # They are SEPARATE flags because the two edits are not one decision.
+    # Measured on the stored live journal (`gate-binding-audit-2026-08-26`):
+    # the cap re-denomination clips 1.35% of this policy's sub-near-nut
+    # bets and lands on 33 hands worth -1,193 chips in total, while the
+    # call re-denomination fires on 3.31% of calls and lands on 10 hands
+    # worth -13,114. One dial for both would force a single verdict on two
+    # changes whose evidence points in different directions.
+    #
+    # Reverted to False on 2026-08-26 after measurement, then **ROLLED
+    # BACK to True the same day.** The measurement stands and is not
+    # withdrawn -- reverting was +7.58 BB/100 for the cap and +16.02 for
+    # the call gates on the card-aware vs-p3 channel, both resolved -- but
+    # the deployed revert busted the live bankroll 1,000 -> 0 in 36 hands
+    # over 1.6h, and 2 hands supplied -2,224 of the -2,278 in losses
+    # against +1,278 across 24 winning hands.
+    #
+    # The turn call in the -1,043 hand (As Tc drawing dead against a set
+    # of tens) is CALL under the hero-purse denominator and FOLD under the
+    # effective-stack one -- verified directly. Note *why* it folds: the
+    # opponent was all-in, so `effective_stack_chips` collapsed to 1 (the
+    # defect logged in PENDING_EDITS 2026-08-26) and tripped the gate. The
+    # protection is real but accidental, and it fires exactly where the
+    # most chips are at stake. Fixing that collapse properly is what
+    # actually settles this, not the True/False of these flags.
+    #
+    # Standing caution: the batteries run at 60bb and live play is
+    # 500-2,900bb deep, so the measurement never covered the regime that
+    # busted.
+    risk_cap_on_effective_stack: bool = True
+    call_gates_on_effective_stack: bool = True
+    # Within the effective-stack branch, count an opponent's ALREADY
+    # COMMITTED chips in the denominator (`contested_stack_chips`) rather
+    # than only the chips behind them.
+    #
+    # This is the repair for the collapse logged in `PENDING_EDITS.md`
+    # (2026-08-26): `effective_stack_chips` counts chips behind, and an
+    # all-in seat stays active with 0, so the denominator falls to 0 ->
+    # clamped to 1 -> every call gate trips at any positive price, and
+    # `card_reveal_expense` saturates on top. It fires on 31 of 4,333
+    # decisions for `candidate-v7-0001c` and 5 of 73 for the reverted
+    # build.
+    #
+    # **Ships False.** On the stored journal the repair is provably
+    # loosening-only, and a loosening change to a live safety gate does
+    # not go out on a default. Turn it on in `tools.gate_ablation` as the
+    # `fix-a` arm, measure it, and only then decide. Deciding on a flag
+    # rather than on a measurement is what busted the bankroll on
+    # 2026-08-26.
+    gate_stack_counts_committed_chips: bool = False
+    # Price a call on chips hero can actually WIN, not on `potChips`.
+    #
+    # An opponent who bets more than hero can match gets the excess back;
+    # it never joins a pot hero is contesting. `potChips` counts it
+    # anyway, so the price reads low exactly when someone has shoved over
+    # hero's stack -- the spots where the most is at risk.
+    #
+    # Measured live 2026-08-26, table `cmtael1m86iff11453wifw45v`: a 2,958
+    # shove into hero's 1,181 purse left 1,777 uncallable, and the pot
+    # odds read 0.2823 where the real price was 0.4943. Hero called off
+    # the whole stack with Ah 4s at an estimated 0.515 and lost 1,181 --
+    # half that day's bust. The `(0.78, 0.626)` gate passed it by 0.00279.
+    #
+    # **Ships False.** Every threshold in the engine adds pot odds to a
+    # required equity, so turning this on can only make prices stricter
+    # -- but "only stricter" is still a live-path behaviour change, and
+    # those get measured here, not defaulted.
+    pot_odds_exclude_uncallable: bool = False
+    # Condition the opponent's range on observed aggression even when
+    # hero acts FIRST and there is nothing to call.
+    #
+    # `_call_top_fraction` returns 1.0 -- literally uniform-random -- the
+    # moment `callChips <= 0`, before it looks at aggression at all. So
+    # whenever hero opens a street the whole opponent-range model is
+    # bypassed. Deterministic on the corpus: 1,369 of 4,795 logged
+    # decisions have no price and EVERY one carries width exactly 1.0,
+    # zero counterexamples. 940 of them had aggression to condition on;
+    # `recentEvents` is cumulative, so the evidence was present and
+    # discarded. Being out of position is what triggers it.
+    #
+    # **Ships False, and this one is not merely caution.** Feature 138
+    # (`opponent_range_width`) is 1.0 whenever feature 134
+    # (`call_effective_stack_fraction`) is 0 in EVERY training row --
+    # 0 of 1,730,110 violate it. Turning this on serves the action-value
+    # head a feature joint with zero training support on about a third of
+    # decisions, and the incumbent cannot detect it: its
+    # `hybrid_min_margin_quantile` is null, so the out-of-distribution
+    # branch in `learned_policy._equity_family` never runs. Measure it
+    # against a policy that can express the joint before enabling.
+    condition_range_without_price: bool = False
 
     def __post_init__(self) -> None:
         for name in ("board_stackoff_kicker", "board_stackoff_thin"):
@@ -269,6 +376,14 @@ class SafetyGates:
             raise ValueError("risk_cap_stack_fraction must be between 0.01 and 1")
         if not 0.0 <= self.reveal_expense_equity_slope <= 0.50:
             raise ValueError("reveal_expense_equity_slope must be between 0 and 0.5")
+        for name in (
+            "risk_cap_on_effective_stack",
+            "call_gates_on_effective_stack",
+            "gate_stack_counts_committed_chips",
+            "pot_odds_exclude_uncallable",
+            "condition_range_without_price",
+        ):
+            object.__setattr__(self, name, bool(getattr(self, name)))
         gates = (
             self.board_stackoff_kicker,
             self.board_stackoff_thin,
@@ -454,6 +569,27 @@ class DecisionEngine:
         if key is not None:
             self.equity_cache[key] = value
         return value
+
+    def _gate_stack(self, table: Mapping[str, Any], *, effective: bool) -> int:
+        """Denominator for a stack-fraction gate.
+
+        A stack-off gate has to be denominated in chips that can actually
+        be lost, which is why the live form is the effective stack. The
+        hero-purse branch is the pre-2026-08-15 form, kept reachable so
+        the change can be measured; it is deliberately unclamped so it
+        reproduces the old arithmetic exactly.
+        """
+
+        if effective:
+            # `gate_stack_counts_committed_chips` selects whether an
+            # opponent's already-committed chips count. Off (the shipped
+            # default) reproduces the pre-2026-08-27 arithmetic bit for
+            # bit, clamp included.
+            if self.safety_gates.gate_stack_counts_committed_chips:
+                return max(1, contested_stack_chips(table))
+            return max(1, effective_stack_chips(table))
+        hero, _ = _hero_and_seats(table)
+        return _integer(hero.get("stackChips"), "hero stackChips")
 
     @staticmethod
     def _street(table: Mapping[str, Any]) -> str:
@@ -696,7 +832,12 @@ class DecisionEngine:
         """
 
         to_call = _integer(allowed.get("callChips", 0), "callChips")
-        if to_call <= 0:
+        # With no price there is no bet to size the read against, and the
+        # size multiplier below self-neutralises (bet_fraction is 0). The
+        # escalation exponent does not need to be discarded with it --
+        # see `condition_range_without_price`, which is what decides
+        # whether it is.
+        if to_call <= 0 and not self.safety_gates.condition_range_without_price:
             return 1.0
         opponent_raises = self._aggressive_events(table, hero=False)
         if opponent_raises == 0:
@@ -759,8 +900,10 @@ class DecisionEngine:
         # tripped no gate, and the hand lost 3,768. Same mis-scoping as the
         # sizing risk cap, in the path that governs the larger losses --
         # every one of the biggest live losses is a call, and calls are
-        # otherwise ungated.
-        stack = max(1, effective_stack_chips(table))
+        # otherwise ungated. `_gate_stack` carries the ablation dial.
+        stack = self._gate_stack(
+            table, effective=self.safety_gates.call_gates_on_effective_stack
+        )
         # Chips staked before a card is turned are staked on unseen cards.
         reveal_penalty = (
             self.safety_gates.reveal_expense_equity_slope
@@ -1163,10 +1306,12 @@ class DecisionEngine:
             # It is also the definition the learned features, the bluff
             # advisor and the telemetry already use, so the gate and the model
             # agree on what "effective stack" means.
-            effective_stack = max(1, effective_stack_chips(table))
+            gate_stack = self._gate_stack(
+                table, effective=self.safety_gates.risk_cap_on_effective_stack
+            )
             risk_cap = contribution + max(
                 big_blind,
-                round(self.safety_gates.risk_cap_stack_fraction * effective_stack),
+                round(self.safety_gates.risk_cap_stack_fraction * gate_stack),
             )
             maximum = min(maximum, risk_cap)
         if maximum < minimum:
@@ -1200,10 +1345,55 @@ class DecisionEngine:
         return self._first_legal_aggression(table, allowed, available)
 
     @staticmethod
-    def _pot_odds(table: Mapping[str, Any], allowed: Mapping[str, Any]) -> float:
+    def _uncallable_chips(table: Mapping[str, Any], call_chips: int) -> int:
+        """Chips in the pot hero cannot win even by calling all-in.
+
+        An opponent who bets more than hero can match gets the excess
+        back: it never joins any pot hero is contesting. Public
+        information only -- bets and stacks -- so this is equally usable
+        as a gate input and as a learned feature.
+
+        Anything unreadable returns 0, which reproduces the old
+        arithmetic exactly, so this can only raise the measured price and
+        only on snapshots where the overhang is legible.
+        """
+
+        try:
+            hero, seats = _hero_and_seats(table)
+            hero_cap = (
+                _integer(hero.get("currentBetChips"), "hero currentBetChips")
+                + call_chips
+            )
+            return sum(
+                max(
+                    0,
+                    _integer(seat.get("currentBetChips"), "currentBetChips")
+                    - hero_cap,
+                )
+                for seat in seats
+                if seat is not hero
+            )
+        except (ArenaSnapshotError, TypeError, ValueError):
+            return 0
+
+    def _pot_odds(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any]
+    ) -> float:
+        """The price of a call, as a share of what calling can win.
+
+        Was a ``@staticmethod``; it reads ``safety_gates`` now so the
+        uncallable-overhang correction is ablatable. Every call site
+        already went through ``self``.
+        """
+
         pot = _integer(table.get("potChips"), "potChips")
         call_chips = _integer(allowed.get("callChips", 0), "callChips")
-        return 0.0 if call_chips == 0 else call_chips / max(pot + call_chips, 1)
+        if call_chips == 0:
+            return 0.0
+        winnable = pot + call_chips
+        if self.safety_gates.pot_odds_exclude_uncallable:
+            winnable -= self._uncallable_chips(table, call_chips)
+        return call_chips / max(winnable, 1)
 
     def _render(
         self,
