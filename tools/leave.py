@@ -10,11 +10,33 @@ import urllib.request
 from pathlib import Path
 
 
+#: Repo-root fallback, mirroring `tools/api.py`. `.arena-credentials` is
+#: gitignored. Without this fallback the seat-release command documented in
+#: `DECISIONS.md` section 1 -- the ONLY recovery, since there is no unclaim
+#: endpoint -- fails whenever the environment variable happens to be unset.
+DEFAULT_CREDENTIALS = Path(__file__).resolve().parent.parent / ".arena-credentials"
+
+
+def credentials_path() -> Path:
+    """Locate the credentials file without reading or printing its contents."""
+
+    configured = os.environ.get("ARENA_CREDENTIALS")
+    if configured:
+        path = Path(configured).expanduser()
+        if not path.is_file():
+            raise SystemExit(f"ARENA_CREDENTIALS points at a missing file: {path}")
+        return path
+    if DEFAULT_CREDENTIALS.is_file():
+        return DEFAULT_CREDENTIALS
+    raise SystemExit(
+        "no Arena credentials found; set ARENA_CREDENTIALS or place the file at "
+        f"{DEFAULT_CREDENTIALS}"
+    )
+
+
 def load_key() -> str:
-    path = os.environ.get("ARENA_CREDENTIALS")
-    if not path:
-        raise SystemExit("set ARENA_CREDENTIALS to your .arena-credentials path")
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    path = credentials_path()
+    data = json.loads(path.read_text(encoding="utf-8"))
     for field in ("apiKey", "api_key", "key", "apiKeyValue", "token"):
         if isinstance(data.get(field), str) and data[field]:
             return data[field]
