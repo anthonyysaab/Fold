@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground.game_state import ArenaSnapshotError, _integer
+from engine.game_state import ArenaSnapshotError, _integer
 
 
 class GameStateValidationTests(unittest.TestCase):

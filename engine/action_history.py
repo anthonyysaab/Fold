@@ -49,8 +49,8 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.training_telemetry import action_family
+from engine import schema3
+from engine.training_telemetry import action_family
 
 __all__ = ["encode_action_history"]
 

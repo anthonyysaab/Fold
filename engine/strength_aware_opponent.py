@@ -5,7 +5,7 @@ project's oldest blocker. Every scripted archetype in `table_simulator` is
 **card-blind**: its continuing range is random no matter what it is charged,
 so it cannot punish indiscriminate aggression, and a policy can therefore win
 every battery while betting a random hand into a real field.
-:class:`~devfun_poker_playground.table_simulator.TexturedAgent` moved the fold
+:class:`~engine.table_simulator.TexturedAgent` moved the fold
 rate onto the *price* but still reads nothing but public information.
 
 This module closes the gap the only way `DECISIONS.md` §4.4 permits — from
@@ -61,18 +61,18 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.game_state import (
+from engine.game_state import (
     ArenaSnapshotError,
     _hero_and_seats,
     _normalize_card,
     _position,
     active_opponent_count,
 )
-from devfun_poker_playground.strength_metric import (
+from engine.strength_metric import (
     StrengthMetricError,
     strength_percentile,
 )
-from devfun_poker_playground.table_simulator import ScriptedAgent, board_coordination
+from engine.table_simulator import ScriptedAgent, board_coordination
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class P3Decision:
     """One "facing a wager" decision, in the P3 feature space.
 
     ``strength_percentile`` is the canonical metric
-    (:mod:`devfun_poker_playground.strength_metric`) — the only strength scale
+    (:mod:`engine.strength_metric`) — the only strength scale
     this project reports on, per ``V8_DESIGN.md`` §2. In the dataset it is the
     actor's revealed hand; at serve it is the agent's own hand. Same function,
     same scale, no drift between fit and use.

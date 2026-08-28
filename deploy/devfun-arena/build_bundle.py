@@ -17,7 +17,7 @@ Layout inside the zip::
     harness/bluff.py                        (root advisor modules)
     harness/lead_position.py
     harness/risk_temperature.py
-    harness/devfun_poker_playground/...     (trimmed live-decision package)
+    harness/engine/...     (trimmed live-decision package)
 
 Run from the repo root or anywhere::
 
@@ -36,7 +36,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-PKG_SRC = REPO / "devfun_poker_playground"
+PKG_SRC = REPO / "engine"
 ROOT_MODULES = ("bluff.py", "lead_position.py", "risk_temperature.py")
 TRAINING_ONLY = (
     "foreign_data.py",
@@ -73,7 +73,7 @@ def assemble() -> None:
         shutil.rmtree(BUILD)
     HARNESS.mkdir(parents=True)
 
-    pkg = HARNESS / "devfun_poker_playground"
+    pkg = HARNESS / "engine"
     shutil.copytree(PKG_SRC, pkg, ignore=_ignore)
     for name in TRAINING_ONLY:
         target = pkg / name

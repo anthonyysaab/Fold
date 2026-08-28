@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground.learning_contract import (
+from engine.learning_contract import (
     build_learning_features,
     FEATURE_SCHEMA_VERSION,
     HEAD_SIZES,
@@ -17,7 +17,7 @@ from devfun_poker_playground.learning_contract import (
     PARAMETER_COUNT,
     validate_artifact_manifest,
 )
-from devfun_poker_playground.policy_features import FEATURE_NAMES, LABELS
+from engine.policy_features import FEATURE_NAMES, LABELS
 
 
 def _manifest() -> dict:
@@ -95,11 +95,11 @@ class LearningContractTests(unittest.TestCase):
     def test_manifest_validates_optional_engine_parameters(self) -> None:
         from bluff import DEFAULT_BLUFF_SETTINGS
 
-        from devfun_poker_playground.decision_engine import (
+        from engine.decision_engine import (
             DEFAULT_SAFETY_GATES,
             DEFAULT_TEMPERATURE_SHAPING,
         )
-        from devfun_poker_playground.opponent_model import DEFAULT_TRACKER_SETTINGS
+        from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
 
         manifest = _manifest()
         manifest["engine_parameters"] = {

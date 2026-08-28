@@ -10,7 +10,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from devfun_poker_playground.policy_features import FEATURE_NAMES
+from engine.policy_features import FEATURE_NAMES
 
 _STREET_INDEX = {"preflop": 0, "flop": 1, "turn": 2, "river": 3}
 _AGGRESSIVE_ACTIONS = ("bet", "raise", "all-in")

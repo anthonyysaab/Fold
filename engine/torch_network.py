@@ -1,7 +1,7 @@
 """Optional PyTorch network used to read training checkpoints.
 
 The feature/label constants live in the torch-free
-:mod:`devfun_poker_playground.policy_features`; this module keeps the optional
+:mod:`engine.policy_features`; this module keeps the optional
 PyTorch surface: network definition, logits masking, and checkpoint validation.
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 import torch
 from torch import Tensor, nn
 
-from devfun_poker_playground.policy_features import (
+from engine.policy_features import (
     FEATURE_NAMES,
     LABELS,
     LEGALITY_FEATURE_INDEXES,

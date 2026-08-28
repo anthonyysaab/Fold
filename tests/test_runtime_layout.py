@@ -8,7 +8,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.poker_policy import (
+from engine.poker_policy import (
     AggressivePokerPolicy,
     PokerPolicy,
     build_policy,
@@ -41,7 +41,7 @@ class RuntimeLayoutTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import sys, devfun_poker_playground; print('torch' in sys.modules)",
+                "import sys, engine; print('torch' in sys.modules)",
             ],
             cwd=ROOT,
             capture_output=True,

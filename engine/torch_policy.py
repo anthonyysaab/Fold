@@ -3,10 +3,10 @@
 This module never performs network I/O. A runner may pass each fresh Arena
 table snapshot to :func:`decide`, then submit the returned payload itself.
 
-Game-state validation lives in :mod:`devfun_poker_playground.game_state` and
-the safety rails in :mod:`devfun_poker_playground.decision_engine`; this
+Game-state validation lives in :mod:`engine.game_state` and
+the safety rails in :mod:`engine.decision_engine`; this
 module adds the PyTorch checkpoint backend. Deployment builds that cannot
-ship torch use :class:`devfun_poker_playground.poker_policy.PokerPolicy`, which
+ship torch use :class:`engine.poker_policy.PokerPolicy`, which
 shares the same rails over exported weights.
 
 With the current decision engine, a positive ``equity_trials`` value routes to
@@ -24,14 +24,14 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 
-from devfun_poker_playground.torch_network import (
+from engine.torch_network import (
     LABELS,
     TinyPolicy,
     mask_illegal_logits,
     validate_checkpoint_contract,
 )
-from devfun_poker_playground.decision_engine import ArenaAction, DecisionEngine
-from devfun_poker_playground.game_state import ArenaSnapshotError, features_from_table
+from engine.decision_engine import ArenaAction, DecisionEngine
+from engine.game_state import ArenaSnapshotError, features_from_table
 
 __all__ = [
     "ArenaAction",

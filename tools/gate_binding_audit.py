@@ -219,7 +219,7 @@ def load_gates(manifest_path: Path) -> dict:
     under an approved artifact.
     """
 
-    from devfun_poker_playground.decision_engine import SafetyGates
+    from engine.decision_engine import SafetyGates
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     block = (manifest.get("engine_parameters") or {}).get("safety_gates") or {}

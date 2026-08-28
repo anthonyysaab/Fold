@@ -75,8 +75,8 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.game_state import ArenaSnapshotError
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.game_state import ArenaSnapshotError
+from engine.strength_aware_opponent import (
     FIT_FEATURE_NAMES,
     PRICE_INDEX,
     STREETS,
@@ -86,7 +86,7 @@ from devfun_poker_playground.strength_aware_opponent import (
     P3FitError,
     decision_features,
 )
-from devfun_poker_playground.strength_metric import StrengthMetricError
+from engine.strength_metric import StrengthMetricError
 from tools.build_phase_a_dataset import _hole_cards_by_seat
 from tools.collect_foreign_play_data import (
     _read_json,

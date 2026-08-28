@@ -22,12 +22,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.decision_engine import DecisionEngine
-from devfun_poker_playground.game_state import (
+from engine.decision_engine import DecisionEngine
+from engine.game_state import (
     effective_stack_chips,
     features_from_table,
 )
-from devfun_poker_playground.learning_contract import LEARNING_FEATURE_NAMES
+from engine.learning_contract import LEARNING_FEATURE_NAMES
 
 BASE_URL = "https://arena.dev.fun"
 USER_AGENT = "Fold-ver-4-public-data-collector/1.0"

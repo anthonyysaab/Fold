@@ -117,7 +117,7 @@ measured to be worth nothing in play, so nothing else moved. See `STATUS.md`
   "138-input" complaint here was itself wrong. The real defects: it prints the
   pre-v8 baseline "344 passed, 1 expected CUDA skip", and it documents 18 of
   the 49 `tests/test_*.py` files, so 31 are missing, not ten.
-- `devfun_poker_playground/README.md` — describes the v6 trunk and three heads.
+- `engine/README.md` — describes the v6 trunk and three heads.
 - `.handoff/notes/RED_TEAM.md` and `FEATURE_REGISTRY.md` — written pre-reset;
   their measurements stand, their framing and plans do not. Both carry banners.
 

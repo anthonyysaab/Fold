@@ -18,13 +18,13 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.learned_policy_v8 import (
+from engine import schema3
+from engine.learned_policy_v8 import (
     RESIDUAL_CAP_POT_FRACTION,
     compose_branch_values,
 )
-from devfun_poker_playground.v8_trainer import V8TrainingConfig
-from devfun_poker_playground.v8_trainer_phase_b import (
+from engine.v8_trainer import V8TrainingConfig
+from engine.v8_trainer_phase_b import (
     RESIDUAL_CAP_POT_FRACTION_DEFAULT,
     PhaseBTrainingConfig,
     check_phase_b_config,

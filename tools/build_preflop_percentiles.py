@@ -4,7 +4,7 @@ V8_DESIGN.md §2: preflop strength is the percentile of the hero's holding
 among the 169 canonical classes under a fixed heads-up all-in-equity
 ordering, combo-weighted (pairs 6, suited 4, offsuit 12; 1,326 total) with
 the mid-rank convention. The table is generated ONCE by this seeded script
-and committed as ``devfun_poker_playground/preflop_percentiles.py`` so live
+and committed as ``engine/preflop_percentiles.py`` so live
 inference does a dict lookup — no per-decision simulation, no drift.
 
 Run as ``python -m tools.build_preflop_percentiles`` from the repo root.
@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from random import Random
 
-from devfun_poker_playground._vendor.treys import Card, Evaluator
+from engine._vendor.treys import Card, Evaluator
 
 RANKS = "23456789TJQKA"
 SEED = 20260816
@@ -108,7 +108,7 @@ def main() -> None:
     ordered = sorted(percentiles, key=percentiles.get, reverse=True)
 
     out = Path(__file__).resolve().parent.parent / (
-        "devfun_poker_playground/preflop_percentiles.py"
+        "engine/preflop_percentiles.py"
     )
     lines = [
         '"""Preflop percentile table for the canonical strength metric.',

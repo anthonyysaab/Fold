@@ -6,7 +6,7 @@ import hashlib
 import json
 import unittest
 
-from devfun_poker_playground.poker_policy import build_policy
+from engine.poker_policy import build_policy
 from tools.self_play_cycle import (
     _harvest_workers,
     _LegSpec,

@@ -10,17 +10,17 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from devfun_poker_playground.decision_engine import DEFAULT_SAFETY_GATES
-from devfun_poker_playground.learned_policy import (
+from engine.decision_engine import DEFAULT_SAFETY_GATES
+from engine.learned_policy import (
     DEFAULT_SERVE_EQUITY_TRIALS,
     approved_fingerprint,
     LearnedPolicyError,
     load_approved,
     load_policy,
 )
-from devfun_poker_playground.learning_contract import LEARNING_INPUT_SIZE
-from devfun_poker_playground.offline_trainer import TrainingConfig, train_candidate
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.learning_contract import LEARNING_INPUT_SIZE
+from engine.offline_trainer import TrainingConfig, train_candidate
+from engine.training_telemetry import TrainingExample
 from tools.promote_candidate import main as promote_main
 
 
@@ -176,7 +176,7 @@ class LearnedPolicyTests(unittest.TestCase):
                     return_value=tuple(conservative._means),
                 ),
                 patch(
-                    "devfun_poker_playground.learned_policy._forward",
+                    "engine.learned_policy._forward",
                     return_value=output,
                 ),
             ):
@@ -197,7 +197,7 @@ class LearnedPolicyTests(unittest.TestCase):
                     return_value=tuple(permissive._means),
                 ),
                 patch(
-                    "devfun_poker_playground.learned_policy._forward",
+                    "engine.learned_policy._forward",
                     return_value=output,
                 ),
             ):
@@ -215,7 +215,7 @@ class LearnedPolicyTests(unittest.TestCase):
                     return_value=tuple(out_of_distribution),
                 ),
                 patch(
-                    "devfun_poker_playground.learned_policy._forward",
+                    "engine.learned_policy._forward",
                     return_value=output,
                 ),
             ):

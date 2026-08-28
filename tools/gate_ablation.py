@@ -110,7 +110,7 @@ class GateArm:
     condition_range_without_price: bool = False
 
     def build(self) -> object:
-        from devfun_poker_playground.learned_policy import load_policy
+        from engine.learned_policy import load_policy
 
         policy = load_policy(self.manifest, equity_trials=self.equity_trials)
         policy.safety_gates = dataclasses.replace(

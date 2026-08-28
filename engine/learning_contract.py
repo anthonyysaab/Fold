@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 
-from devfun_poker_playground.policy_features import FEATURE_NAMES, LABELS
+from engine.policy_features import FEATURE_NAMES, LABELS
 
 # Schema 2 (2026-08-12) adds the session opponent model and table standing
 # to the inputs: three cycles proved diet balancing alone cannot teach
@@ -268,11 +268,11 @@ def _validate_engine_parameters(parameters: object) -> None:
 
     from bluff import BluffSettings
 
-    from devfun_poker_playground.decision_engine import (
+    from engine.decision_engine import (
         SafetyGates,
         TemperatureShaping,
     )
-    from devfun_poker_playground.opponent_model import TrackerSettings
+    from engine.opponent_model import TrackerSettings
 
     if not isinstance(parameters, Mapping):
         raise LearningContractError("engine_parameters must be an object")

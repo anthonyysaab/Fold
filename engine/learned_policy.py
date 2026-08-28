@@ -28,24 +28,24 @@ from typing import Any
 
 from bluff import BluffSettings
 
-from devfun_poker_playground.decision_engine import (
+from engine.decision_engine import (
     DecisionEngine,
     SafetyGates,
     SharedEquityCache,
     TemperatureShaping,
 )
-from devfun_poker_playground.game_state import _integer, effective_stack_chips
-from devfun_poker_playground.hand_strength import prewarm
-from devfun_poker_playground.learning_contract import (
+from engine.game_state import _integer, effective_stack_chips
+from engine.hand_strength import prewarm
+from engine.learning_contract import (
     BRANCH_FAMILIES,
     BRANCH_POT_FRACTIONS,
     LEARNING_INPUT_SIZE,
     MODEL_FORMAT_VERSION_V7,
     validate_artifact_manifest,
 )
-from devfun_poker_playground.offline_trainer import _forward, _forward_v2
-from devfun_poker_playground.opponent_model import AggressionTracker, TrackerSettings
-from devfun_poker_playground.policy_features import LABELS
+from engine.offline_trainer import _forward, _forward_v2
+from engine.opponent_model import AggressionTracker, TrackerSettings
+from engine.policy_features import LABELS
 
 APPROVED_POINTER = "approved.json"
 

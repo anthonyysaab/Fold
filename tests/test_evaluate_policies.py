@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy, build_policy
+from engine.poker_policy import AggressivePokerPolicy, build_policy
 from tools import evaluate_policies
 
 

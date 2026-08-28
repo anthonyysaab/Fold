@@ -8,13 +8,13 @@ from unittest.mock import patch
 
 from bluff import DEFAULT_BLUFF_SETTINGS
 
-from devfun_poker_playground.opponent_model import (
+from engine.opponent_model import (
     AggressionTracker,
     TrackerSettings,
 )
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.policy_features import FEATURE_NAMES
-from devfun_poker_playground.training_telemetry import make_decision_record
+from engine.poker_policy import AggressivePokerPolicy
+from engine.policy_features import FEATURE_NAMES
+from engine.training_telemetry import make_decision_record
 
 ALWAYS = dataclasses.replace(
     DEFAULT_BLUFF_SETTINGS,

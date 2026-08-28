@@ -46,15 +46,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
-from devfun_poker_playground.game_state import effective_stack_chips
-from devfun_poker_playground.learned_policy_v8 import load_policy_v8
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
+from engine.game_state import effective_stack_chips
+from engine.learned_policy_v8 import load_policy_v8
+from engine.strength_aware_opponent import (
     DEFAULT_FIT_PATH as P3_DEFAULT_FIT_PATH,
 )
-from devfun_poker_playground.strength_aware_opponent import StrengthAwareAgent
-from devfun_poker_playground.strength_metric import strength_percentile
-from devfun_poker_playground.table_simulator import (
+from engine.strength_aware_opponent import StrengthAwareAgent
+from engine.strength_metric import strength_percentile
+from engine.table_simulator import (
     MatchResult,
     RecordingPolicy,
     ScriptedAgent,
@@ -1292,7 +1292,7 @@ def main(argv: list[str] | None = None) -> int:
         equity_trials=args.equity_trials,
     )
     del v8_policy
-    from devfun_poker_playground.learned_policy import load_policy
+    from engine.learned_policy import load_policy
 
     incumbent_label = str(
         load_policy(args.incumbent, equity_trials=args.equity_trials).policy_version

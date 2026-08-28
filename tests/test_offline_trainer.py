@@ -10,11 +10,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.learning_contract import (
+from engine.learning_contract import (
     LEARNING_INPUT_SIZE,
     validate_artifact_manifest,
 )
-from devfun_poker_playground.offline_trainer import (
+from engine.offline_trainer import (
     TRAINING_OBJECTIVE,
     TrainingConfig,
     _action_value_target,
@@ -30,7 +30,7 @@ from devfun_poker_playground.offline_trainer import (
     _step,
     train_candidate,
 )
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.training_telemetry import TrainingExample
 
 
 def _example(

@@ -1,6 +1,6 @@
 """Contract tests for schema 3 — the v8 feature layout must not drift.
 
-``devfun_poker_playground/schema3.py`` is the single coordination point for
+``engine/schema3.py`` is the single coordination point for
 the v8 feature vector; every producer and consumer imports the layout from
 it, so the only way to catch accidental drift is a test that pins the frozen
 contract from outside the module. A failure here is a schema event, not a
@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground import policy_features, schema3
-from devfun_poker_playground.schema3 import (
+from engine import policy_features, schema3
+from engine.schema3 import (
     BELIEF_BUCKETS,
     BELIEF_FEATURE_NAMES,
     CARD_BLOCK_SIZE,
@@ -216,7 +216,7 @@ class TestDormantBlock(unittest.TestCase):
     def test_every_dormant_name_still_exists_in_schema_2(self) -> None:
         # The whole point of parking rather than deleting: the engine still
         # computes these, so reactivation needs no code recovered.
-        from devfun_poker_playground.learning_contract import LEARNING_FEATURE_NAMES
+        from engine.learning_contract import LEARNING_FEATURE_NAMES
 
         for name in schema3.DORMANT_FEATURE_NAMES:
             self.assertIn(name, LEARNING_FEATURE_NAMES, name)

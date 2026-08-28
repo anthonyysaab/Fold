@@ -5,9 +5,9 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.policy_features import FEATURE_NAMES
-from devfun_poker_playground.training_telemetry import make_decision_record
+from engine.poker_policy import AggressivePokerPolicy
+from engine.policy_features import FEATURE_NAMES
+from engine.training_telemetry import make_decision_record
 
 
 def _weights_favoring_fold() -> dict:

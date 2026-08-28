@@ -83,15 +83,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.poker_policy import build_policy
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.poker_policy import build_policy
+from engine.strength_aware_opponent import (
     DEFAULT_FIT_PATH,
     STREETS,
     P3Decision,
     load_fit,
 )
-from devfun_poker_playground.strength_metric import strength_percentile
-from devfun_poker_playground.table_simulator import _family_of, run_sessions
+from engine.strength_metric import strength_percentile
+from engine.table_simulator import _family_of, run_sessions
 from tools.evaluate_policies import (
     _gauntlet_workers,
     _PolicySpec,
@@ -544,8 +544,8 @@ def stage_instrument(args: argparse.Namespace) -> dict:
 
 
 def build_arms(args: argparse.Namespace) -> list[Any]:
-    from devfun_poker_playground.learned_policy import load_policy
-    from devfun_poker_playground.learned_policy_v8 import load_policy_v8
+    from engine.learned_policy import load_policy
+    from engine.learned_policy_v8 import load_policy_v8
 
     v8_label = str(
         load_policy_v8(args.candidate, equity_trials=args.equity_trials).policy_version

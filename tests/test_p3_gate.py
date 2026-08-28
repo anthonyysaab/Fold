@@ -16,7 +16,7 @@ import math
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.strength_aware_opponent import (
     DEFAULT_FIT_PATH,
     P3Decision,
     StrengthAwareAgent,

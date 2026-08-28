@@ -8,7 +8,7 @@ import unittest
 from collections.abc import Sequence
 from unittest.mock import patch
 
-from devfun_poker_playground.decision_engine import (
+from engine.decision_engine import (
     DecisionEngine,
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
@@ -16,16 +16,16 @@ from devfun_poker_playground.decision_engine import (
     TemperatureShaping,
     UNSOFTENED_SAFETY_GATES,
 )
-from devfun_poker_playground.poker_policy import (
+from engine.poker_policy import (
     AGGRESSIVE_SAFETY_GATES,
     AggressivePokerPolicy,
 )
-from devfun_poker_playground.game_state import (
+from engine.game_state import (
     card_reveal_expense,
     contested_stack_chips,
     effective_stack_chips,
 )
-from devfun_poker_playground.policy_features import FEATURE_NAMES
+from engine.policy_features import FEATURE_NAMES
 
 
 def _weights_favoring_fold() -> dict:

@@ -27,9 +27,9 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from devfun_poker_playground.learned_policy import load_policy
-from devfun_poker_playground.poker_policy import build_policy
-from devfun_poker_playground.table_simulator import (
+from engine.learned_policy import load_policy
+from engine.poker_policy import build_policy
+from engine.table_simulator import (
     MatchResult,
     RecordingPolicy,
     run_sessions,

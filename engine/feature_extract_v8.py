@@ -65,19 +65,19 @@ from functools import lru_cache
 
 from lead_position import measure_lead_position
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground._vendor.treys import Card, Evaluator
-from devfun_poker_playground.action_history import (
+from engine import schema3
+from engine._vendor.treys import Card, Evaluator
+from engine.action_history import (
     _actor_unit,
     _seat_ordinals,
     encode_action_history,
 )
-from devfun_poker_playground.belief_provider import (
+from engine.belief_provider import (
     BeliefProvider,
     NeutralBeliefProvider,
     require_buckets,
 )
-from devfun_poker_playground.game_state import (
+from engine.game_state import (
     _active_seats,
     _cards,
     _hero_and_seats,
@@ -89,15 +89,15 @@ from devfun_poker_playground.game_state import (
     effective_stack_chips,
     features_from_table,
 )
-from devfun_poker_playground.hand_potential import hand_potential
-from devfun_poker_playground.hand_strength import board_improvement
-from devfun_poker_playground.policy_features import FEATURE_NAMES
-from devfun_poker_playground.preflop_percentiles import PREFLOP_PERCENTILES
-from devfun_poker_playground.strength_metric import (
+from engine.hand_potential import hand_potential
+from engine.hand_strength import board_improvement
+from engine.policy_features import FEATURE_NAMES
+from engine.preflop_percentiles import PREFLOP_PERCENTILES
+from engine.strength_metric import (
     canonical_class,
     strength_percentile,
 )
-from devfun_poker_playground.training_telemetry import action_family
+from engine.training_telemetry import action_family
 
 __all__ = ["FeatureExtractError", "extract_features_v8"]
 

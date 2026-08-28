@@ -5,10 +5,10 @@ from __future__ import annotations
 import copy
 import unittest
 
-from devfun_poker_playground.game_state import features_from_table
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.policy_features import FEATURE_NAMES
-from devfun_poker_playground.table_simulator import (
+from engine.game_state import features_from_table
+from engine.poker_policy import AggressivePokerPolicy
+from engine.policy_features import FEATURE_NAMES
+from engine.table_simulator import (
     _FAMILY_BRANCHES,
     RecordingPolicy,
     ScriptedAgent,
@@ -156,7 +156,7 @@ class TableSimulatorTests(unittest.TestCase):
         stacks = {"aces": 1_000, "kings": 1_000, "deuces": 1_000}
         seats = [
             __import__(
-                "devfun_poker_playground.table_simulator", fromlist=["SimSeat"]
+                "engine.table_simulator", fromlist=["SimSeat"]
             ).SimSeat(
                 seat_number=index + 1,
                 agent_id=agent_id,
@@ -165,7 +165,7 @@ class TableSimulatorTests(unittest.TestCase):
             )
             for index, (agent_id, agent) in enumerate(agents)
         ]
-        from devfun_poker_playground.table_simulator import MatchResult
+        from engine.table_simulator import MatchResult
 
         result = MatchResult(
             hands=0,
@@ -203,7 +203,7 @@ class TableSimulatorTests(unittest.TestCase):
         self.assertGreater(policy.opponent_tracker.range_floor("shover"), 0.7)
 
     def test_carry_over_sessions_bust_restart_and_aggregate(self) -> None:
-        from devfun_poker_playground.table_simulator import run_sessions
+        from engine.table_simulator import run_sessions
 
         shover = ScriptedAgent("shover", 0.0, 0.0, 1.0, seed=3)
         station = ScriptedAgent("station", 0.15, 0.05, 0.0, seed=4)
@@ -469,8 +469,8 @@ class EquityCacheTest(unittest.TestCase):
 
     @staticmethod
     def _match(cache):
-        from devfun_poker_playground.poker_policy import build_policy
-        from devfun_poker_playground.table_simulator import run_sessions
+        from engine.poker_policy import build_policy
+        from engine.table_simulator import run_sessions
 
         hero = build_policy(aggressive=True, equity_trials=40, equity_cache=cache)
         result = run_sessions(
@@ -501,7 +501,7 @@ class EquityCacheTest(unittest.TestCase):
         # forfeit exactly the cross-rollout duplication the cache exists for.
         import copy
 
-        from devfun_poker_playground.decision_engine import SharedEquityCache
+        from engine.decision_engine import SharedEquityCache
 
         cache = SharedEquityCache()
         self.assertIs(copy.deepcopy(cache), cache)
@@ -530,8 +530,8 @@ class EquityCacheTest(unittest.TestCase):
         self.assertEqual(load.call_args.kwargs["hyper_aggression_chance"], 0.0)
 
     def test_live_construction_keeps_the_anti_modeling_floor(self) -> None:
-        from devfun_poker_playground.decision_engine import HYPER_AGGRESSION_CHANCE
-        from devfun_poker_playground.poker_policy import build_policy
+        from engine.decision_engine import HYPER_AGGRESSION_CHANCE
+        from engine.poker_policy import build_policy
 
         policy = build_policy(aggressive=True, equity_trials=4)
         self.assertEqual(policy.hyper_aggression_chance, HYPER_AGGRESSION_CHANCE)
@@ -540,8 +540,8 @@ class EquityCacheTest(unittest.TestCase):
     def test_load_policy_threads_the_cache_and_defaults_to_none(self) -> None:
         # The --on-policy harvest path builds its hero through load_policy, so
         # a cache that only reaches build_policy would silently skip it.
-        from devfun_poker_playground.decision_engine import SharedEquityCache
-        from devfun_poker_playground.learned_policy import load_policy
+        from engine.decision_engine import SharedEquityCache
+        from engine.learned_policy import load_policy
 
         manifest = "artifacts/candidates/candidate-v7-0001c.manifest.json"
         cache = SharedEquityCache()
@@ -552,7 +552,7 @@ class EquityCacheTest(unittest.TestCase):
         self.assertIsNone(load_policy(manifest, equity_trials=20).equity_cache)
 
     def test_cached_and_uncached_runs_are_identical(self) -> None:
-        from devfun_poker_playground.decision_engine import SharedEquityCache
+        from engine.decision_engine import SharedEquityCache
 
         cache = SharedEquityCache()
         with_cache = self._match(cache)

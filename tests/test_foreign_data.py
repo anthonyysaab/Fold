@@ -7,12 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.foreign_data import (
+from engine.foreign_data import (
     FEATURE_COLUMNS,
     ForeignDataError,
     load_foreign_training_examples,
 )
-from devfun_poker_playground.learning_contract import LEARNING_INPUT_SIZE
+from engine.learning_contract import LEARNING_INPUT_SIZE
 from tools.audit_foreign_play_data import summarize_rows
 
 _META = {

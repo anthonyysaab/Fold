@@ -24,7 +24,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Protocol, runtime_checkable
 
-from devfun_poker_playground.schema3 import BELIEF_BUCKETS
+from engine.schema3 import BELIEF_BUCKETS
 
 # Sum-of-probabilities tolerance. Exact float accumulation error over
 # BELIEF_BUCKETS additions is < 1e-14; 1e-6 is nine orders of magnitude

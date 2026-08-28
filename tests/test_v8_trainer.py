@@ -16,8 +16,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.v8_trainer import (
+from engine import schema3
+from engine.v8_trainer import (
     CARD_ENCODER_WIDTH,
     CONTEXT_ENCODER_WIDTH,
     CONTEXT_STD_FLOOR,

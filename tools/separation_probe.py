@@ -64,7 +64,7 @@ class ManifestSpec:
     equity_trials: int
 
     def build(self) -> object:
-        from devfun_poker_playground.learned_policy import load_policy
+        from engine.learned_policy import load_policy
 
         return load_policy(self.manifest, equity_trials=self.equity_trials)
 

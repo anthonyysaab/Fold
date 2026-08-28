@@ -15,9 +15,9 @@ import math
 import random
 import unittest
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.action_history import encode_action_history
-from devfun_poker_playground.training_telemetry import action_family
+from engine import schema3
+from engine.action_history import encode_action_history
+from engine.training_telemetry import action_family
 
 _FAMILY_CHANNELS = ("fold", "check_call", "aggress")
 _HISTORY_BASE = schema3.feature_index(schema3.HISTORY_FEATURE_NAMES[0])

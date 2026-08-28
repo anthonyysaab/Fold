@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.decision_engine import DecisionEngine
+from engine.decision_engine import DecisionEngine
 from tools.collect_foreign_play_data import _decision_row
 from tools.rebuild_foreign_corpus import (
     Collection,

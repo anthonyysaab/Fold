@@ -44,7 +44,7 @@ in the CUDA venv. This trainer writes immutable candidate artifacts only
 manifest validator accepts no state but ``"candidate"``.
 
 Usage (CUDA venv):
-    python -m devfun_poker_playground.v8_trainer \
+    python -m engine.v8_trainer \
         --model-version candidate-v8-0001 --init-seeds 101 202 303
 """
 
@@ -65,19 +65,19 @@ from typing import Any
 
 from bluff import DEFAULT_BLUFF_SETTINGS
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.decision_engine import (
+from engine import schema3
+from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
 )
-from devfun_poker_playground.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
-from devfun_poker_playground.learning_contract import MODEL_FORMAT
-from devfun_poker_playground.offline_trainer import (
+from engine.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
+from engine.learning_contract import MODEL_FORMAT
+from engine.offline_trainer import (
     _assert_finite_weights,
     _round9,
     validate_training_device,
 )
-from devfun_poker_playground.opponent_model import DEFAULT_TRACKER_SETTINGS
+from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
 
 MODEL_FORMAT_VERSION_V8 = 3
 MODEL_FAMILY_V8 = "v8-composed-value"

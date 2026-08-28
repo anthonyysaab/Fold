@@ -31,25 +31,25 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
-from devfun_poker_playground.decision_engine import SharedEquityCache
-from devfun_poker_playground.foreign_data import load_foreign_training_examples
-from devfun_poker_playground.learned_policy import load_policy
-from devfun_poker_playground.offline_trainer import (
+from engine.decision_engine import SharedEquityCache
+from engine.foreign_data import load_foreign_training_examples
+from engine.learned_policy import load_policy
+from engine.offline_trainer import (
     print_branch_summary,
     TRAINING_OBJECTIVE,
     TrainingConfig,
     train_candidate,
     validate_training_device,
 )
-from devfun_poker_playground.poker_policy import build_policy
-from devfun_poker_playground.table_simulator import (
+from engine.poker_policy import build_policy
+from engine.table_simulator import (
     calibrated_lineup,
     RecordingPolicy,
     run_sessions,
     ScriptedAgent,
     TexturedAgent,
 )
-from devfun_poker_playground.training_telemetry import (
+from engine.training_telemetry import (
     load_training_corpus,
     save_training_corpus,
 )

@@ -14,9 +14,9 @@ import math
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.learned_policy_v8 import LearnedPokerPolicyV8
-from devfun_poker_playground.poker_policy import build_policy
-from devfun_poker_playground.table_simulator import ScriptedAgent, TableSimulator
+from engine.learned_policy_v8 import LearnedPokerPolicyV8
+from engine.poker_policy import build_policy
+from engine.table_simulator import ScriptedAgent, TableSimulator
 from tools import evaluate_v8
 
 _REPO = Path(__file__).resolve().parent.parent

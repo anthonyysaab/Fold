@@ -37,8 +37,8 @@ import random
 from functools import lru_cache
 from typing import Sequence
 
-from devfun_poker_playground._vendor.treys import Card, Evaluator
-from devfun_poker_playground.schema3 import CARD_CODES
+from engine._vendor.treys import Card, Evaluator
+from engine.schema3 import CARD_CODES
 
 # The card universe is the schema's, never restated (F8): the deck and all
 # membership validation derive from schema3.CARD_CODES.

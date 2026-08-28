@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.decision_engine import DecisionEngine
+from engine.decision_engine import DecisionEngine
 from tools.collect_foreign_play_data import (
     _decision_row,
     _fetch_replays,

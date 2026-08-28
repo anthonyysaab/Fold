@@ -37,7 +37,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from devfun_poker_playground.game_state import (
+from engine.game_state import (
     _active_seats,
     _AGGRESSIVE_ACTIONS,
     _hero_and_seats,

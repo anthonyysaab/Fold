@@ -23,7 +23,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
-from devfun_poker_playground.learning_contract import (
+from engine.learning_contract import (
     LearningContractError,
     validate_artifact_manifest,
 )

@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from devfun_poker_playground.decision_engine import DecisionResult
-from devfun_poker_playground.game_state import (
+from engine.decision_engine import DecisionResult
+from engine.game_state import (
     active_opponent_count,
     _cards,
     _hero_and_seats,
@@ -26,11 +26,11 @@ from devfun_poker_playground.game_state import (
     _sequence,
     effective_stack_chips,
 )
-from devfun_poker_playground.learning_contract import (
+from engine.learning_contract import (
     FEATURE_SCHEMA_VERSION,
     LEARNING_FEATURE_NAMES,
 )
-from devfun_poker_playground.policy_features import FEATURE_NAMES, LABELS
+from engine.policy_features import FEATURE_NAMES, LABELS
 
 TELEMETRY_SCHEMA_VERSION = 2
 # Versions this process can still READ. Bumping the writer must never orphan a

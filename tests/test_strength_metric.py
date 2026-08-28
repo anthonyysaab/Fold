@@ -30,18 +30,18 @@ import importlib.util
 import random
 import unittest
 
-from devfun_poker_playground.schema3 import CARD_CODES
+from engine.schema3 import CARD_CODES
 
 _TABLE_AVAILABLE = (
-    importlib.util.find_spec("devfun_poker_playground.preflop_percentiles")
+    importlib.util.find_spec("engine.preflop_percentiles")
     is not None
 )
 _SKIP_REASON = "preflop table not yet generated"
 
 if _TABLE_AVAILABLE:
-    from devfun_poker_playground._vendor.treys import Card, Evaluator
-    from devfun_poker_playground.preflop_percentiles import PREFLOP_PERCENTILES
-    from devfun_poker_playground.strength_metric import (
+    from engine._vendor.treys import Card, Evaluator
+    from engine.preflop_percentiles import PREFLOP_PERCENTILES
+    from engine.strength_metric import (
         StrengthMetricError,
         canonical_class,
         strength_percentile,

@@ -92,17 +92,17 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground._vendor.treys import Card, Evaluator
-from devfun_poker_playground.belief_provider import NeutralBeliefProvider
-from devfun_poker_playground.feature_extract_v8 import (
+from engine import schema3
+from engine._vendor.treys import Card, Evaluator
+from engine.belief_provider import NeutralBeliefProvider
+from engine.feature_extract_v8 import (
     _BRANCH_LARGE,
     _BRANCH_SMALL,
     extract_features_v8,
 )
-from devfun_poker_playground.game_state import effective_stack_chips
-from devfun_poker_playground.strength_metric import strength_percentile
-from devfun_poker_playground.training_telemetry import action_family
+from engine.game_state import effective_stack_chips
+from engine.strength_metric import strength_percentile
+from engine.training_telemetry import action_family
 from tools.collect_foreign_play_data import (
     _action_size,
     _read_json,

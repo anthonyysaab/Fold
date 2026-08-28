@@ -22,15 +22,15 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from devfun_poker_playground.policy_features import FEATURE_NAMES
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.schema3 import INPUT_SIZE_V8
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.policy_features import FEATURE_NAMES
+from engine.poker_policy import AggressivePokerPolicy
+from engine.schema3 import INPUT_SIZE_V8
+from engine.strength_aware_opponent import (
     P3Decision,
     StrengthAwareAgent,
     load_fit,
 )
-from devfun_poker_playground.table_simulator import (
+from engine.table_simulator import (
     _FAMILY_BRANCHES,
     RecordingPolicy,
     ScriptedAgent,

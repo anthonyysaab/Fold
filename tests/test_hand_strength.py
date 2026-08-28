@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground.hand_strength import estimate_equity
+from engine.hand_strength import estimate_equity
 
 # A medium-strength holding: top pair, good kicker on a dry board. Strong
 # against a random hand, behind most of a tight aggressor's range.

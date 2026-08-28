@@ -5,14 +5,14 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from devfun_poker_playground.decision_engine import (
+from engine.decision_engine import (
     DecisionEngine,
     DEFAULT_TEMPERATURE_SHAPING,
     NEUTRAL_TEMPERATURE_SHAPING,
     TemperatureShaping,
 )
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.policy_features import FEATURE_NAMES
+from engine.poker_policy import AggressivePokerPolicy
+from engine.policy_features import FEATURE_NAMES
 
 
 def _weights_favoring_fold() -> dict:

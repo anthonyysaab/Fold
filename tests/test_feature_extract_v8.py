@@ -25,19 +25,19 @@ import statistics
 import unittest
 from collections.abc import Sequence
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.action_history import encode_action_history
-from devfun_poker_playground.belief_provider import BeliefProviderError
-from devfun_poker_playground.feature_extract_v8 import (
+from engine import schema3
+from engine.action_history import encode_action_history
+from engine.belief_provider import BeliefProviderError
+from engine.feature_extract_v8 import (
     FeatureExtractError,
     _hand_events,
     extract_features_v8,
 )
-from devfun_poker_playground.game_state import features_from_table
-from devfun_poker_playground.hand_potential import hand_potential
-from devfun_poker_playground.policy_features import FEATURE_NAMES
-from devfun_poker_playground.preflop_percentiles import PREFLOP_PERCENTILES
-from devfun_poker_playground.strength_metric import (
+from engine.game_state import features_from_table
+from engine.hand_potential import hand_potential
+from engine.policy_features import FEATURE_NAMES
+from engine.preflop_percentiles import PREFLOP_PERCENTILES
+from engine.strength_metric import (
     canonical_class,
     strength_percentile,
 )

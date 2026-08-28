@@ -8,7 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from devfun_poker_playground.learning_contract import (
+from engine.learning_contract import (
     BRANCH_FAMILIES,
     BRANCH_LABELS,
     BRANCH_POT_FRACTIONS,
@@ -19,7 +19,7 @@ from devfun_poker_playground.learning_contract import (
     LearningContractError,
     validate_v7_architecture,
 )
-from devfun_poker_playground.offline_trainer import (
+from engine.offline_trainer import (
     _baseline_floor_v7,
     _branch_metrics_v7,
     _forward_v2,
@@ -29,7 +29,7 @@ from devfun_poker_playground.offline_trainer import (
     print_branch_summary,
     TrainingSummary,
 )
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.training_telemetry import TrainingExample
 
 
 def _random_v7_weights(architecture: dict, seed: int = 5) -> dict:
@@ -118,7 +118,7 @@ class ContractV7Tests(unittest.TestCase):
         self.assertEqual(sorted([*cards, *context]), list(range(LEARNING_INPUT_SIZE)))
 
     def test_board_tier_and_legality_stay_in_the_context_block(self) -> None:
-        from devfun_poker_playground.learning_contract import (
+        from engine.learning_contract import (
             LEARNING_FEATURE_NAMES,
         )
 

@@ -20,9 +20,9 @@ import csv
 import math
 from pathlib import Path
 
-from devfun_poker_playground.learning_contract import LEARNING_FEATURE_NAMES
-from devfun_poker_playground.policy_features import LABELS
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.learning_contract import LEARNING_FEATURE_NAMES
+from engine.policy_features import LABELS
+from engine.training_telemetry import TrainingExample
 
 FOREIGN_POLICY_PREFIX = "foreign-teacher"
 # Collector CSVs carry the schema-1 feature set; the four schema-2 opponent

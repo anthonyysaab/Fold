@@ -24,9 +24,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from devfun_poker_playground.hand_strength import _shared_evaluator, _treys_card
-from devfun_poker_playground.policy_features import LABELS
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.hand_strength import _shared_evaluator, _treys_card
+from engine.policy_features import LABELS
+from engine.training_telemetry import TrainingExample
 
 _RANKS = "23456789TJQKA"
 _SUITS = "cdhs"

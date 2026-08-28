@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground import game_state
-from devfun_poker_playground.decision_engine import SafetyGates
+from engine import game_state
+from engine.decision_engine import SafetyGates
 from tools.gate_binding_audit import (
     REVEALS_REMAINING,
     Decision,

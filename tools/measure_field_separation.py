@@ -98,9 +98,9 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from devfun_poker_playground.schema3 import CARD_CODES
-from devfun_poker_playground.strength_metric import strength_percentile
-from devfun_poker_playground.training_telemetry import action_family
+from engine.schema3 import CARD_CODES
+from engine.strength_metric import strength_percentile
+from engine.training_telemetry import action_family
 from tools.collect_foreign_play_data import _read_json, _unwrap_rpc
 
 DEFAULT_ROOTS = (
@@ -1022,7 +1022,7 @@ def build_report(
         "generated_for": "V8_DESIGN.md §2 / §6.3 — the recomputed field benchmark",
         "date": "2026-08-16",
         "metric": {
-            "module": "devfun_poker_playground.strength_metric",
+            "module": "engine.strength_metric",
             "function": "strength_percentile",
             "definition": (
                 "postflop: exact enumeration of C(unseen,2) opponent "

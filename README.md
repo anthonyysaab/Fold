@@ -21,7 +21,7 @@ Decisions come from deterministic equity rules, shaped a bounded amount by the s
 - `build/` is an ignored generated-output folder and may be empty.
 - `bundle.zip` is the ignored, regenerable Eval sandbox bundle written by `deploy/devfun-arena/build_bundle.py`.
 - `deploy/` contains deployment adapters: the Eval sandbox bundle flow and the Linux systemd unit.
-- `devfun_poker_playground/` contains policy, game-state, and hand-strength code: the live decision brain plus the training modules. Both live play and training depend on it; never delete or move it.
+- `engine/` contains policy, game-state, and hand-strength code: the live decision brain plus the training modules. Both live play and training depend on it; never delete or move it.
 - `foreign play data/` is the ignored public-replay corpus collected from Arena. The raw archive is 16.638 GB; the seven validated season CSVs are 0.288 GB (259,539 eligible rows). It also holds final-table, tournament, and Playground S14 collections.
 - `lead_position.py` is the standalone -100..+100 player lead gauge: chip rank and chip share, accentuated by seat position. The engine computes it per decision and feeds it to the bluff advisor.
 - `live_session.py` supervises continuous live play: back-to-back sessions, free-Playground discovery, money hard-stops, clean table release, and the deployment-scoped run archive.
@@ -119,7 +119,7 @@ Telemetry collection does not train, explore, refresh weights, or change policy 
 After telemetry has settled hand results, generate a local candidate artifact:
 
 ```powershell
-python -m devfun_poker_playground.offline_trainer .arena-training.jsonl
+python -m engine.offline_trainer .arena-training.jsonl
 ```
 
 Foreign teacher decisions can be mixed through the validated CSV boundary as

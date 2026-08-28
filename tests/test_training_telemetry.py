@@ -11,9 +11,9 @@ from pathlib import Path
 
 from risk_temperature import measure_risk_temperature
 
-from devfun_poker_playground.decision_engine import ArenaAction, DecisionResult
-from devfun_poker_playground.learning_contract import LEARNING_INPUT_SIZE
-from devfun_poker_playground.training_telemetry import (
+from engine.decision_engine import ArenaAction, DecisionResult
+from engine.learning_contract import LEARNING_INPUT_SIZE
+from engine.training_telemetry import (
     action_response_matches,
     load_training_corpus,
     load_training_examples,

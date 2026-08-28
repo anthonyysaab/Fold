@@ -28,19 +28,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.decision_engine import DEFAULT_SAFETY_GATES
-from devfun_poker_playground.game_state import features_from_table
-from devfun_poker_playground.learned_policy import LearnedPolicyError
-from devfun_poker_playground.learned_policy_v8 import (
+from engine import schema3
+from engine.decision_engine import DEFAULT_SAFETY_GATES
+from engine.game_state import features_from_table
+from engine.learned_policy import LearnedPolicyError
+from engine.learned_policy_v8 import (
     LearnedPokerPolicyV8,
     LearnedPolicyV8Error,
     _forward_v3,
     compose_branch_values,
     load_policy_v8,
 )
-from devfun_poker_playground.learning_contract import MODEL_FORMAT
-from devfun_poker_playground.v8_trainer import (
+from engine.learning_contract import MODEL_FORMAT
+from engine.v8_trainer import (
     BRANCH_LABELS_V8,
     CARD_ENCODER_WIDTH,
     CONTEXT_ENCODER_WIDTH,
@@ -493,7 +493,7 @@ class LegalityMaskingTests(unittest.TestCase):
         table = _turn_table()
         available = list(table["allowedActions"]["availableActions"])
         with patch(
-            "devfun_poker_playground.learned_policy_v8.extract_features_v8",
+            "engine.learned_policy_v8.extract_features_v8",
             side_effect=RuntimeError("boom"),
         ):
             payload = policy.decide(table)
@@ -506,7 +506,7 @@ class LegalityMaskingTests(unittest.TestCase):
             "residual": [0.0] * 4,
         }
         with patch(
-            "devfun_poker_playground.learned_policy_v8._forward_v3",
+            "engine.learned_policy_v8._forward_v3",
             return_value=nan_outputs,
         ):
             payload = policy.decide(table)

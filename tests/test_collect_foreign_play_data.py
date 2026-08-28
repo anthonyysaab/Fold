@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground.decision_engine import DecisionEngine
-from devfun_poker_playground.learning_contract import LEARNING_FEATURE_NAMES
+from engine.decision_engine import DecisionEngine
+from engine.learning_contract import LEARNING_FEATURE_NAMES
 from tools.collect_foreign_play_data import _decision_row, _receipt_from_table
 
 

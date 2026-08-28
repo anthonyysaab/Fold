@@ -12,9 +12,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from devfun_poker_playground.decision_engine import SharedEquityCache
-from devfun_poker_playground.offline_trainer import TRAINING_OBJECTIVE, TrainingConfig
-from devfun_poker_playground.training_telemetry import (
+from engine.decision_engine import SharedEquityCache
+from engine.offline_trainer import TRAINING_OBJECTIVE, TrainingConfig
+from engine.training_telemetry import (
     save_training_corpus,
     TrainingExample,
 )

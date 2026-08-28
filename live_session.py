@@ -52,7 +52,7 @@ from pathlib import Path
 from typing import Any
 
 import run_agent
-from devfun_poker_playground import poker_policy
+from engine import poker_policy
 
 # Substrings that mark a competition as costing money. Conservative on
 # purpose: a false positive only refuses to auto-join, which is recoverable,
@@ -107,7 +107,7 @@ def policy_identity(standard: bool, learned: bool = False) -> str:
     """
 
     if learned:
-        from devfun_poker_playground.learned_policy import load_approved
+        from engine.learned_policy import load_approved
 
         return str(load_approved("artifacts", equity_trials=1).policy_version)
     chosen = (

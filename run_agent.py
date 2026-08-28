@@ -32,9 +32,9 @@ import urllib.request
 from collections.abc import Mapping
 from pathlib import Path
 
-from devfun_poker_playground.decision_engine import safest_passive_action
-from devfun_poker_playground.poker_policy import build_policy
-from devfun_poker_playground.training_telemetry import (
+from engine.decision_engine import safest_passive_action
+from engine.poker_policy import build_policy
+from engine.training_telemetry import (
     action_response_matches,
     make_decision_record,
     parse_replay_receipts,
@@ -379,7 +379,7 @@ def main(argv=None):
     competition = args.competition_id
     approved_token = None
     if args.learned:
-        from devfun_poker_playground.learned_policy import (
+        from engine.learned_policy import (
             approved_fingerprint,
             load_approved,
         )
@@ -516,7 +516,7 @@ def main(argv=None):
                     replay_check_needed = False
                 if args.learned:
                     # Between hands is the only safe point to swap weights.
-                    from devfun_poker_playground.learned_policy import (
+                    from engine.learned_policy import (
                         approved_fingerprint,
                         load_approved,
                         LearnedPolicyError,

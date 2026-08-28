@@ -73,36 +73,36 @@ from typing import Any
 
 from bluff import BluffSettings
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.belief_provider import BeliefProvider
-from devfun_poker_playground.decision_engine import (
+from engine import schema3
+from engine.belief_provider import BeliefProvider
+from engine.decision_engine import (
     DecisionEngine,
     SafetyGates,
     SharedEquityCache,
     TemperatureShaping,
 )
-from devfun_poker_playground.feature_extract_v8 import (
+from engine.feature_extract_v8 import (
     _aggressive_range,
     _BRANCH_LARGE,
     _BRANCH_SMALL,
     extract_features_v8,
 )
-from devfun_poker_playground.game_state import (
+from engine.game_state import (
     _hero_and_seats,
     _integer,
     effective_stack_chips,
 )
-from devfun_poker_playground.hand_strength import prewarm
-from devfun_poker_playground.learned_policy import (
+from engine.hand_strength import prewarm
+from engine.learned_policy import (
     LearnedPolicyError,
     _load_engine_parameters,
     _matrix,
     _vector,
 )
-from devfun_poker_playground.learning_contract import MODEL_FORMAT
-from devfun_poker_playground.offline_trainer import _dot, _layer_norm, _sigmoid
-from devfun_poker_playground.opponent_model import AggressionTracker
-from devfun_poker_playground.v8_trainer import (
+from engine.learning_contract import MODEL_FORMAT
+from engine.offline_trainer import _dot, _layer_norm, _sigmoid
+from engine.opponent_model import AggressionTracker
+from engine.v8_trainer import (
     BRANCH_LABELS_V8,
     EQUITY_SLOTS,
     FOLD_THROUGH_BRANCHES,

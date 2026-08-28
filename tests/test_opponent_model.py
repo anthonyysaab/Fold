@@ -5,12 +5,12 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from devfun_poker_playground.opponent_model import (
+from engine.opponent_model import (
     AggressionTracker,
     TrackerSettings,
 )
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.policy_features import FEATURE_NAMES
+from engine.poker_policy import AggressivePokerPolicy
+from engine.policy_features import FEATURE_NAMES
 
 
 def _weights_favoring_fold() -> dict:
@@ -326,7 +326,7 @@ class PermaShoveRemedyTests(unittest.TestCase):
             return 0.42 + 0.28 * top_fraction
 
         with patch(
-            "devfun_poker_playground.decision_engine.estimate_equity",
+            "engine.decision_engine.estimate_equity",
             side_effect=fake_equity,
         ):
             return policy.decide_with_diagnostics(table)

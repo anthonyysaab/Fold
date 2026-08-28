@@ -6,9 +6,9 @@ import json
 import tempfile
 import unittest
 
-from devfun_poker_playground.learning_contract import LEARNING_INPUT_SIZE
-from devfun_poker_playground.offline_trainer import TrainingConfig, train_candidate
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.learning_contract import LEARNING_INPUT_SIZE
+from engine.offline_trainer import TrainingConfig, train_candidate
+from engine.training_telemetry import TrainingExample
 
 try:
     import torch

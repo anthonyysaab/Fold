@@ -31,7 +31,7 @@ import unittest
 from collections import defaultdict
 from pathlib import Path
 
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.strength_aware_opponent import (
     DEFAULT_FIT_PATH,
     FIT_FEATURE_NAMES,
     PRICE_INDEX,
@@ -41,7 +41,7 @@ from devfun_poker_playground.strength_aware_opponent import (
     load_fit,
     strength_aware_lineup,
 )
-from devfun_poker_playground.table_simulator import (
+from engine.table_simulator import (
     MatchResult,
     ScriptedAgent,
     SimSeat,
@@ -123,7 +123,7 @@ def _mean_fold(agent, *, pot_before: int, bet: int, board=("2c", "7d", "9h"),
     is this average, not the fold probability of any one holding.
     """
 
-    from devfun_poker_playground.schema3 import CARD_CODES
+    from engine.schema3 import CARD_CODES
 
     deck = [code for code in CARD_CODES if code not in board]
     combos = list(itertools.combinations(deck, 2))

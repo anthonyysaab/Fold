@@ -10,7 +10,7 @@ flat in bet size above the fitted-support cap).
 Complements, not duplicates: ``tests/test_p3_audit.py`` characterises the
 dataset and the defect history; ``tests/test_p3_gate.py`` covers the strict
 battery seat and the gate instrument. This file is the direct contract of
-``devfun_poker_playground.strength_aware_opponent`` itself.
+``engine.strength_aware_opponent`` itself.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import random
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.strength_aware_opponent import (
     DEFAULT_FIT_PATH,
     FIT_FEATURE_NAMES,
     PRICE_INDEX,

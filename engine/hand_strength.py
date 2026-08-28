@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from random import Random
 
-from devfun_poker_playground._vendor.treys import Card, Deck, Evaluator
+from engine._vendor.treys import Card, Deck, Evaluator
 
 _EVALUATOR: Evaluator | None = None
 _FULL_DECK: tuple[int, ...] | None = None

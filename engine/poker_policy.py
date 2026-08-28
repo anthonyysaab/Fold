@@ -15,12 +15,12 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground.policy_features import (
+from engine.policy_features import (
     FEATURE_NAMES,
     LABELS,
     LEGALITY_FEATURE_INDEXES,
 )
-from devfun_poker_playground.decision_engine import (
+from engine.decision_engine import (
     BluffSettings,
     DecisionEngine,
     DEFAULT_SAFETY_GATES,
@@ -28,8 +28,8 @@ from devfun_poker_playground.decision_engine import (
     SharedEquityCache,
     TemperatureShaping,
 )
-from devfun_poker_playground.hand_strength import prewarm
-from devfun_poker_playground.opponent_model import AggressionTracker
+from engine.hand_strength import prewarm
+from engine.opponent_model import AggressionTracker
 
 _WEIGHTS_ENV = "POKER_POLICY_WEIGHTS"
 _WEIGHTS_FILENAME = "tiny-policy-pure.json"

@@ -16,13 +16,13 @@ from __future__ import annotations
 import math
 import unittest
 
-from devfun_poker_playground.belief_provider import (
+from engine.belief_provider import (
     BeliefProvider,
     BeliefProviderError,
     NeutralBeliefProvider,
     require_buckets,
 )
-from devfun_poker_playground.schema3 import BELIEF_BUCKETS
+from engine.schema3 import BELIEF_BUCKETS
 
 # Derived: half a bucket of mass, unambiguously beyond the module's 1e-6
 # sum tolerance, used to build off-sum and negative counterexamples.

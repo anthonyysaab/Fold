@@ -37,7 +37,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground.strength_metric import strength_percentile
+from engine.strength_metric import strength_percentile
 from tools.collect_foreign_play_data import _read_json, _unwrap_rpc
 from tools.measure_field_separation import (
     Decision,

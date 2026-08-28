@@ -13,7 +13,7 @@ from io import StringIO
 from unittest import mock
 
 import run_agent
-from devfun_poker_playground.decision_engine import (
+from engine.decision_engine import (
     DecisionEngine,
     safest_passive_action,
 )

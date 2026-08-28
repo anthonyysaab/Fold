@@ -15,9 +15,9 @@ from __future__ import annotations
 import random
 import unittest
 
-from devfun_poker_playground._vendor.treys import Card, Evaluator
-from devfun_poker_playground.hand_potential import HandPotentialError, hand_potential
-from devfun_poker_playground.schema3 import CARD_CODES
+from engine._vendor.treys import Card, Evaluator
+from engine.hand_potential import HandPotentialError, hand_potential
+from engine.schema3 import CARD_CODES
 
 _RANKS = "23456789TJQKA"
 _SUITS = "cdhs"

@@ -60,7 +60,7 @@ venv. Artifacts are immutable candidates: state ``"candidate"``, promotion
 
 Usage (CUDA venv, repo root)::
 
-    python -m devfun_poker_playground.v8_trainer_phase_b \
+    python -m engine.v8_trainer_phase_b \
         --model-version candidate-v8-0002a --init-seeds 401
 """
 
@@ -81,20 +81,20 @@ from typing import Any
 
 from bluff import DEFAULT_BLUFF_SETTINGS
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.decision_engine import (
+from engine import schema3
+from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
 )
-from devfun_poker_playground.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
-from devfun_poker_playground.learning_contract import MODEL_FORMAT
-from devfun_poker_playground.offline_trainer import (
+from engine.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
+from engine.learning_contract import MODEL_FORMAT
+from engine.offline_trainer import (
     _assert_finite_weights,
     _round9,
     validate_training_device,
 )
-from devfun_poker_playground.opponent_model import DEFAULT_TRACKER_SETTINGS
-from devfun_poker_playground.v8_trainer import (
+from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
+from engine.v8_trainer import (
     BRANCH_LABELS_V8,
     EQUITY_SLOTS,
     FOLD_THROUGH_BRANCHES,
@@ -531,7 +531,7 @@ def fit_phase_b(
 
     card_indices = list(schema3.CARD_INDICES)
     context_indices = list(schema3.CONTEXT_INDICES)
-    from devfun_poker_playground.v8_trainer import (
+    from engine.v8_trainer import (
         CARD_ENCODER_WIDTH,
         CONTEXT_ENCODER_WIDTH,
         HEAD_TOWER_WIDTH,
@@ -962,7 +962,7 @@ def fit_phase_b(
         is that training and serving are the same arithmetic.
         """
 
-        from devfun_poker_playground.learned_policy_v8 import (
+        from engine.learned_policy_v8 import (
             RESIDUAL_CAP_POT_FRACTION,
             compose_branch_values,
             _forward_v3,

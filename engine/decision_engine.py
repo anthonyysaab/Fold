@@ -25,11 +25,11 @@ from bluff import BluffAdvice, BluffSettings, DEFAULT_BLUFF_SETTINGS, evaluate_b
 from lead_position import measure_lead_position
 from risk_temperature import RiskTemperature, measure_risk_temperature
 
-from devfun_poker_playground.hand_strength import board_improvement, estimate_equity
-from devfun_poker_playground.learning_contract import build_learning_features
-from devfun_poker_playground.opponent_model import AggressionTracker
-from devfun_poker_playground.policy_features import LABELS
-from devfun_poker_playground.game_state import (
+from engine.hand_strength import board_improvement, estimate_equity
+from engine.learning_contract import build_learning_features
+from engine.opponent_model import AggressionTracker
+from engine.policy_features import LABELS
+from engine.game_state import (
     _active_seats,
     _AGGRESSIVE_ACTIONS,
     active_opponent_count,

@@ -31,8 +31,8 @@ import json
 import unittest
 from pathlib import Path
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.strength_metric import strength_percentile
+from engine import schema3
+from engine.strength_metric import strength_percentile
 from tools.build_phase_a_dataset import (
     _LABEL_NAMES,
     _showdown_equity,

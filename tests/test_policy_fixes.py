@@ -5,14 +5,14 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from devfun_poker_playground.game_state import ArenaSnapshotError
-from devfun_poker_playground.opponent_model import (
+from engine.game_state import ArenaSnapshotError
+from engine.opponent_model import (
     AggressionTracker,
     TrackerSettings,
 )
-from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-from devfun_poker_playground.learning_contract import LEARNING_INPUT_SIZE
-from devfun_poker_playground.policy_features import FEATURE_NAMES
+from engine.poker_policy import AggressivePokerPolicy
+from engine.learning_contract import LEARNING_INPUT_SIZE
+from engine.policy_features import FEATURE_NAMES
 
 
 def _weights_favoring_fold() -> dict:

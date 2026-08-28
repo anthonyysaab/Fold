@@ -122,17 +122,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from devfun_poker_playground import schema3
-from devfun_poker_playground.decision_engine import SharedEquityCache
-from devfun_poker_playground.feature_extract_v8 import (
+from engine import schema3
+from engine.decision_engine import SharedEquityCache
+from engine.feature_extract_v8 import (
     _aggressive_range,
     _BRANCH_LARGE,
     _BRANCH_SMALL,
     extract_features_v8,
 )
-from devfun_poker_playground.game_state import effective_stack_chips
-from devfun_poker_playground.learned_policy_v8 import load_policy_v8
-from devfun_poker_playground.strength_aware_opponent import (
+from engine.game_state import effective_stack_chips
+from engine.learned_policy_v8 import load_policy_v8
+from engine.strength_aware_opponent import (
     P3Decision,
     StrengthAwareAgent,
     _cached_strength,
@@ -140,7 +140,7 @@ from devfun_poker_playground.strength_aware_opponent import (
     hero_hole_cards,
     load_fit,
 )
-from devfun_poker_playground.table_simulator import (
+from engine.table_simulator import (
     _DECK,
     _ForcedFamilyPolicy,
     _REVEALED_BOARD,
@@ -151,7 +151,7 @@ from devfun_poker_playground.table_simulator import (
     TableSimulator,
     TexturedAgent,
 )
-from devfun_poker_playground.v8_trainer import BRANCH_LABELS_V8
+from engine.v8_trainer import BRANCH_LABELS_V8
 
 CORPUS_KIND = "phase-b-corpus"
 CORPUS_SCHEMA_VERSION = 1

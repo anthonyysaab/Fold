@@ -18,8 +18,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from devfun_poker_playground.learning_contract import LEARNING_INPUT_SIZE
-from devfun_poker_playground.offline_trainer import (
+from engine.learning_contract import LEARNING_INPUT_SIZE
+from engine.offline_trainer import (
     DEGENERATE_GROUP_FILTERS,
     TrainingConfig,
     _action_value_target,
@@ -27,7 +27,7 @@ from devfun_poker_playground.offline_trainer import (
     _zero_signal_group,
     train_candidate,
 )
-from devfun_poker_playground.training_telemetry import TrainingExample
+from engine.training_telemetry import TrainingExample
 from tools.self_play_cycle import main as cycle_main
 
 try:
@@ -466,7 +466,7 @@ class RandomArmTests(unittest.TestCase):
         """
 
         source = pathlib.Path(
-            "devfun_poker_playground/offline_trainer.py"
+            "engine/offline_trainer.py"
         ).read_text(encoding="utf-8")
         start = source.index("def _mask_flags")
         body = source[start : source.index("def action_weights", start)]

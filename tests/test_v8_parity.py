@@ -20,13 +20,13 @@ from __future__ import annotations
 
 import unittest
 
-from devfun_poker_playground.decision_engine import DecisionEngine
-from devfun_poker_playground.feature_extract_v8 import (
+from engine.decision_engine import DecisionEngine
+from engine.feature_extract_v8 import (
     _lead_position_unit,
     extract_features_v8,
 )
-from devfun_poker_playground.game_state import _hero_and_seats
-from devfun_poker_playground.schema3 import FEATURE_NAMES_V8
+from engine.game_state import _hero_and_seats
+from engine.schema3 import FEATURE_NAMES_V8
 
 # Reduced from the extractor's 400 default: parity tests pin wiring, not
 # Monte-Carlo precision, and the compared quantities ignore the trials.

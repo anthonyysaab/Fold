@@ -15,11 +15,11 @@ from pathlib import Path
 
 from bluff import DEFAULT_BLUFF_SETTINGS
 
-from devfun_poker_playground.decision_engine import (
+from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
 )
-from devfun_poker_playground.learning_contract import (
+from engine.learning_contract import (
     BRANCH_FAMILIES,
     BRANCH_LABELS,
     context_feature_indices,
@@ -36,10 +36,10 @@ from devfun_poker_playground.learning_contract import (
     validate_artifact_manifest,
     validate_v7_architecture,
 )
-from devfun_poker_playground.foreign_data import load_foreign_training_examples
-from devfun_poker_playground.opponent_model import DEFAULT_TRACKER_SETTINGS
-from devfun_poker_playground.policy_features import LABELS
-from devfun_poker_playground.training_telemetry import (
+from engine.foreign_data import load_foreign_training_examples
+from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
+from engine.policy_features import LABELS
+from engine.training_telemetry import (
     TrainingExample,
     load_training_examples,
 )

@@ -37,10 +37,10 @@ _policy = None
 _safest_passive = None
 _init_error = ""
 try:
-    from devfun_poker_playground.decision_engine import safest_passive_action
-    from devfun_poker_playground.hand_strength import prewarm
-    from devfun_poker_playground.poker_policy import AggressivePokerPolicy
-    from devfun_poker_playground.policy_features import FEATURE_NAMES, LABELS
+    from engine.decision_engine import safest_passive_action
+    from engine.hand_strength import prewarm
+    from engine.poker_policy import AggressivePokerPolicy
+    from engine.policy_features import FEATURE_NAMES, LABELS
 
     def _inert_weights() -> dict:
         """A valid zero network; never consulted without ``table_sizes``."""
