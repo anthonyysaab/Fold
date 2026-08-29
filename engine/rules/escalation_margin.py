@@ -6,28 +6,38 @@ street margins price the third raise of a street like the first bet::
 
     margin = ESCALATION_STEPS[min(street_aggressions, MEASURED_MAX_K)]
 
-**The margin is a MEASURED STEP TABLE, not an extrapolated slope.**
-Measured 2026-08-29 on 1,903 complete-information aggressive events
-(``artifacts/evaluations/escalation-shift-estimate-2026-08-29.json``):
-the k-th aggressor's equity against a random holding reads
+**The margin is a table of PER-K MEASURED STEPS.** From 1,903
+complete-information aggressive events
+(``artifacts/evaluations/escalation-shift-estimate-2026-08-29.json``,
+``per_k_steps``), the k-th aggressor's equity against a random holding,
+and its step from the k = 1 base of 0.6436::
 
-    k = 1: 0.6436 (n=1587)   k = 2: 0.7235 (n=231)   k >= 3: 0.7626 (n=85)
+    k = 2  n=231  step +0.0799        k = 5  n=8   step +0.1799
+    k = 3  n= 55  step +0.0978        k = 6  n=2   step +0.2289
+    k = 4  n= 16  step +0.1306        k = 7  n=2   step +0.2402
 
-so the extra equity a call must find is the STEP from k = 1 — +0.0799 at
-k = 2, +0.1190 at k >= 3 — read straight off the measurement.
+Each shipped entry is the step for ITS OWN k. That is the property two
+earlier versions lacked, and both failures came from the same place —
+``K_CAP``, a constant the estimator documents as a display bucket:
 
-An earlier version fitted a single linear slope (``kappa_e = 0.0671``)
-and multiplied it by an unbounded ``count - 1``. That was wrong twice.
-(1) **The slope was an artifact of the reporting cap**: refitting the
-same 1,903 rows with the k-bucket cap at 2 / 3 / 5 / uncapped gives
-0.0904 / 0.0671 / 0.0551 / 0.0490 — a spread of 2.8x the published
-standard error, on a constant the module described as a display
-bucket. The relationship is concave, so no single slope survives the
-choice. (2) **It extrapolated past its support**: k > 3 has 30 rows
-total and the slope kept multiplying, so a five-bet street demanded a
-margin larger than the parameter validator's own legal ceiling. The
-step table has neither failure mode: it is the measurement itself, and
-it saturates at the edge of the data by construction.
+1. The first version fitted a linear **slope** to k capped at 3.
+   Refitting the same rows at caps 2 / 3 / 5 / uncapped gives
+   0.0904 / 0.0671 / 0.0551 / 0.0490 — a 2.8x SE spread, because the
+   relationship is concave and no single slope survives the choice.
+2. The second version replaced the slope with a step table whose
+   terminal cell was the **pooled k >= 3 mean** (+0.1190) — but that
+   cell is read at exactly ``count == 3``, where the measured step is
+   +0.0978. It over-priced the modal 3-bet spot by 22% and moved with
+   the cap exactly as the slope had. The dependence was relocated, not
+   removed.
+
+**Saturation above k = 3 is a POLICY choice, not a claim about the
+data.** The relationship keeps rising through k = 7; the table stops
+because the support does not (30 rows above k = 3, thinning to n = 2).
+Holding the k = 3 step for longer streets deliberately UNDER-prices
+them — the safe direction for a margin, since demanding too little on
+thin evidence loses EV while demanding too much folds winners. Extend
+the table only by measuring, never by extrapolating.
 
 **The count is the STREET ORDINAL, hero's own aggression included.**
 ``estimate_escalation_shift`` indexes each event by its position among
@@ -62,9 +72,12 @@ RULE_NAME = "C4-escalation-margin"
 #: street, read directly off the per-k means in the artifact below. Index
 #: is the wager count; entry 0 is unused, entry 1 is the base case.
 #: Extending this table requires re-measuring, never extrapolating.
-ESCALATION_STEPS: tuple[float, ...] = (0.0, 0.0, 0.0799, 0.1190)
-#: The largest wager count the measurement supports. Counts above it read
-#: the last measured step — saturation, not extrapolation.
+#: Per-k measured steps (index = wager count). Entry k is the step for
+#: THAT k, never a pool over k and above — see the module docstring.
+ESCALATION_STEPS: tuple[float, ...] = (0.0, 0.0, 0.0799, 0.0978)
+#: The largest wager count this table prices explicitly. Counts above it
+#: hold the last entry: a deliberate conservative policy where the
+#: support thins, not a claim that the data saturates.
 MEASURED_MAX_K = len(ESCALATION_STEPS) - 1
 KAPPA_E_SOURCE = "artifacts/evaluations/escalation-shift-estimate-2026-08-29.json"
 

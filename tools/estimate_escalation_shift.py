@@ -73,7 +73,10 @@ from tools.collect_foreign_play_data import _read_json, _unwrap_rpc
 EXCLUDED_AGENTS = frozenset({"Fold-ver-4"})
 AGGRESSIVE_ACTIONS = frozenset({"bet", "raise", "all-in"})
 EQUITY_TRIALS = 200
-#: k buckets reported; the last pools everything at or above it.
+#: k buckets in the DISPLAY table only. It must never decide a shipped
+#: parameter: it did twice (as a fitted slope's regressor, then as a step
+#: table's pooled terminal cell), and both times the value moved with it.
+#: ``per_k_steps`` is the consumable estimate and ignores this.
 K_CAP = 3
 OUTPUT_DIR = Path("artifacts") / "evaluations"
 
@@ -156,6 +159,40 @@ def event_rows(replay: Mapping[str, Any]) -> tuple[list[dict[str, Any]], Counter
         )
         stats["rows"] += 1
     return rows, stats
+
+
+def per_k_steps(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """UNCAPPED per-k means and their step from k = 1.
+
+    This is the estimate C4 consumes. It is deliberately independent of
+    ``K_CAP``: that constant aggregates the *display* table below, and an
+    earlier version let it decide a shipped parameter — first as the
+    regressor of a fitted slope, then as the terminal cell of a step
+    table pooled over ``k >= K_CAP``. A pooled tail read at its own lower
+    edge over-prices that edge (the k>=3 pool is +0.1190 while k=3 alone
+    is +0.0978), and both values move with the cap. Per-k means do not.
+    """
+
+    by_k: dict[int, list[float]] = defaultdict(list)
+    for row in rows:
+        by_k[row["k_raw"]].append(row["equity_vs_random"])
+    if 1 not in by_k:
+        raise ValueError("no k = 1 rows: the base case is undefined")
+    base = statistics.fmean(by_k[1])
+    out: dict[str, Any] = {}
+    for k in sorted(by_k):
+        values = by_k[k]
+        out[str(k)] = {
+            "n": len(values),
+            "mean_equity_vs_random": statistics.fmean(values),
+            "step_from_k1": statistics.fmean(values) - base,
+            "se": (
+                statistics.stdev(values) / len(values) ** 0.5
+                if len(values) > 1
+                else None
+            ),
+        }
+    return {"base_k1_mean": base, "by_k": out}
 
 
 def summarize(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -281,7 +318,9 @@ def main(argv: list[str] | None = None) -> int:
         "k_cap": K_CAP,
         "excluded_agents": sorted(EXCLUDED_AGENTS),
         "rows": len(rows),
-        "by_k": {str(k): v for k, v in table.items()},
+        "by_k_capped_for_display": {str(k): v for k, v in table.items()},
+        # The estimate C4 consumes: uncapped, per-k, cap-independent.
+        "per_k_steps": per_k_steps(rows),
         # Raiser equity vs a random holding RISES with k; a typical
         # continuing hand loses exactly that much, so kappa_e = +slope.
         "kappa_e_equity_per_raise": slope,

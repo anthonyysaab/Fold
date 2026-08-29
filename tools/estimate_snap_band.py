@@ -239,6 +239,10 @@ def selftest(verbose: bool = True) -> None:
     step = band_edge(_synthetic(lambda c: 0.7 if c >= 0.85 else 0.4, 20000, 7))
     if not 0.80 <= step["edge_c"] <= 0.90:
         raise AssertionError(f"gate 1: planted step at 0.85, recovered edge {step['edge_c']}")
+    # A real edge must RESOLVE, not merely land in the right bin: without
+    # this the battery could pass while the tool never reports a band.
+    if step["kappa"] is None or not step["status"].startswith("RESOLVED"):
+        raise AssertionError(f"gate 1: a planted edge must resolve, got {step['status']}")
     flat = band_edge(_synthetic(lambda c: 0.55, 20000, 8))
     # A c-independent rule has NO behavioural edge, so the walk must
     # report no resolved band rather than "the band is everything".

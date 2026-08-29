@@ -201,6 +201,19 @@ class CommitmentGateTests(unittest.TestCase):
         self.assertTrue(verdict.fired)
         self.assertAlmostEqual(verdict.spr_post, 1.0)
 
+    def test_spr_post_never_goes_negative(self) -> None:
+        """At the effective-stack collapse the price exceeds what is
+        behind; an unclamped ratio journals a negative SPR beside a reason
+        about a shove nobody can make."""
+
+        params = CommitmentGateParams(enabled=True)
+        for gate_stack, to_call, pot in ((1, 500, 2_000), (0, 100, 50), (10, 900, 30)):
+            verdict = forward_commitment(
+                params, gate_stack=gate_stack, to_call=to_call, pot=pot
+            )
+            self.assertTrue(verdict.fired)
+            self.assertGreaterEqual(verdict.spr_post, 0.0)
+
     def test_just_above_the_boundary_does_not_fire(self) -> None:
         # One chip deeper than the SPR' == 1 state must not fire.
         to_call, pot_before = 100, 400
@@ -355,10 +368,38 @@ class EscalationTests(unittest.TestCase):
         from engine.rules.escalation_margin import ESCALATION_STEPS
 
         self.assertEqual(EscalationMarginParams().steps, ESCALATION_STEPS)
-        # The steps ARE the measured per-k means minus the k=1 mean, read
-        # off the artifact rather than restated here as a slope.
-        self.assertAlmostEqual(ESCALATION_STEPS[2], 0.7235 - 0.6436, places=4)
-        self.assertAlmostEqual(ESCALATION_STEPS[3], 0.7626 - 0.6436, places=4)
+
+    def test_steps_are_the_artifact_s_own_per_k_values(self) -> None:
+        """The guard that would have caught two shipped parameters.
+
+        Each entry must equal the step for ITS OWN k in the estimation
+        artifact — not a slope, and not a pool over k and above. Both
+        earlier versions of this parameter were functions of the
+        estimator's display cap; per-k steps cannot be.
+        """
+
+        import json
+        from pathlib import Path
+
+        from engine.rules.escalation_margin import (
+            ESCALATION_STEPS,
+            KAPPA_E_SOURCE,
+        )
+
+        artifact = json.loads(
+            Path(KAPPA_E_SOURCE).read_text(encoding="utf-8")
+        )
+        per_k = artifact["per_k_steps"]["by_k"]
+        for k in range(2, len(ESCALATION_STEPS)):
+            self.assertAlmostEqual(
+                ESCALATION_STEPS[k],
+                per_k[str(k)]["step_from_k1"],
+                places=4,
+                msg=f"entry {k} must be the k={k} step, not a pooled tail",
+            )
+        # And explicitly NOT the pooled tail the previous version shipped.
+        pooled_tail = 0.1190
+        self.assertNotAlmostEqual(ESCALATION_STEPS[-1], pooled_tail, places=4)
 
     def test_margin_saturates_at_the_measured_support(self) -> None:
         """Regression: the slope form multiplied an UNBOUNDED count, so a

@@ -11,7 +11,10 @@ The post-call quantities, with the engine's ``potChips`` convention
 
     E' = gate_stack - to_call        chips behind after calling
     P' = pot + to_call               the pot the call creates
-    SPR' = E' / P'
+    SPR' = max(0, E' / P')           clamped: at the effective-stack
+                                     collapse the price exceeds what is
+                                     behind, and a negative ratio is not
+                                     a geometry, it is an artifact
 
 This module only *decides*; it never applies a floor. When it fires, the
 call ladder evaluates the call as if the strictest existing call stack

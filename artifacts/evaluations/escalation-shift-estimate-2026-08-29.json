@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T15:06:24.929689+00:00",
+  "generated_at": "2026-08-29T23:29:24.616484+00:00",
   "tool": "tools.estimate_escalation_shift",
   "recipe": "engine/rules/README.md C4",
   "roots": [
@@ -13,7 +13,7 @@
     "Fold-ver-4"
   ],
   "rows": 1903,
-  "by_k": {
+  "by_k_capped_for_display": {
     "1": {
       "n": 1587,
       "mean_equity_vs_random": 0.6435869565217391,
@@ -33,6 +33,65 @@
       "mean_strength_percentile": 0.9553888573368224
     }
   },
+  "per_k_steps": {
+    "base_k1_mean": 0.6435869565217391,
+    "by_k": {
+      "1": {
+        "n": 1587,
+        "mean_equity_vs_random": 0.6435869565217391,
+        "step_from_k1": 0.0,
+        "se": 0.003699873367198752
+      },
+      "2": {
+        "n": 231,
+        "mean_equity_vs_random": 0.723452380952381,
+        "step_from_k1": 0.07986542443064182,
+        "se": 0.008770893933420546
+      },
+      "3": {
+        "n": 55,
+        "mean_equity_vs_random": 0.7413636363636363,
+        "step_from_k1": 0.0977766798418972,
+        "se": 0.014037710482127878
+      },
+      "4": {
+        "n": 16,
+        "mean_equity_vs_random": 0.77421875,
+        "step_from_k1": 0.13063179347826082,
+        "se": 0.025069402364153663
+      },
+      "5": {
+        "n": 8,
+        "mean_equity_vs_random": 0.8234375,
+        "step_from_k1": 0.1798505434782609,
+        "se": 0.030829084930931235
+      },
+      "6": {
+        "n": 2,
+        "mean_equity_vs_random": 0.8725,
+        "step_from_k1": 0.2289130434782609,
+        "se": 0.12249999999999998
+      },
+      "7": {
+        "n": 2,
+        "mean_equity_vs_random": 0.88375,
+        "step_from_k1": 0.2401630434782609,
+        "se": 0.11125
+      },
+      "8": {
+        "n": 1,
+        "mean_equity_vs_random": 0.7925,
+        "step_from_k1": 0.14891304347826084,
+        "se": null
+      },
+      "9": {
+        "n": 1,
+        "mean_equity_vs_random": 0.7675,
+        "step_from_k1": 0.12391304347826082,
+        "se": null
+      }
+    }
+  },
   "kappa_e_equity_per_raise": 0.06714184413250268,
   "kappa_e_se": 0.006539697212203859,
   "strength_percentile_shift_per_raise": 0.10951330085073577,
@@ -45,5 +104,5 @@
     "rows": 1903,
     "excluded_agent_aggressions": 66
   },
-  "elapsed_s": 29.5
+  "elapsed_s": 24.3
 }

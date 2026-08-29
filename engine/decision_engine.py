@@ -1128,9 +1128,12 @@ class DecisionEngine:
         self._rule_verdicts = []
         if deadline_s < 2.0:
             action = self._deadline_action(table, allowed, available)
-            # The deadline path can reach _sized_action (first-legal
-            # aggression), so C5 CAN fire here — carry the verdicts out
-            # rather than discarding them.
+            # The deadline path reaches _sized_action with equity=None,
+            # so boldness is 0 and the damped and undamped fractions are
+            # identical — C5 cannot journal here today. The carry-out is
+            # kept anyway so a future rule that CAN fire on this path is
+            # recorded rather than silently dropped; it is None in
+            # practice.
             deadline_verdicts = self._take_rule_verdicts()
             return DecisionResult(
                 action=self._render(action, table, allowed, equity=None),
@@ -1378,6 +1381,8 @@ class DecisionEngine:
         # cold, smaller when hot. A caller (the bluff path) may bring its
         # own pot fraction instead, and a hyper-aggression decision targets
         # the full pot. The risk cap below never shifts.
+        pending_damper = None
+        undamped_fraction: float | None = None
         if pot_fraction is None:
             if self._hyper_active:
                 pot_fraction = _HYPER_POT_FRACTION
@@ -1413,14 +1418,17 @@ class DecisionEngine:
                         + self.temperature_shaping.sizing_span
                         * damped_boldness(boldness, damper_verdict)
                     )
-                    # Record only when the damped arm actually WINS the min.
-                    # In the hot regime it loses and the emitted size is
-                    # byte-identical to dial-off; journaling "sizes cooled"
-                    # there would assert an effect that did not happen —
-                    # the same attribution defect the composition carries a
-                    # _LaneRun to avoid.
-                    if damper_verdict.fired and damped_fraction < pot_fraction:
-                        self._record_rule_verdict(damper_verdict)
+                    # Deferred: the verdict is journaled at the END of this
+                    # method, and only if the EMITTED AMOUNT differs. A
+                    # fraction comparison is not enough — the big-blind
+                    # floor, the integer round and the legal clamp all
+                    # absorb small fractional differences, and this method
+                    # can still bail with None afterwards, which would
+                    # journal an effect for a proposal the engine
+                    # abandons. Comparing fractions was the first attempt
+                    # and left both holes open.
+                    pending_damper = damper_verdict if damper_verdict.fired else None
+                    undamped_fraction = pot_fraction
                     pot_fraction = min(pot_fraction, damped_fraction)
         desired = base + max(big_blind, round(pot_fraction * (pot + call_chips)))
 
@@ -1464,8 +1472,22 @@ class DecisionEngine:
             )
             maximum = min(maximum, risk_cap)
         if maximum < minimum:
+            # Abandoned proposal: journal nothing. Recording before this
+            # bail attributed a cooling to a wager the engine never made
+            # (measured: 1,521 of 3,000 probed states).
             return None
-        return action, min(max(desired, minimum), maximum)
+        sized = min(max(desired, minimum), maximum)
+        if pending_damper is not None:
+            # Journal the damper only if it changed the AMOUNT. Equal
+            # amounts mean the legalization absorbed the cooled fraction,
+            # and "sizes cooled" would assert an effect that did not reach
+            # the table.
+            undamped_desired = base + max(
+                big_blind, round(undamped_fraction * (pot + call_chips))
+            )
+            if sized != min(max(undamped_desired, minimum), maximum):
+                self._record_rule_verdict(pending_damper)
+        return action, sized
 
     def _first_legal_aggression(
         self,

@@ -90,6 +90,38 @@ implementation passes its bug; a dead agent is not a refutation; a
 documented "display" constant can be a live regressor — were each paid
 for once.
 
+## Third sweep, 2026-08-30 — the fix-pass reviewed, and what the pattern means
+
+Scoped to commit `f37d574` alone, with a machine-checked exit criterion
+(no blockers, no non-note bugs on the L2 critical path, nothing
+unverified). **It was not met**: 15 raw, 8 confirmed, 7 refuted, 0
+unverified. The decisive finding:
+
+| # | where | defect |
+|---|---|---|
+| 20 | `escalation_margin` | **The κ_e blocker's fix reproduced the blocker.** `ESCALATION_STEPS[3] = 0.1190` was the *pooled k≥3 mean* — but index 3 is read at exactly `count == 3`, where the measured step is **+0.0978**. So it over-priced the modal 3-bet spot by 22%, and the pooled value is itself a function of `K_CAP` (at any cap ≥ 4 that cell becomes 0.0978). The dependence was **relocated, not removed**, and the spec's claim that the table "saturates at the edge of the data" was false — the data runs to k = 9. Now genuinely per-k, with saturation restated as a deliberate conservative POLICY, and pinned by a test against the artifact's own `per_k_steps`. |
+| 21 | `decision_engine` (C5) | The attribution guard compared pot **fractions**, but the big-blind floor, the integer round and the legal clamp all absorb small fractional differences — so it still journaled "sizes cooled" on decisions whose emitted amount was byte-identical to dial-off, and it recorded *before* the `return None` bail (1,521 of 3,000 probed states journaled a cooling for a wager the engine then abandoned). Now deferred to the end and compared on the **emitted amount**. |
+| 22 | `estimate_snap_band` | The tightened flat-null gate lost the assertion that a real edge RESOLVES, so the battery could pass while the tool never reported a band. Gate 1 now asserts resolution. |
+| 23 | `commitment_gate` | The `max(0, …)` clamp shipped with no test and both definitions still stated the unqualified ratio. Pinned and corrected. |
+| 24 | records | The Phase-2 κ_e block still published the retracted slope as "ESTIMATED, resolved"; the snap-band gate description still described the behaviour its own fix inverted; the published κ_r artifact still carried verdicts computed under the old `<` rule. All three corrected — the artifact **annotated rather than regenerated**, and the correction verified: **all 8 changed verdicts are the null-mirror control; κ_r = 8.0 stands.** |
+
+**The pattern, stated plainly.** Three sweeps found 9, then 12, then 8
+defects — the rate is not converging, and each round reviewed the
+previous round's *fixes*. Twice now a fix has reproduced the defect it
+was fixing in a new place (finding 20 is the sharpest case: a constant
+documented as cosmetic decided a shipped parameter, was removed from the
+slope, and reappeared in a pooled cell).
+
+What this says is narrower than "the code is unreliable": every one of
+these lives in the **rules layer, which ships entirely dial-off**, and
+the two engine-side defects were *over*-attribution in telemetry, not
+wrong play. The L2 critical path — contract, schema 4, extractor, g —
+took one finding across three sweeps. But it does say the fix-writing
+pace has been outrunning review, and the mitigation is structural rather
+than more sweeping: **every parameter that reaches a dial is now pinned
+by a test against its own estimation artifact**, which is the guard that
+would have caught findings 10 and 20 at the moment of writing.
+
 Five mechanisms elevate money-geometry ratios and coverage into the rule
 layer. Each is its **own module, own parameter dataclass, own default-off
 dial, own typed verdict** — a future bust diagnosis must attribute every
@@ -122,7 +154,7 @@ shove of the remaining stack E′ into pot P′, the price is
 hand "has". Below SPR′ ≈ 1 the call IS a stack-off in installments. The
 diagnosed −1,043 bust hand is exactly this shape.
 
-**Math.** `SPR′ = (gate_stack − to_call) / (pot + to_call)` — the
+**Math.** `SPR′ = max(0, (gate_stack − to_call) / (pot + to_call))` — the
 denominator is the post-call pot, and `potChips` ALREADY contains the
 bet hero faces (verified 2026-08-29: 1,042 of 1,097 first-in preflop
 live rows read `potChips == sb + bb`; it is the same convention
@@ -344,7 +376,13 @@ an inference.
 
 ## Phase 2 results (2026-08-29)
 
-**κ_e (C4) — ESTIMATED, resolved.** `tools/estimate_escalation_shift.py`
+**κ_e (C4) — RETRACTED 2026-08-30; superseded by the per-k step table
+in the C4 section above.** The slope below is a function of the
+estimator's display cap (0.0904 / 0.0671 / 0.0551 / 0.0490 at caps
+2 / 3 / 5 / uncapped) and must not be quoted. Its *census* stands — the
+1,903 rows and the per-k means are what the step table is read from.
+Kept, struck through, because a retracted number that vanishes is a
+number that gets re-derived. ~~ESTIMATED, resolved.~~ `tools/estimate_escalation_shift.py`
 over 1,196 replays, 1,903 aggressive events with true cards, zero parse
 skips; gates: canonical-estimator sanity, planted-slope recovery, shuffle
 null — all passed. Raiser equity vs one random holding by raise ordinal:

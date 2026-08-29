@@ -4231,5 +4231,11 @@
       "verdict": "PASS",
       "meaning": "a FAIL means this run is not the frozen instrument and none of its numbers may be quoted beside the frozen reports"
     }
+  },
+  "verdict_rule_correction_2026_08_30": {
+    "what": "Verdicts in this artifact were computed with `|mean| < mde` as the UNRESOLVED test; the tool now uses `<=`.",
+    "effect": "8 verdicts change, ALL of them the damper-off-mirror null control (|mean| = 0.0 at mde = 0.0), which was labelled a directional win and is correctly UNRESOLVED under the new rule. No kappa_r grid contrast changes.",
+    "conclusion_unchanged": "kappa_r = 8.0 stands: the resolved ruin reductions and the vs-station EV cost are unaffected.",
+    "note": "Annotated rather than regenerated so the published record is preserved with its correction attached."
   }
 }
