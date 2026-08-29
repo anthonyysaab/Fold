@@ -153,9 +153,13 @@ def contested_stack_chips(table: Mapping[str, Any]) -> int:
     fall below the price. The behind-only form has no such floor, which
     is the defect.
 
-    **This is not wired to the live path by default.** It is reached
-    only through ``SafetyGates.gate_stack_counts_committed_chips``,
-    which ships ``False``; see that field.
+    **Two consumers, one of them unconditional.** The safety gates reach
+    it only through ``SafetyGates.gate_stack_counts_committed_chips``,
+    which ships ``False`` — see that field. But since 2026-08-29 the v9
+    sizing function's depth-invariant read
+    (``aggression_sizing.table_temperature``) uses it unconditionally, as
+    the table-scoped purse that keeps bet pressure from decaying to
+    nothing at live bankroll depth. A change here moves g's read.
     """
 
     hero, seats = _hero_and_seats(table)

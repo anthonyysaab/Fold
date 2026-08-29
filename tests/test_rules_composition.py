@@ -36,7 +36,7 @@ from engine.rules import (
     escalation_margin,
     forward_commitment,
     geometric_fraction,
-    opponent_raises_this_street,
+    street_aggressions,
     snap_to_cover,
 )
 from engine.rules.escalation_margin import KAPPA_E_ESTIMATED
@@ -159,20 +159,55 @@ class DamperSupremacyTests(unittest.TestCase):
 
 
 class CommitmentGateTests(unittest.TestCase):
-    def test_derived_threshold_matches_the_price_identity(self) -> None:
-        # At SPR' exactly 1, a next-street shove of E' into P' prices 1/3.
-        gate_stack, to_call, pot = 700, 100, 400
-        spr_post = (gate_stack - to_call) / (pot + 2 * to_call)
-        self.assertEqual(spr_post, 1.0)
+    def test_pot_convention_is_the_engine_s_own(self) -> None:
+        """potChips already contains the bet faced — C1's denominator rests
+        on this, so it is pinned against the engine's pot-odds definition
+        rather than restated (the first C1 draft double-counted it)."""
+
+        from engine.decision_engine import DecisionEngine
+
+        engine = type(
+            "Probe", (DecisionEngine,), {"_family": lambda self, f: "check_call"}
+        )()
+        pot, to_call = 300, 100
+        # pot odds = price / (pot AFTER the call). If potChips excluded the
+        # outstanding bet this would have to read to_call/(pot+2*to_call).
+        self.assertAlmostEqual(
+            engine._pot_odds({"potChips": pot}, {"callChips": to_call}),
+            to_call / (pot + to_call),
+        )
+
+    def test_threshold_is_the_shove_price_boundary(self) -> None:
+        # Built forward from the convention, NOT from the gate's formula:
+        # a state where calling leaves exactly as many chips behind as the
+        # pot the call creates (SPR' = 1).
+        to_call, pot_before = 100, 400
+        pot_after_call = pot_before + to_call          # the convention
+        gate_stack = pot_after_call + to_call          # E' == P' after calling
         remaining = gate_stack - to_call
-        next_pot = pot + 2 * to_call
-        price = remaining / (next_pot + 2 * remaining)
+        self.assertEqual(remaining, pot_after_call)    # SPR' == 1 by construction
+
+        # At that geometry a next-street shove prices at exactly 1/3.
+        price = remaining / (pot_after_call + 2 * remaining)
         self.assertAlmostEqual(price, 1.0 / 3.0)
+
         verdict = forward_commitment(
             CommitmentGateParams(enabled=True),
-            gate_stack=gate_stack, to_call=to_call, pot=pot,
+            gate_stack=gate_stack, to_call=to_call, pot=pot_before,
         )
         self.assertTrue(verdict.fired)
+        self.assertAlmostEqual(verdict.spr_post, 1.0)
+
+    def test_just_above_the_boundary_does_not_fire(self) -> None:
+        # One chip deeper than the SPR' == 1 state must not fire.
+        to_call, pot_before = 100, 400
+        gate_stack = pot_before + 2 * to_call + 1
+        verdict = forward_commitment(
+            CommitmentGateParams(enabled=True),
+            gate_stack=gate_stack, to_call=to_call, pot=pot_before,
+        )
+        self.assertFalse(verdict.fired)
+        self.assertGreater(verdict.spr_post, 1.0)
 
     def test_uncommitted_geometry_passes(self) -> None:
         verdict = forward_commitment(
@@ -202,6 +237,113 @@ class GeometricTests(unittest.TestCase):
         self.assertAlmostEqual(geometric_fraction(1.0, 1), 1.0)
         self.assertAlmostEqual(geometric_fraction(4.0, 3), 0.5400, places=3)
 
+    def test_self_deactivates_above_the_lane_top(self) -> None:
+        """Regression: the first draft clamped the blend at lane_top, so a
+        mildly value-leaning read at live SPR jumped to the band MAXIMUM
+        instead of leaving the lane fraction alone."""
+
+        from engine.rules import blended_fraction
+
+        # SPR 120 — the live median. f_geo is far above any lane top.
+        verdict = blended_fraction(
+            GeometricSizingParams(enabled=True),
+            lane_fraction=0.775,
+            boldness=0.1,
+            pot=100,
+            effective_stack=12_000,
+            street="turn",
+            lane_top=1.0,
+        )
+        self.assertFalse(verdict.fired)
+        self.assertEqual(verdict.f_out, 0.775)
+        self.assertGreater(verdict.f_geo, 1.0)
+
+    def test_still_blends_inside_the_band(self) -> None:
+        from engine.rules import blended_fraction
+
+        # SPR 4 on the flop: f_geo ~ 0.54, inside the aggressive band.
+        verdict = blended_fraction(
+            GeometricSizingParams(enabled=True),
+            lane_fraction=1.0,
+            boldness=1.0,
+            pot=100,
+            effective_stack=400,
+            street="flop",
+            lane_top=1.0,
+        )
+        self.assertTrue(verdict.fired)
+        self.assertAlmostEqual(verdict.f_out, verdict.f_geo)
+        self.assertLess(verdict.f_out, 1.0)
+
+
+class AttributionTests(unittest.TestCase):
+    """Regression: the emitted target must be explained by its own run."""
+
+    def test_attribution_follows_the_winning_pipeline(self) -> None:
+        # The state the sweep found: damped run is stack-bound at 1012.5,
+        # undamped run's pot arm is smaller (956.5) and wins the min.
+        composed = compose_aggressive_target(
+            boldness=1.0,
+            pot=10_000,
+            to_call=100,
+            effective_stack=3_000,
+            contribution=0,
+            street="flop",
+            bankroll=800,
+            exposure=1_000,
+            geometric=GeometricSizingParams(enabled=True),
+            damper=RuinDamperParams(enabled=True, kappa_r=8.0),
+        )
+        undamped = compose_aggressive_target(
+            boldness=1.0,
+            pot=10_000,
+            to_call=100,
+            effective_stack=3_000,
+            contribution=0,
+            street="flop",
+            bankroll=10**9,  # damper inert
+            exposure=1_000,
+            geometric=GeometricSizingParams(enabled=True),
+        )
+        # Same emitted number in both cases...
+        self.assertAlmostEqual(composed.target, undamped.target)
+        # ...so it must carry the same explanation, not the discarded one.
+        self.assertEqual(composed.set_by, undamped.set_by)
+        self.assertEqual(composed.boldness_used, undamped.boldness_used)
+        self.assertAlmostEqual(
+            composed.geometric.f_out, undamped.geometric.f_out
+        )
+
+    def test_recorded_verdict_reproduces_the_emitted_target(self) -> None:
+        """Whatever run is attributed, its f_out must rebuild the target."""
+
+        rng = random.Random(_FUZZ_SEED + 9)
+        geo = GeometricSizingParams(enabled=True)
+        damp = RuinDamperParams(enabled=True, kappa_r=8.0)
+        checked = 0
+        for _ in range(_FUZZ_CASES):
+            state = _random_state(rng)
+            composed = compose_aggressive_target(
+                boldness=state["boldness"],
+                pot=state["pot"],
+                to_call=state["to_call"],
+                effective_stack=state["effective_stack"],
+                contribution=state["contribution"],
+                street=state["street"],
+                bankroll=state["bankroll"],
+                exposure=state["exposure"],
+                geometric=geo,
+                damper=damp,
+            )
+            if composed.set_by != "C2":
+                continue
+            checked += 1
+            expected = state["to_call"] + composed.geometric.f_out * (
+                state["pot"] + state["to_call"]
+            )
+            self.assertAlmostEqual(composed.target, expected, places=6)
+        self.assertGreater(checked, 0, "no C2-attributed cases were exercised")
+
 
 class EscalationTests(unittest.TestCase):
     def test_default_is_the_measured_value(self) -> None:
@@ -211,13 +353,18 @@ class EscalationTests(unittest.TestCase):
 
     def test_margin_shape(self) -> None:
         params = EscalationMarginParams(enabled=True)
-        self.assertEqual(escalation_margin(params, 0).margin_added, 0.0)
-        self.assertEqual(escalation_margin(params, 1).margin_added, 0.0)
+        self.assertEqual(escalation_margin(params, 0).margin_applied, 0.0)
+        self.assertEqual(escalation_margin(params, 1).margin_applied, 0.0)
         self.assertAlmostEqual(
-            escalation_margin(params, 3).margin_added, 2 * params.kappa_e
+            escalation_margin(params, 3).margin_applied, 2 * params.kappa_e
         )
+        # The journaled number is the one that moved the gate: already
+        # scaled by (1 - wildness), with the raw value kept beside it.
+        damped = escalation_margin(params, 3, wildness=0.25)
+        self.assertAlmostEqual(damped.margin_raw, 2 * params.kappa_e)
+        self.assertAlmostEqual(damped.margin_applied, 2 * params.kappa_e * 0.75)
 
-    def test_counter_excludes_hero(self) -> None:
+    def test_counter_is_the_street_ordinal(self) -> None:
         table = {
             "recentEvents": [
                 {"street": "flop", "summary": {"seatNumber": 1, "action": "bet"}},
@@ -226,8 +373,10 @@ class EscalationTests(unittest.TestCase):
                 {"street": "turn", "summary": {"seatNumber": 2, "action": "bet"}},
             ]
         }
-        self.assertEqual(opponent_raises_this_street(table, "flop", 1), 1)
-        self.assertEqual(opponent_raises_this_street(table, "flop", 9), 2)
+        # The street ordinal INCLUDES hero's own bet: that is the
+        # quantity kappa_e was measured against (module docstring).
+        self.assertEqual(street_aggressions(table, "flop"), 2)
+        self.assertEqual(street_aggressions(table, "turn"), 1)
 
 
 class SnapTests(unittest.TestCase):
@@ -425,6 +574,113 @@ class VerdictTelemetryTests(unittest.TestCase):
         self.assertEqual(record["rule_verdicts"], list(decision.rule_verdicts))
         off = self._engine("check_call").decide_with_diagnostics(table)
         self.assertIsNone(record_for(off)["rule_verdicts"])
+
+
+class SweepRegressionTests(unittest.TestCase):
+    """One test per bug the 2026-08-29 adversarial sweep confirmed."""
+
+    def test_engine_damper_never_grows_a_wager(self) -> None:
+        """BLOCKER: the sizer arm is monotone INCREASING in boldness, so a
+        damped negative (hot) read raised the pot fraction — the damper
+        grew bets in exactly the states it exists to cool."""
+
+        from engine.decision_engine import DecisionEngine
+        from engine.rules.composition import RuleLayerParams
+
+        def engine(**kwargs):
+            return type(
+                "Probe", (DecisionEngine,), {"_family": lambda self, f: "aggress"}
+            )(seed=3, **kwargs)
+
+        # Preflop free spot with a weak read: distance-from-river and low
+        # equity push the temperature past the setpoint, so boldness is
+        # NEGATIVE — the regime where damping used to enlarge the bet.
+        table = _snapshot(
+            street="preflop",
+            board=(),
+            to_call=0,
+            available=("check", "bet"),
+            bet_range=(100, 700),
+            raise_range=None,
+        )
+        allowed = table["allowedActions"]
+        weak_equity = 0.05
+        off = engine()
+        on = engine(
+            rule_layer=RuleLayerParams(
+                damper=RuinDamperParams(enabled=True, kappa_r=8.0)
+            )
+        )
+        self.assertLess(off._boldness(table, allowed, weak_equity), 0.0)
+        sized_off = off._sized_action("bet", table, allowed, weak_equity)
+        sized_on = on._sized_action("bet", table, allowed, weak_equity)
+        self.assertIsNotNone(sized_off)
+        self.assertLessEqual(sized_on[1], sized_off[1])
+
+    def test_snap_band_is_two_sided(self) -> None:
+        """A large wager must not snap DOWN onto a tiny covered all-in."""
+
+        params = SnapToCoverParams(enabled=True, band=0.15)
+        far_below = snap_to_cover(
+            params, to_amount=5_000.0, covered_allin_to_amounts=(100,)
+        )
+        self.assertFalse(far_below.fired)
+        self.assertEqual(far_below.to_amount, 5_000.0)
+        # ...while a target inside the band below an all-in still snaps up.
+        in_band = snap_to_cover(
+            params, to_amount=900.0, covered_allin_to_amounts=(1_000,)
+        )
+        self.assertTrue(in_band.fired)
+        self.assertEqual(in_band.snapped_to, 1_000.0)
+
+    def test_composed_record_cannot_be_half_loaded(self) -> None:
+        """The bare-g loader must refuse a composed record rather than
+        silently dropping its dial states."""
+
+        from engine.aggression_sizing import (
+            DEFAULT_SIZING_PARAMETERS,
+            parameters_from_record,
+            sizing_record,
+        )
+        from engine.rules.composition import (
+            RuleLayerParams,
+            composed_sizing_record,
+            parameters_and_rules_from_record,
+        )
+
+        rules = RuleLayerParams(
+            damper=RuinDamperParams(enabled=True, kappa_r=8.0),
+            geometric=GeometricSizingParams(enabled=True),
+        )
+        record = composed_sizing_record(DEFAULT_SIZING_PARAMETERS, rules)
+        with self.assertRaises(ValueError):
+            parameters_from_record(record)
+        sizing_out, rules_out = parameters_and_rules_from_record(record)
+        self.assertEqual(sizing_out, DEFAULT_SIZING_PARAMETERS)
+        self.assertEqual(rules_out, rules)
+        # ...and the composed loader refuses a bare record symmetrically.
+        with self.assertRaises(ValueError):
+            parameters_and_rules_from_record(sizing_record())
+
+    def test_free_spot_raise_is_an_active_wager(self) -> None:
+        """27 live rows offer 'raise' at to_call == 0 with betRange null."""
+
+        from engine.branch_contract_v9 import legal_branch_labels
+
+        labels = legal_branch_labels({"check", "fold", "raise", "all-in"}, 0)
+        self.assertIn("active", labels)
+        self.assertIn("passive", labels)
+        self.assertNotIn("aggressive", labels)   # escalation-only
+        self.assertNotIn("fatal", labels)        # dominated at a free check
+
+    def test_verdict_accumulator_closes_after_a_decision(self) -> None:
+        from engine.decision_engine import DecisionEngine
+
+        engine = type(
+            "Probe", (DecisionEngine,), {"_family": lambda self, f: "check_call"}
+        )(seed=3)
+        engine.decide_with_diagnostics(_snapshot())
+        self.assertIsNone(engine._rule_verdicts)
 
 
 class ParameterHardeningTests(unittest.TestCase):

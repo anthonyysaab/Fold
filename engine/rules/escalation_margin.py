@@ -14,12 +14,29 @@ the k-th aggressor's equity against a random holding climbs
 
     kappa_e = +0.0671 equity per extra raise (SE 0.0065, t ≈ 10.3).
 
-The count deliberately EXCLUDES hero's own aggressive actions — the
-existing ``raises_current_street`` feature counts them, which makes it
-table escalation, not opponent pressure. The wildness composition is the
-ladder's, not this module's: the added margin flows into
-``neutral_price`` at the wiring point, so tracked maniacs dissolve it
-through the one existing blend — no second mechanism.
+**The count must match the estimand, and the estimand is the STREET
+ORDINAL.** ``estimate_escalation_shift`` indexes each aggressive event by
+its position among *all* aggressive actions of its street, hero's
+included, and measures how much stronger the k-th aggressor is. So the
+applied count is the street's total aggression count — the same quantity
+``game_state._aggression_count`` (and the ``raises_current_street``
+feature) already computes. An earlier draft excluded hero's own actions
+on the reasoning that opponent pressure is the real signal; that is
+defensible in the abstract but it silently applies the measured number
+to a *different* quantity than it was measured on, under-pricing every
+street where hero bet first and was raised — exactly the 3-bet spot the
+margin exists for. Fixed 2026-08-29.
+
+**How the margin composes with tracked wildness.** The wiring scales it
+once, as ``margin += margin_added * (1 - wildness)``, and it is
+deliberately NOT added to ``neutral_price``. The gate blend is
+``required = (1 - w)*floor + w*neutral_price``: it slides TOWARD
+neutral_price as wildness rises, so a margin placed there would be
+*preserved* against a tracked maniac — exactly backwards, since a
+maniac's raises carry no range information and the margin exists to
+price range narrowing. An earlier draft of this docstring (and of the
+spec) said "flows into neutral_price"; that wording was wrong and the
+amendment is recorded in ``engine/rules/README.md``.
 
 Failure posture: a negative or malformed count reads as zero raises —
 zero margin added, never a negative one.
@@ -64,27 +81,31 @@ DEFAULT_ESCALATION_MARGIN = EscalationMarginParams()
 class EscalationVerdict:
     rule: str
     fired: bool
-    opponent_raises: int
-    margin_added: float
+    street_aggressions: int
+    margin_raw: float
+    wildness: float
+    margin_applied: float
     reason: str
 
     def as_mapping(self) -> dict[str, object]:
         return {
             "rule": self.rule,
             "fired": self.fired,
-            "opponent_raises": self.opponent_raises,
-            "margin_added": self.margin_added,
+            "street_aggressions": self.street_aggressions,
+            "margin_raw": self.margin_raw,
+            "wildness": self.wildness,
+            "margin_applied": self.margin_applied,
             "reason": self.reason,
         }
 
 
-def opponent_raises_this_street(
-    table: Mapping[str, Any], street: str, hero_seat: int
-) -> int:
-    """Aggressive actions by OTHERS this street, from ``recentEvents``.
+def street_aggressions(table: Mapping[str, Any], street: str) -> int:
+    """Aggressive actions this street, from ``recentEvents``.
 
-    The same event walk as ``game_state._aggression_count`` (whose
-    aggressive-action set is imported, never restated), narrowed by seat.
+    Hero's own INCLUDED -- see the module docstring: this is the quantity
+    kappa_e was measured against, and the applied count must be the
+    measured one. Same event walk and same aggressive-action set as
+    ``game_state._aggression_count`` (imported, never restated).
     """
 
     count = 0
@@ -97,43 +118,40 @@ def opponent_raises_this_street(
         if summary_value is None:
             continue
         summary = _mapping(summary_value, "recentEvent.summary")
-        if summary.get("seatNumber") == hero_seat:
-            continue
         if str(summary.get("action") or "").casefold() in _AGGRESSIVE_ACTIONS:
             count += 1
     return count
 
 
 def escalation_margin(
-    params: EscalationMarginParams, opponent_raises: int
+    params: EscalationMarginParams,
+    aggressions: int,
+    wildness: float = 0.0,
 ) -> EscalationVerdict:
-    """Extra call margin for facing escalation beyond the first wager."""
+    """Extra call margin for facing escalation beyond the first wager.
+
+    ``wildness`` is the tracker's reading; ``margin_applied`` is already
+    scaled by ``(1 - wildness)``, so the journaled verdict records the
+    number that actually moved the gate rather than a pre-scaling one a
+    diagnosis would have to re-derive. See the module docstring for why
+    the scaling belongs here and not in ``neutral_price``.
+    """
 
     if not params.enabled:
-        return EscalationVerdict(RULE_NAME, False, 0, 0.0, "disabled")
-    raises = max(0, int(opponent_raises)) if isinstance(opponent_raises, int) else 0
-    extra = max(0, raises - 1)
+        return EscalationVerdict(RULE_NAME, False, 0, 0.0, 0.0, 0.0, "disabled")
+    count = max(0, int(aggressions)) if isinstance(aggressions, int) else 0
+    extra = max(0, count - 1)
+    w = min(1.0, max(0.0, float(wildness)))
     if extra == 0:
         return EscalationVerdict(
-            RULE_NAME, False, raises, 0.0, "at most one opponent wager: base margin"
+            RULE_NAME, False, count, 0.0, w, 0.0,
+            "at most one wager this street: base margin",
         )
-    added = params.kappa_e * extra
+    raw = params.kappa_e * extra
+    applied = raw * (1.0 - w)
+    reason = f"{count} wagers this street: +{applied:.4f} equity demanded"
+    if w:
+        reason += f" (raw {raw:.4f} dissolved by wildness {w:.2f})"
     return EscalationVerdict(
-        RULE_NAME,
-        True,
-        raises,
-        added,
-        f"{raises} opponent wagers this street: +{added:.4f} equity demanded",
+        RULE_NAME, applied > 0.0, count, raw, w, applied, reason
     )
-
-
-__all__ = [
-    "RULE_NAME",
-    "KAPPA_E_ESTIMATED",
-    "KAPPA_E_SOURCE",
-    "EscalationMarginParams",
-    "DEFAULT_ESCALATION_MARGIN",
-    "EscalationVerdict",
-    "opponent_raises_this_street",
-    "escalation_margin",
-]

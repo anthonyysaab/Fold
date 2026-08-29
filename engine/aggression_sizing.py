@@ -214,6 +214,17 @@ def parameters_from_record(record: Mapping[str, object]) -> SizingParameters:
             f"sizing record identity {identity!r} is not {G_IDENTITY!r} —"
             " its sizes were derived under a different g"
         )
+    if "rules" in record:
+        # A composed record (engine.rules.composition.composed_sizing_record)
+        # carries dial states that decide the sizes as much as these
+        # parameters do. Returning only the g block would silently drop
+        # them and reproduce the wrong sizes under the right identity, so
+        # this loader refuses rather than half-loading.
+        raise ValueError(
+            "this is a COMPOSED sizing record (it carries a 'rules' block):"
+            " load it with engine.rules.composition.parameters_and_rules_"
+            "from_record, which returns the dial states too"
+        )
     parameters = record.get("parameters")
     if not isinstance(parameters, Mapping):
         raise ValueError("sizing record must carry a parameters mapping")

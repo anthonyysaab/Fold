@@ -24,9 +24,39 @@ Phase-3 notes, recorded where they matter:
   `min(damped pipeline, undamped pipeline)` whenever d < 1 — in the
   non-monotone regime the damper has no effect, which is correct: the
   geometric blend already sized down further than the damper would.
+  **Attribution follows the winning run** (`_LaneRun`): the first
+  implementation attributed from the discarded damped evaluation, so a
+  wager emitted by the undamped pot arm could be recorded as
+  `stack-cap` with a geometric verdict whose `f_out` did not reproduce
+  it. Fixed 2026-08-29.
 - Attribution is a closed vocabulary: every composed wager names its
   setter — `g`, `C2`, `stack-cap`, or `C3A` — with the damper's verdict
   carried separately.
+
+## Adversarial sweep, 2026-08-29 — nine defects found and fixed
+
+Five reviewers with distinct lenses over the foundation commits, then
+adversarial verification. **Every finding below was confirmed by
+interpreter repro or by the live journal, never by argument alone**, and
+each carries a regression test that fails on the unfixed code.
+
+| # | where | defect |
+|---|---|---|
+| 1 | `commitment_gate` | **C1's denominator double-counted the outstanding bet.** `potChips` already contains the bet hero faces — verified on 1,042 of 1,097 first-in preflop live rows (`potChips == sb + bb`, none `== sb`) and it is the convention `_pot_odds` rests on. Was `pot + 2·to_call`, now `pot + to_call`; the gate had been firing ~33% past its derived boundary. The old test *mirrored* the bad formula, so it passed — it now derives the boundary forward from the convention. |
+| 2 | `decision_engine` (C5 site) | **BLOCKER: the damper GREW wagers on hot reads.** The sizer arm is monotone *increasing* in boldness, so scaling a negative b toward zero raises the fraction (b=−1, d=0.1: 0.3050 → 0.4805). My wiring comment asserted the arm was safe and skipped the min. Now `min(damped, undamped)` — the same construction the composition already used, for the same reason. |
+| 3 | `composition` | **Attribution came from the discarded pipeline.** When the damper's min picked the undamped run, `set_by`, the recorded C2 verdict and `boldness_used` all described the damped one — a wager emitted by the pot arm could journal as `stack-cap` with an `f_out` that could not reproduce it. `_LaneRun` now carries the winning run's explanation. |
+| 4 | `geometric_sizing` | **C2 did the opposite of its accepted degradation.** Above the lane top it clamped the *blend* at `lane_top`, so at live SPR (~120) every mildly value-leaning read jumped to the band MAXIMUM. It now returns the lane fraction untouched and reports `fired: false` — the self-deactivation the spec was accepted on. |
+| 5 | `coverage_targeting` | **The snap band was one-sided.** `to_amount >= (1−κ)·allin` admitted every covered all-in however far below, and `max()` then snapped a 5,000 wager DOWN onto a lone 100-chip all-in. Now two-sided: `(1−κ)·allin <= to_amount <= allin`. |
+| 6 | `escalation_margin` | **κ_e was applied to a different quantity than it was measured on.** The estimator indexes by the STREET ordinal (hero's aggression included); the wiring counted opponents only, under-pricing exactly the bet-then-raised spot the margin exists for. The counter is now the street ordinal, and the docstring's pre-amendment "flows into neutral_price" wording (which described the *opposite* composition) is corrected. |
+| 7 | `branch_contract_v9` + `feature_extract_v9` | **The free-spot `raise` shape was unhandled.** 27 live decisions offer `raise` at `to_call == 0` with `betRange` null and `raiseRange` stated (blind-option preflop). The contract now counts `raise` as an active-lane wager there, and the extractor falls back to `raiseRange`. |
+| 8 | `aggression_sizing` | **A composed record could be half-loaded.** `parameters_from_record` accepted a composed record and silently dropped its `rules` block — right identity, wrong sizes. It now refuses and points at `parameters_and_rules_from_record`, which is the composed inverse. |
+| 9 | verdict hygiene | The C4 verdict recorded the pre-wildness margin (now `margin_raw` / `wildness` / `margin_applied`); C1 journaled `fired` even with `call_stack_gates` empty, where nothing enforces (now recorded only when a gate exists); `_rule_verdicts` stayed a live list after a decision, contradicting its own contract (now drained). Doc drift: the README's verdict-field lists named fields that never existed, and `contested_stack_chips` still claimed no live consumer — g's depth-invariant read has used it unconditionally since 2026-08-29. |
+
+The recurring lesson, now twice: **a test that mirrors the implementation
+passes the implementation's bug.** Findings 1 and 4 both had green tests
+written from the same wrong premise as the code. Regression tests here
+derive their expectations from an independent source — the pot
+convention, the live journal, or a hand-built state.
 
 Five mechanisms elevate money-geometry ratios and coverage into the rule
 layer. Each is its **own module, own parameter dataclass, own default-off
@@ -60,7 +90,13 @@ shove of the remaining stack E′ into pot P′, the price is
 hand "has". Below SPR′ ≈ 1 the call IS a stack-off in installments. The
 diagnosed −1,043 bust hand is exactly this shape.
 
-**Math.** `SPR′ = (gate_stack − to_call) / (pot + 2·to_call)`, where
+**Math.** `SPR′ = (gate_stack − to_call) / (pot + to_call)` — the
+denominator is the post-call pot, and `potChips` ALREADY contains the
+bet hero faces (verified 2026-08-29: 1,042 of 1,097 first-in preflop
+live rows read `potChips == sb + bb`; it is the same convention
+`_pot_odds` rests on). The first draft wrote `pot + 2·to_call`, which
+double-counted the outstanding bet and fired the gate ~33% past its
+derived boundary on a pot-sized bet. Where
 `gate_stack` is **the call ladder's own denominator** (`_gate_stack`,
 inheriting `call_gates_on_effective_stack` and, if ever enabled,
 `gate_stack_counts_committed_chips` — one denominator authority, no new
@@ -80,8 +116,9 @@ floor — the correct behavior the collapsed denominator today produces
 only by accident. `equity is None` (deadline path) passes, matching
 `_call_clears_margin`.
 
-**Verdict fields.** `fired`, `spr_post`, `floor_demanded`, `equity`,
-`passed`.
+**Verdict fields** (`CommitmentVerdict.as_mapping()`, the shape that
+reaches schema-3 `rule_verdicts`): `rule`, `fired`, `spr_post`,
+`reason`.
 
 ---
 
@@ -108,15 +145,20 @@ f_target = (1 − w)·f_lane(b) + w·f_geo,  clamped to (0, lane_top]
 
 Applies to **both wager lanes** (aggressive raise and active bet); the
 lane tops stay 1.0 / 0.695 — escalation-only, no overbets, per the v9
-contract. At live SPR (median ~120) f_geo exceeds the cap and the clamp
-returns the lane band — the candidate self-deactivates at depths where
-stacks cannot be gotten in, which is the theoretically correct
-degradation.
+contract. **When `f_geo > lane_top` the rule returns the lane fraction
+UNTOUCHED and reports `fired: false`** — above the band the geometric
+plan is infeasible (even the band maximum every street cannot get
+stacks in), so the rule has no advice. At live SPR (median ~120) that
+is the normal case and the candidate self-deactivates, which is the
+theoretically correct degradation and the reading this spec was
+accepted on. NOTE: the first implementation clamped the *blend* at
+`lane_top` instead, which did the opposite — every mildly value-leaning
+read at live depth jumped to the band MAXIMUM. Fixed 2026-08-29.
 
 **Parameters: none.** Closed form; the blend weight is the existing read.
 
-**Verdict fields.** `fired` (w > 0 and clamp not binding), `spr`, `n`,
-`f_geo`, `w`, `f_out`.
+**Verdict fields.** `rule`, `fired`, `spr`, `streets_remaining`,
+`f_geo`, `weight`, `f_out`, `reason`.
 
 ---
 
@@ -151,8 +193,8 @@ response to exact all-ins. If the archive lacks resolution, κ falls back
 to owner-set (flagged; proposed 0.15) — recorded as which one it was.
 Rule B's damp slope: estimated from the same archive or deferred.
 
-**Verdict fields.** `fired`, `snap_target_seat`, `allin_to`, `band_x`,
-`covered_count`, `covering_count`.
+**Verdict fields.** `rule`, `fired`, `to_amount`, `snapped_to`,
+`candidates`, `reason`.
 
 ---
 
@@ -175,8 +217,9 @@ replays, measure `E[opponent equity vs hero | k opponent raises]` as a
 function of k; κ_e is the per-extra-raise shift. Direct, because those
 replays carry the opponent's actual cards.
 
-**Verdict fields.** `fired`, `opp_raises`, `margin_added`,
-`wildness_dissolved_to`.
+**Verdict fields.** `rule`, `fired`, `opponent_raises`,
+`margin_added`, `reason`. (The wildness scaling happens at the wiring
+site, on the margin the verdict reports.)
 
 ---
 
@@ -203,7 +246,8 @@ offline**: sweep κ_r in the battery and read the ruin-probability /
 BB-per-100 frontier from the existing ruin column — no live cost, no
 authored number. Initial sweep grid proposed 2–10.
 
-**Verdict fields.** `fired` (d < 1), `d`, `bankroll`, `exposure`.
+**Verdict fields.** `rule`, `fired`, `d`, `bankroll`, `exposure`,
+`reason`.
 
 ---
 

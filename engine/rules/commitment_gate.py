@@ -6,6 +6,13 @@ is ``E'/(P'+2E') = 1/(2 + 1/SPR')`` — at SPR' = 1 that is 1/3, odds
 nearly any hand "has", so below SPR' ~ 1 the call IS a stack-off in
 installments.
 
+The post-call quantities, with the engine's ``potChips`` convention
+(the pot ALREADY contains the bet hero faces)::
+
+    E' = gate_stack - to_call        chips behind after calling
+    P' = pot + to_call               the pot the call creates
+    SPR' = E' / P'
+
 This module only *decides*; it never applies a floor. When it fires, the
 call ladder evaluates the call as if the strictest existing call stack
 gate had tripped — same floor (``call_stack_gates[0]``), same reveal
@@ -86,7 +93,15 @@ def forward_commitment(
         return CommitmentVerdict(RULE_NAME, False, None, "no price to commit to")
     if pot < 0 or gate_stack < 0:
         return CommitmentVerdict(RULE_NAME, False, None, "malformed state: inert")
-    spr_post = (gate_stack - to_call) / (pot + 2 * to_call)
+    # Post-call pot is pot + to_call, NOT pot + 2*to_call: potChips already
+    # contains the bet hero is facing. Verified empirically 2026-08-29 —
+    # 1,042 of 1,097 first-in preflop live rows have potChips == sb + bb
+    # (none have potChips == sb) — and it is the same convention
+    # `_pot_odds` relies on (to_call / (pot + to_call) is the post-call
+    # pot). The first draft double-counted the outstanding bet, which
+    # inflated the denominator and fired the gate ~33% past its derived
+    # boundary on a pot-sized bet.
+    spr_post = (gate_stack - to_call) / (pot + to_call)
     if spr_post <= params.spr_threshold:
         return CommitmentVerdict(
             RULE_NAME,

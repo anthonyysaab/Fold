@@ -39,7 +39,7 @@ wager, so a diagnosis never reconstructs precedence from effects.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from engine.aggression_sizing import (
     DEFAULT_SIZING_PARAMETERS,
@@ -152,6 +152,61 @@ class ComposedWager:
         ]
 
 
+def parameters_and_rules_from_record(
+    record: Mapping[str, object],
+) -> tuple[SizingParameters, RuleLayerParams]:
+    """The identity-checking inverse of :func:`composed_sizing_record`.
+
+    The companion to ``aggression_sizing.parameters_from_record``, which
+    handles bare g records and REFUSES composed ones — loading a composed
+    record through it would drop the dial states and reproduce the wrong
+    sizes under the right identity.
+    """
+
+    from engine.aggression_sizing import G_IDENTITY
+
+    identity = record.get("identity")
+    if identity != G_IDENTITY:
+        raise ValueError(
+            f"sizing record identity {identity!r} is not {G_IDENTITY!r}"
+        )
+    parameters = record.get("parameters")
+    if not isinstance(parameters, Mapping):
+        raise ValueError("sizing record must carry a parameters mapping")
+    rules = record.get("rules")
+    if not isinstance(rules, Mapping):
+        raise ValueError(
+            "not a composed record: no 'rules' block. Use"
+            " engine.aggression_sizing.parameters_from_record"
+        )
+    return (
+        SizingParameters.from_mapping(parameters),
+        RuleLayerParams(
+            damper=RuinDamperParams(**dict(rules["damper"])),
+            geometric=GeometricSizingParams(**dict(rules["geometric"])),
+            snap=SnapToCoverParams(**dict(rules["snap"])),
+            commitment=CommitmentGateParams(**dict(rules["commitment"])),
+            escalation=EscalationMarginParams(**dict(rules["escalation"])),
+        ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _LaneRun:
+    """One evaluation of a lane at one boldness, with what set its target.
+
+    Attribution MUST come from the run that produced the emitted number.
+    When the damper's min picks the undamped run, attributing from the
+    discarded damped run names the wrong setter and records a verdict
+    whose f_out cannot reproduce the emitted target (found 2026-08-29).
+    """
+
+    target: float
+    verdict: GeometricVerdict
+    stack_bound: bool
+    boldness: float
+
+
 def _aggressive_pipeline(
     boldness: float,
     *,
@@ -161,11 +216,8 @@ def _aggressive_pipeline(
     street: str,
     sizing: SizingParameters,
     geometric: GeometricSizingParams,
-) -> tuple[float, GeometricVerdict, bool]:
-    """One evaluation of the aggressive lane at a given boldness.
-
-    Returns (target, C2 verdict, stack_arm_bound).
-    """
+) -> _LaneRun:
+    """One evaluation of the aggressive lane at a given boldness."""
 
     fraction, cap = aggressive_fractions(boldness, sizing)
     verdict = blended_fraction(
@@ -184,8 +236,12 @@ def _aggressive_pipeline(
         fraction=verdict.f_out,
         cap=cap,
     )
-    target = min(pot_arm, stack_arm)
-    return target, verdict, stack_arm < pot_arm
+    return _LaneRun(
+        target=min(pot_arm, stack_arm),
+        verdict=verdict,
+        stack_bound=stack_arm < pot_arm,
+        boldness=boldness,
+    )
 
 
 def compose_aggressive_target(
@@ -213,9 +269,7 @@ def compose_aggressive_target(
             " unprovoked wagers belong to the active lane"
         )
     d_verdict = damping(damper, bankroll=bankroll, exposure=exposure)
-    b_used = damped_boldness(boldness, d_verdict)
-    target, c2_verdict, stack_bound = _aggressive_pipeline(
-        b_used,
+    kwargs = dict(
         pot=pot,
         to_call=to_call,
         effective_stack=effective_stack,
@@ -223,18 +277,13 @@ def compose_aggressive_target(
         sizing=sizing,
         geometric=geometric,
     )
+    run = _aggressive_pipeline(damped_boldness(boldness, d_verdict), **kwargs)
     if d_verdict.d < 1.0:
-        undamped_target, _, _ = _aggressive_pipeline(
-            boldness,
-            pot=pot,
-            to_call=to_call,
-            effective_stack=effective_stack,
-            street=street,
-            sizing=sizing,
-            geometric=geometric,
-        )
-        target = min(target, undamped_target)
+        undamped = _aggressive_pipeline(boldness, **kwargs)
+        if undamped.target < run.target:
+            run = undamped
 
+    target = run.target
     to_amount = contribution + target
     snap_verdict = snap_to_cover(
         snap,
@@ -245,9 +294,9 @@ def compose_aggressive_target(
         to_amount = snap_verdict.to_amount
         target = to_amount - contribution
         set_by = "C3A"
-    elif stack_bound:
+    elif run.stack_bound:
         set_by = "stack-cap"
-    elif c2_verdict.fired:
+    elif run.verdict.fired:
         set_by = "C2"
     else:
         set_by = "g"
@@ -257,10 +306,10 @@ def compose_aggressive_target(
         to_amount=to_amount,
         set_by=set_by,
         damper=d_verdict,
-        geometric=c2_verdict,
+        geometric=run.verdict,
         snap=snap_verdict,
         boldness_in=boldness,
-        boldness_used=b_used,
+        boldness_used=run.boldness,
     )
 
 
@@ -282,26 +331,31 @@ def compose_active_wager(
     """The active-bet composition at ``to_call == 0``."""
 
     d_verdict = damping(damper, bankroll=bankroll, exposure=exposure)
-    b_used = damped_boldness(boldness, d_verdict)
 
-    def pipeline(b: float) -> tuple[float, GeometricVerdict]:
-        fraction = active_bet_fraction(b, sizing)
+    def pipeline(b: float) -> _LaneRun:
         verdict = blended_fraction(
             geometric,
-            lane_fraction=fraction,
+            lane_fraction=active_bet_fraction(b, sizing),
             boldness=b,
             pot=pot,
             effective_stack=effective_stack,
             street=street,
             lane_top=sizing.active_base + sizing.active_span,
         )
-        return active_wager_from_fraction(pot=pot, fraction=verdict.f_out), verdict
+        return _LaneRun(
+            target=active_wager_from_fraction(pot=pot, fraction=verdict.f_out),
+            verdict=verdict,
+            stack_bound=False,  # the active lane has no stack arm
+            boldness=b,
+        )
 
-    target, c2_verdict = pipeline(b_used)
+    run = pipeline(damped_boldness(boldness, d_verdict))
     if d_verdict.d < 1.0:
-        undamped_target, _ = pipeline(boldness)
-        target = min(target, undamped_target)
+        undamped = pipeline(boldness)
+        if undamped.target < run.target:
+            run = undamped
 
+    target = run.target
     to_amount = contribution + target
     snap_verdict = snap_to_cover(
         snap,
@@ -312,7 +366,7 @@ def compose_active_wager(
         to_amount = snap_verdict.to_amount
         target = to_amount - contribution
         set_by = "C3A"
-    elif c2_verdict.fired:
+    elif run.verdict.fired:
         set_by = "C2"
     else:
         set_by = "g"
@@ -322,10 +376,10 @@ def compose_active_wager(
         to_amount=to_amount,
         set_by=set_by,
         damper=d_verdict,
-        geometric=c2_verdict,
+        geometric=run.verdict,
         snap=snap_verdict,
         boldness_in=boldness,
-        boldness_used=b_used,
+        boldness_used=run.boldness,
     )
 
 
@@ -336,4 +390,5 @@ __all__ = [
     "compose_active_wager",
     "compose_aggressive_target",
     "composed_sizing_record",
+    "parameters_and_rules_from_record",
 ]

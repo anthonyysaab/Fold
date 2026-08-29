@@ -27,7 +27,7 @@ from engine.rules.escalation_margin import (
     EscalationMarginParams,
     EscalationVerdict,
     escalation_margin,
-    opponent_raises_this_street,
+    street_aggressions,
 )
 from engine.rules.geometric_sizing import (
     DEFAULT_GEOMETRIC_SIZING,
@@ -69,6 +69,6 @@ __all__ = [
     "escalation_margin",
     "forward_commitment",
     "geometric_fraction",
-    "opponent_raises_this_street",
+    "street_aggressions",
     "snap_to_cover",
 ]

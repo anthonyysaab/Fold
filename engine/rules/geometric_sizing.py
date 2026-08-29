@@ -120,7 +120,22 @@ def blended_fraction(
         )
     spr = effective_stack / pot
     f_geo = geometric_fraction(spr, n)
-    f_out = min(lane_top, (1.0 - weight) * lane_fraction + weight * f_geo)
+    if f_geo > lane_top:
+        # SELF-DEACTIVATION, and it must be a return of the LANE value —
+        # not a clamp of the blend. Above the lane top the geometric plan
+        # is infeasible: even betting the band maximum every street cannot
+        # get stacks in, so the rule has no advice and must not move the
+        # size. Clamping the blend instead (the first draft) did the
+        # opposite — at live SPR (~120) f_geo exceeds every lane top, so
+        # every mildly value-leaning read jumped straight to the band
+        # MAXIMUM. Found 2026-08-29; the spec was accepted on the
+        # self-deactivation reading (README, C2).
+        return GeometricVerdict(
+            RULE_NAME, False, spr, n, f_geo, weight, lane_fraction,
+            f"geometric target {f_geo:.3f} exceeds the lane top "
+            f"{lane_top:.3f}: stacks cannot be gotten in, rule inert",
+        )
+    f_out = (1.0 - weight) * lane_fraction + weight * f_geo
     fired = f_out != lane_fraction
     return GeometricVerdict(
         RULE_NAME,

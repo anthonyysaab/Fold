@@ -242,7 +242,13 @@ def extract_features_v9(
             snap=rules.snap,
             damper=rules.damper,
         )
-        lane_range = _lane_range(allowed, "betRange")
+        # betRange first, raiseRange as the fallback: at blind-option free
+        # spots the Arena names the unprovoked wager "raise" and leaves
+        # betRange null (27 such decisions in the stored live journal).
+        # Without the fallback those states skip the clamped cost path.
+        lane_range = _lane_range(allowed, "betRange") or _lane_range(
+            allowed, "raiseRange"
+        )
         if lane_range is None:
             new_values["cost_active_eff"] = _clip01(composed.target / eff)
         else:

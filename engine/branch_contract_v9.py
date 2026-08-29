@@ -153,8 +153,15 @@ def legal_branches(available: Collection[str], to_call: int) -> tuple[int, ...]:
         emitted.append(branch_index("fatal"))
     if "check" in actions and to_call == 0:
         emitted.append(branch_index("passive"))
+    # At a free spot the Arena does not always name the wager action
+    # "bet": at blind-option preflop spots it offers "raise" with
+    # betRange null and raiseRange stated (27 such decisions in the
+    # stored live journal, e.g. actions ["all-in","check","fold","raise"]
+    # with callChips 0). All three name the same thing here — the active
+    # lane's unprovoked wager — so all three make it legal.
     if ("call" in actions and to_call > 0) or (
-        to_call == 0 and ("bet" in actions or "all-in" in actions)
+        to_call == 0
+        and ("bet" in actions or "raise" in actions or "all-in" in actions)
     ):
         emitted.append(branch_index("active"))
     if to_call > 0 and ("raise" in actions or "all-in" in actions):

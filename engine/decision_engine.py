@@ -30,10 +30,7 @@ from engine.learning_contract import build_learning_features
 from engine.opponent_model import AggressionTracker
 from engine.rules.commitment_gate import forward_commitment
 from engine.rules.composition import DEFAULT_RULE_LAYER, RuleLayerParams
-from engine.rules.escalation_margin import (
-    escalation_margin,
-    opponent_raises_this_street,
-)
+from engine.rules.escalation_margin import escalation_margin, street_aggressions
 from engine.rules.ruin_damper import damped_boldness, damping, table_exposure
 from engine.policy_features import LABELS
 from engine.game_state import (
@@ -903,23 +900,21 @@ class DecisionEngine:
         )
         margin += self.safety_gates.board_margin(tier)
         if self.rule_layer.escalation.enabled:
-            # C4 — each opponent raise beyond the first demands the
+            # C4 — each wager beyond the first this street demands the
             # measured extra equity, scaled by (1 - wildness): the same
             # signal the gate floors blend on, so tracked maniacs whose
             # raises mean nothing dissolve this margin exactly as they
-            # dissolve the floors. Dial-off skips the event walk entirely.
-            hero, _ = _hero_and_seats(table)
+            # dissolve the floors. The count is the STREET ordinal (hero's
+            # own aggression included) because that is the quantity
+            # kappa_e was measured against. Dial-off skips the walk.
             escalation = escalation_margin(
                 self.rule_layer.escalation,
-                opponent_raises_this_street(
-                    table,
-                    self._street(table),
-                    _integer(hero.get("seatNumber"), "hero seatNumber", minimum=1),
-                ),
+                street_aggressions(table, self._street(table)),
+                wildness,
             )
             if escalation.fired:
                 self._record_rule_verdict(escalation)
-            margin += escalation.margin_added * (1.0 - wildness)
+            margin += escalation.margin_applied
         price = self._pot_odds(table, allowed) + margin
         if equity < price:
             return False
@@ -968,7 +963,12 @@ class DecisionEngine:
                 to_call=to_call,
                 pot=_integer(table.get("potChips"), "potChips"),
             )
-            if commitment.fired:
+            # Recorded only when a gate exists for it to trigger. C1 adds
+            # a trigger to the strictest existing gate; with
+            # call_stack_gates empty (a legal configuration) the loop
+            # below never runs, so a "fired" verdict would journal an
+            # enforcement that did not happen.
+            if commitment.fired and self._call_stack_gates():
                 self._record_rule_verdict(commitment)
         for index, (stack_fraction, equity_floor) in enumerate(
             self._call_stack_gates()
@@ -1023,6 +1023,16 @@ class DecisionEngine:
         # rescue, passive fallback); identical re-firings are one fact.
         if mapping not in self._rule_verdicts:
             self._rule_verdicts.append(mapping)
+
+    def _take_rule_verdicts(self) -> tuple[dict[str, object], ...] | None:
+        """Drain the accumulator, restoring the "closed outside a decision"
+        state its contract promises: leaving the list in place would let a
+        later direct call of a gated method append to a finished
+        decision's record."""
+
+        collected = self._rule_verdicts
+        self._rule_verdicts = None
+        return tuple(collected) if collected else None
 
     def decide(
         self,
@@ -1096,6 +1106,7 @@ class DecisionEngine:
         self._rule_verdicts = []
         if deadline_s < 2.0:
             action = self._deadline_action(table, allowed, available)
+            self._take_rule_verdicts()  # nothing can have fired; close it
             return DecisionResult(
                 action=self._render(action, table, allowed, equity=None),
                 family="deadline",
@@ -1184,9 +1195,7 @@ class DecisionEngine:
             opponent_evidence_confidence=(
                 self.opponent_tracker.pressure_actor_profile(table)[2]
             ),
-            rule_verdicts=(
-                tuple(self._rule_verdicts) if self._rule_verdicts else None
-            ),
+            rule_verdicts=self._take_rule_verdicts(),
             lead_position=lead,
             bluff_kind=bluff_kind,
             hyper_aggression=self._hyper_active,
@@ -1348,13 +1357,24 @@ class DecisionEngine:
                 pot_fraction = _HYPER_POT_FRACTION
             else:
                 boldness = self._boldness(table, allowed, equity)
+                pot_fraction = 0.5 * (
+                    1.0 + self.temperature_shaping.sizing_span * boldness
+                )
                 if self.rule_layer.damper.enabled:
                     # C5 — the ruin damper cools the read before sizing.
-                    # This arm is monotone in boldness, so damping can only
-                    # shrink the size (no min-with-undamped needed here,
-                    # unlike the rules composition's geometric blend). The
-                    # hyper branch above deliberately bypasses it: the
-                    # owner's anti-modeling floor is not a tuning surface.
+                    #
+                    # The emitted fraction is min(damped, undamped), NOT
+                    # simply the damped one. This arm is monotone
+                    # INCREASING in boldness, so scaling b toward zero
+                    # RAISES the fraction whenever b < 0 (a hot read):
+                    # measured b=-1, d=0.1 moves 0.3050 -> 0.4805. An
+                    # earlier comment here claimed the arm was monotone in
+                    # the safe direction and skipped the min — it grew
+                    # bets in exactly the hot states the damper exists to
+                    # cool. Same construction, same reason, as the rules
+                    # composition. The hyper branch above deliberately
+                    # bypasses it: the anti-modeling floor is not a tuning
+                    # surface.
                     damper_verdict = damping(
                         self.rule_layer.damper,
                         bankroll=_integer(
@@ -1364,10 +1384,15 @@ class DecisionEngine:
                     )
                     if damper_verdict.fired:
                         self._record_rule_verdict(damper_verdict)
-                    boldness = damped_boldness(boldness, damper_verdict)
-                pot_fraction = 0.5 * (
-                    1.0 + self.temperature_shaping.sizing_span * boldness
-                )
+                    pot_fraction = min(
+                        pot_fraction,
+                        0.5
+                        * (
+                            1.0
+                            + self.temperature_shaping.sizing_span
+                            * damped_boldness(boldness, damper_verdict)
+                        ),
+                    )
         desired = base + max(big_blind, round(pot_fraction * (pot + call_chips)))
 
         if equity is None or equity < self.safety_gates.near_nut_floor:

@@ -3,9 +3,15 @@
 Against an opponent hero covers, the maximum loss is THEIR stack and the
 fold pressure on them is total. A raise that leaves a covered short stack
 a few blinds behind buys the same fold decision as their all-in at worse
-leverage — so when the composed target lands within the band of a covered
-opponent's all-in to-amount, snap to exactly that all-in (the largest
-covered one in band: covering it covers the smaller).
+leverage — so when the composed target lands within the band BELOW a
+covered opponent's all-in to-amount, snap to exactly that all-in (the
+largest covered one in band: covering it covers the smaller)::
+
+    (1 - band) * allin_j  <=  target_to  <=  allin_j
+
+The band is two-sided by necessity: it closes a small gap UPWARD, and a
+one-sided test admits every covered all-in however far below, which lets
+``max()`` snap a large wager DOWN onto a tiny stack.
 
 Rule B (damped stack-offs versus opponents who cover hero) is DEFERRED
 into the C5 regime work — the archive that was to estimate its slope has
@@ -94,13 +100,20 @@ def snap_to_cover(
         return SnapVerdict(
             RULE_NAME, False, to_amount, None, 0, "no positive target: inert"
         )
+    # The band is TWO-SIDED. The rule exists to close a small gap upward
+    # — "a raise that leaves a covered short stack a few blinds behind
+    # buys the same fold decision at worse leverage" — so a candidate
+    # all-in must sit at or above the composed target and within the band
+    # below it. A one-sided test (the first draft) made every covered
+    # all-in a candidate no matter how far below, and `max()` then snapped
+    # a 5,000 wager DOWN onto a lone 100-chip all-in. Verified 2026-08-29.
     candidates = [
         int(amount)
         for amount in covered_allin_to_amounts
         if not isinstance(amount, bool)
         and isinstance(amount, (int, float))
         and amount > 0
-        and to_amount >= (1.0 - params.band) * amount
+        and (1.0 - params.band) * amount <= to_amount <= amount
     ]
     if not candidates:
         return SnapVerdict(
