@@ -49,7 +49,7 @@ from engine.aggression_sizing import (
     SizingParameters,
     table_boldness,
 )
-from engine.branch_contract_v9 import BRANCH_LABELS_V9, legal_branches
+from engine.branch_contract_v9 import BRANCH_LABELS_V9, legal_branch_labels
 from engine.belief_provider import BeliefProvider
 from engine.feature_extract_v8 import (
     _EQUITY_TRIALS,
@@ -162,11 +162,10 @@ def extract_features_v9(
     eff = max(1, effective_stack_chips(table))
     hero_stack = _integer(hero.get("stackChips"), "hero stackChips", minimum=1)
 
-    # legal_branches returns slot INDICES; resolve to labels before the
-    # membership test (a string-in-indices test is silently always false).
-    legal_labels = {
-        BRANCH_LABELS_V9[index] for index in legal_branches(available, to_call)
-    }
+    # The label form of the contract query — the index form invites a
+    # silently-always-false string-in-indices membership test (caught
+    # here once; the contract now carries both forms).
+    legal_labels = legal_branch_labels(available, to_call)
     new_values: dict[str, float] = {
         f"legal_{branch}": 1.0 if branch in legal_labels else 0.0
         for branch in BRANCH_LABELS_V9

@@ -167,6 +167,23 @@ def legal_branches(available: Collection[str], to_call: int) -> tuple[int, ...]:
     return tuple(emitted)
 
 
+def legal_branch_labels(
+    available: Collection[str], to_call: int
+) -> frozenset[str]:
+    """The legal branches as LABELS — for membership tests by name.
+
+    ``legal_branches`` returns slot indices, and a caller testing a label
+    string against them gets a silently-always-false membership check —
+    caught once in ``feature_extract_v9`` (2026-08-29), where the
+    mirror-shaped test passed the bug on both sides. Callers that think
+    in names use this form; callers that index arrays use the index form.
+    """
+
+    return frozenset(
+        BRANCH_LABELS_V9[index] for index in legal_branches(available, to_call)
+    )
+
+
 __all__ = [
     "BRANCH_LABELS_V9",
     "BranchContractError",
@@ -178,4 +195,5 @@ __all__ = [
     "branch_action",
     "branch_index",
     "legal_branches",
+    "legal_branch_labels",
 ]
