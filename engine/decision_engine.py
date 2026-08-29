@@ -518,6 +518,28 @@ class DecisionEngine:
         # engine — the zero-diff invariant, fuzzed in
         # tests/test_rules_composition.py and held by the full suite.
         self.rule_layer = rule_layer if rule_layer is not None else DEFAULT_RULE_LAYER
+        # C2 and C3A size through `engine.rules.composition`, which only the
+        # v9 composed-value serve path consults (layer 2). This engine's
+        # sizer is the v7/v8 temperature path and CANNOT honour them, while
+        # `feature_extract_v9` DOES apply them to the branch-cost features.
+        # Enabling them here would therefore teach a corpus sizes this
+        # engine never plays — a train/serve divergence, silent in every
+        # test because the suite runs dial-off. Refuse instead.
+        unsupported = [
+            name
+            for name, dial in (
+                ("geometric (C2)", self.rule_layer.geometric),
+                ("snap (C3A)", self.rule_layer.snap),
+            )
+            if dial.enabled
+        ]
+        if unsupported:
+            raise ValueError(
+                f"{', '.join(unsupported)} cannot be served by this engine's"
+                " sizer: they act through engine.rules.composition, which"
+                " only the v9 composed-value path consults. Enabling them"
+                " here would diverge the features from the played sizes."
+            )
         # Opt-in memo for the Monte Carlo equity estimate, keyed on every
         # argument the estimate depends on. estimate_equity is deterministic,
         # so a hit returns the bit-identical float and behaviour cannot
@@ -1106,13 +1128,17 @@ class DecisionEngine:
         self._rule_verdicts = []
         if deadline_s < 2.0:
             action = self._deadline_action(table, allowed, available)
-            self._take_rule_verdicts()  # nothing can have fired; close it
+            # The deadline path can reach _sized_action (first-legal
+            # aggression), so C5 CAN fire here — carry the verdicts out
+            # rather than discarding them.
+            deadline_verdicts = self._take_rule_verdicts()
             return DecisionResult(
                 action=self._render(action, table, allowed, equity=None),
                 family="deadline",
                 equity=None,
                 situation_temperature=None,
                 deadline_fallback=True,
+                rule_verdicts=deadline_verdicts,
             )
 
         # Facing aggression, estimate equity against the strong part of the
@@ -1382,17 +1408,20 @@ class DecisionEngine:
                         ),
                         exposure=table_exposure(table),
                     )
-                    if damper_verdict.fired:
-                        self._record_rule_verdict(damper_verdict)
-                    pot_fraction = min(
-                        pot_fraction,
-                        0.5
-                        * (
-                            1.0
-                            + self.temperature_shaping.sizing_span
-                            * damped_boldness(boldness, damper_verdict)
-                        ),
+                    damped_fraction = 0.5 * (
+                        1.0
+                        + self.temperature_shaping.sizing_span
+                        * damped_boldness(boldness, damper_verdict)
                     )
+                    # Record only when the damped arm actually WINS the min.
+                    # In the hot regime it loses and the emitted size is
+                    # byte-identical to dial-off; journaling "sizes cooled"
+                    # there would assert an effect that did not happen —
+                    # the same attribution defect the composition carries a
+                    # _LaneRun to avoid.
+                    if damper_verdict.fired and damped_fraction < pot_fraction:
+                        self._record_rule_verdict(damper_verdict)
+                    pot_fraction = min(pot_fraction, damped_fraction)
         desired = base + max(big_blind, round(pot_fraction * (pot + call_chips)))
 
         if equity is None or equity < self.safety_gates.near_nut_floor:

@@ -33,7 +33,9 @@ impossible-by-construction; any failure aborts without reporting:
 1. **Planted step** — synthetic decisions whose fold rule steps at
    c* = 0.85 must recover a band edge in [0.80, 0.90].
 2. **Flat null** — synthetic decisions with a c-independent fold rule
-   must recover the FULL range (no distinguishable edge anywhere).
+   must resolve NOTHING: with no behavioural edge anywhere there is no
+   band to report, and emitting one would be the instrument inventing a
+   result.
 3. **Support** — on real data every c must lie in (0, 1] and the
    reference bucket must be non-empty, or there is nothing to
    distinguish from and the band is undefined.
@@ -195,7 +197,12 @@ def band_edge(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     # change, and reporting a kappa there would dress a corpus hole up as
     # a measurement (the exact P3 blind spot: the field almost never
     # faces near-stack bets).
-    resolved = stopped_on == "rejection" or lowest_indistinguishable == 0
+    # Reaching bin 0 without a rejection is NOT a resolved band: it means
+    # the walk never found a behavioural edge anywhere, and reporting
+    # kappa = 1 - C_EDGES[0] = 1.0 would emit a value SnapToCoverParams
+    # refuses (band must be <= 0.5). That is the flat-null shape, and the
+    # honest report is "no edge found".
+    resolved = stopped_on == "rejection"
     return {
         "reference": {
             "range": [C_EDGES[-2], C_EDGES[-1]],
@@ -205,7 +212,15 @@ def band_edge(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "per_bin": per_bin,
         "edge_c": edge_c,
         "kappa": round(1.0 - edge_c, 4) if resolved else None,
-        "status": "RESOLVED" if resolved else "UNRESOLVED: support ends at an empty bin",
+        "status": (
+            "RESOLVED"
+            if resolved
+            else (
+                "UNRESOLVED: support ends at an empty bin"
+                if stopped_on == "empty_bin"
+                else "UNRESOLVED: no behavioural edge found in any bin"
+            )
+        ),
         "stopped_on": stopped_on,
     }
 
@@ -225,10 +240,17 @@ def selftest(verbose: bool = True) -> None:
     if not 0.80 <= step["edge_c"] <= 0.90:
         raise AssertionError(f"gate 1: planted step at 0.85, recovered edge {step['edge_c']}")
     flat = band_edge(_synthetic(lambda c: 0.55, 20000, 8))
-    if flat["edge_c"] != C_EDGES[0]:
-        raise AssertionError(f"gate 2: flat rule must recover the full range, got edge {flat['edge_c']}")
+    # A c-independent rule has NO behavioural edge, so the walk must
+    # report no resolved band rather than "the band is everything".
+    if flat["kappa"] is not None or flat["status"].startswith("RESOLVED"):
+        raise AssertionError(
+            f"gate 2: a flat rule must resolve nothing, got {flat['status']}"
+        )
     if verbose:
-        print(f"selftest PASS: step edge {step['edge_c']}, flat edge {flat['edge_c']}")
+        print(
+            f"selftest PASS: step edge {step['edge_c']} (kappa {step['kappa']}),"
+            f" flat -> {flat['status']}"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:

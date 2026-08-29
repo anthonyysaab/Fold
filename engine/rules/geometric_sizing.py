@@ -14,11 +14,18 @@ The blend carries no new constants: ``w = max(0, b)`` — value-heavy reads
 move toward the geometric size, neutral and negative reads keep the lane
 band untouched (pressure/bluff lines keep their old shape) —
 
-    f_out = clamp((1 − w)·f_lane + w·f_geo,  minimum 0+,  lane top)
+    f_out = (1 − w)·f_lane + w·f_geo        while f_geo <= lane_top
+    f_out = f_lane                          otherwise (rule inert)
 
-At live SPR (median ~120) f_geo exceeds every lane top and the clamp
-returns the lane band: the rule self-deactivates exactly where stacks
-cannot be gotten in, which is the correct degradation.
+**Above the lane top the rule returns the lane fraction untouched and
+reports `fired: false`.** The geometric plan is infeasible there — even
+the band maximum every street cannot get stacks in — so the rule has no
+advice to give. At live SPR (median ~120) that is the normal case and
+the candidate self-deactivates, which is the correct degradation. An
+earlier version CLAMPED the blend at `lane_top` instead, which did the
+opposite: every mildly value-leaning read at live depth jumped to the
+band maximum. The formula above is the fix, and this docstring is the
+place that previously disagreed with it.
 
 Failure posture: unknown street or non-positive pot/eff → NOT FIRED, the
 untouched lane fraction is returned with a reason.

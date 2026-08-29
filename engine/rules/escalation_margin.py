@@ -1,45 +1,51 @@
 """C4 — escalation-priced call margins. Spec: ``engine/rules/README.md``.
 
 Each re-raise multiplicatively filters the opponent's range toward its
-top, so the equity a call needs rises with the raise count. Today's
-street margins price the third raise of a street like the first bet.
+top, so the equity a call needs rises with the wager count. Today's
+street margins price the third raise of a street like the first bet::
 
-    margin_added = kappa_e · max(0, opponent_raises_this_street − 1)
+    margin = ESCALATION_STEPS[min(street_aggressions, MEASURED_MAX_K)]
 
-**kappa_e is ESTIMATED, not authored** — measured 2026-08-29 on 1,903
-complete-information aggressive events
+**The margin is a MEASURED STEP TABLE, not an extrapolated slope.**
+Measured 2026-08-29 on 1,903 complete-information aggressive events
 (``artifacts/evaluations/escalation-shift-estimate-2026-08-29.json``):
-the k-th aggressor's equity against a random holding climbs
-0.6436 → 0.7235 → 0.7626 for k = 1, 2, 3+, slope
+the k-th aggressor's equity against a random holding reads
 
-    kappa_e = +0.0671 equity per extra raise (SE 0.0065, t ≈ 10.3).
+    k = 1: 0.6436 (n=1587)   k = 2: 0.7235 (n=231)   k >= 3: 0.7626 (n=85)
 
-**The count must match the estimand, and the estimand is the STREET
-ORDINAL.** ``estimate_escalation_shift`` indexes each aggressive event by
-its position among *all* aggressive actions of its street, hero's
-included, and measures how much stronger the k-th aggressor is. So the
-applied count is the street's total aggression count — the same quantity
-``game_state._aggression_count`` (and the ``raises_current_street``
-feature) already computes. An earlier draft excluded hero's own actions
-on the reasoning that opponent pressure is the real signal; that is
-defensible in the abstract but it silently applies the measured number
-to a *different* quantity than it was measured on, under-pricing every
-street where hero bet first and was raised — exactly the 3-bet spot the
-margin exists for. Fixed 2026-08-29.
+so the extra equity a call must find is the STEP from k = 1 — +0.0799 at
+k = 2, +0.1190 at k >= 3 — read straight off the measurement.
 
-**How the margin composes with tracked wildness.** The wiring scales it
-once, as ``margin += margin_added * (1 - wildness)``, and it is
-deliberately NOT added to ``neutral_price``. The gate blend is
-``required = (1 - w)*floor + w*neutral_price``: it slides TOWARD
-neutral_price as wildness rises, so a margin placed there would be
-*preserved* against a tracked maniac — exactly backwards, since a
-maniac's raises carry no range information and the margin exists to
-price range narrowing. An earlier draft of this docstring (and of the
-spec) said "flows into neutral_price"; that wording was wrong and the
-amendment is recorded in ``engine/rules/README.md``.
+An earlier version fitted a single linear slope (``kappa_e = 0.0671``)
+and multiplied it by an unbounded ``count - 1``. That was wrong twice.
+(1) **The slope was an artifact of the reporting cap**: refitting the
+same 1,903 rows with the k-bucket cap at 2 / 3 / 5 / uncapped gives
+0.0904 / 0.0671 / 0.0551 / 0.0490 — a spread of 2.8x the published
+standard error, on a constant the module described as a display
+bucket. The relationship is concave, so no single slope survives the
+choice. (2) **It extrapolated past its support**: k > 3 has 30 rows
+total and the slope kept multiplying, so a five-bet street demanded a
+margin larger than the parameter validator's own legal ceiling. The
+step table has neither failure mode: it is the measurement itself, and
+it saturates at the edge of the data by construction.
 
-Failure posture: a negative or malformed count reads as zero raises —
-zero margin added, never a negative one.
+**The count is the STREET ORDINAL, hero's own aggression included.**
+``estimate_escalation_shift`` indexes each event by its position among
+all aggressive actions of its street, so the applied count must be the
+same quantity. An earlier draft excluded hero's actions, which applied
+the measured number to a different quantity and under-priced exactly
+the bet-then-raised spot the margin exists for.
+
+**How the margin composes with tracked wildness.** ``escalation_margin``
+returns ``margin_applied`` already scaled by ``(1 - wildness)``, and the
+wiring adds that. It is deliberately NOT added to ``neutral_price``: the
+gate blend is ``required = (1 - w)*floor + w*neutral_price``, which
+slides TOWARD neutral_price as wildness rises, so a margin placed there
+would be *preserved* against a tracked maniac — backwards, since a
+maniac's raises carry no range information.
+
+Failure posture: a negative or malformed count reads as zero wagers —
+zero margin, never a negative one.
 """
 
 from __future__ import annotations
@@ -52,26 +58,46 @@ from engine.game_state import _AGGRESSIVE_ACTIONS, _mapping, _sequence
 
 RULE_NAME = "C4-escalation-margin"
 
-#: The measured value and its provenance; the dataclass default mirrors it.
-KAPPA_E_ESTIMATED = 0.0671
+#: The measured step table: extra equity demanded at k wagers this
+#: street, read directly off the per-k means in the artifact below. Index
+#: is the wager count; entry 0 is unused, entry 1 is the base case.
+#: Extending this table requires re-measuring, never extrapolating.
+ESCALATION_STEPS: tuple[float, ...] = (0.0, 0.0, 0.0799, 0.1190)
+#: The largest wager count the measurement supports. Counts above it read
+#: the last measured step — saturation, not extrapolation.
+MEASURED_MAX_K = len(ESCALATION_STEPS) - 1
 KAPPA_E_SOURCE = "artifacts/evaluations/escalation-shift-estimate-2026-08-29.json"
 
 
 @dataclass(frozen=True, slots=True)
 class EscalationMarginParams:
     enabled: bool = False
-    kappa_e: float = KAPPA_E_ESTIMATED
+    #: Overridable for ablation; must stay non-decreasing and start at 0.
+    steps: tuple[float, ...] = ESCALATION_STEPS
 
     def __post_init__(self) -> None:
         if isinstance(self.enabled, int) and not isinstance(self.enabled, bool):
             raise ValueError("enabled must be a bool")
-        if (
-            isinstance(self.kappa_e, bool)
-            or not isinstance(self.kappa_e, (int, float))
-            or not math.isfinite(self.kappa_e)
-            or not 0.0 <= self.kappa_e <= 0.5
-        ):
-            raise ValueError("kappa_e must be a finite number in [0, 0.5]")
+        steps = tuple(self.steps)
+        if len(steps) < 2 or steps[0] != 0.0 or steps[1] != 0.0:
+            raise ValueError(
+                "steps must start (0.0, 0.0): one wager is the base case"
+            )
+        previous = 0.0
+        for value in steps:
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or not 0.0 <= value <= 0.5
+                or value < previous
+            ):
+                raise ValueError(
+                    "each step must be a finite number in [0, 0.5] and"
+                    " non-decreasing"
+                )
+            previous = value
+        object.__setattr__(self, "steps", steps)
 
 
 DEFAULT_ESCALATION_MARGIN = EscalationMarginParams()
@@ -130,28 +156,44 @@ def escalation_margin(
 ) -> EscalationVerdict:
     """Extra call margin for facing escalation beyond the first wager.
 
-    ``wildness`` is the tracker's reading; ``margin_applied`` is already
-    scaled by ``(1 - wildness)``, so the journaled verdict records the
-    number that actually moved the gate rather than a pre-scaling one a
-    diagnosis would have to re-derive. See the module docstring for why
-    the scaling belongs here and not in ``neutral_price``.
+    The margin is read from the measured step table and SATURATES at the
+    edge of its support; it is never extrapolated. ``wildness`` is the
+    tracker's reading, and ``margin_applied`` is already scaled by
+    ``(1 - wildness)`` so the journaled verdict records the number that
+    actually moved the gate.
     """
 
     if not params.enabled:
         return EscalationVerdict(RULE_NAME, False, 0, 0.0, 0.0, 0.0, "disabled")
     count = max(0, int(aggressions)) if isinstance(aggressions, int) else 0
-    extra = max(0, count - 1)
     w = min(1.0, max(0.0, float(wildness)))
-    if extra == 0:
+    index = min(count, len(params.steps) - 1)
+    raw = params.steps[index] if index >= 1 else 0.0
+    if raw == 0.0:
         return EscalationVerdict(
             RULE_NAME, False, count, 0.0, w, 0.0,
             "at most one wager this street: base margin",
         )
-    raw = params.kappa_e * extra
     applied = raw * (1.0 - w)
+    saturated = count > len(params.steps) - 1
     reason = f"{count} wagers this street: +{applied:.4f} equity demanded"
+    if saturated:
+        reason += f" (measured support ends at {len(params.steps) - 1})"
     if w:
         reason += f" (raw {raw:.4f} dissolved by wildness {w:.2f})"
     return EscalationVerdict(
         RULE_NAME, applied > 0.0, count, raw, w, applied, reason
     )
+
+
+__all__ = [
+    "RULE_NAME",
+    "ESCALATION_STEPS",
+    "MEASURED_MAX_K",
+    "KAPPA_E_SOURCE",
+    "EscalationMarginParams",
+    "DEFAULT_ESCALATION_MARGIN",
+    "EscalationVerdict",
+    "escalation_margin",
+    "street_aggressions",
+]

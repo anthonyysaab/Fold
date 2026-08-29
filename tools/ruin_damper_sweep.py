@@ -243,7 +243,10 @@ def contrasts(per_arm: Mapping[str, Mapping[str, Any]]) -> dict:
             diffs = [b - a for a, b in zip(base, other, strict=True)]
             stats = paired_stats(diffs)
             mde = round(2.0 * stats["sd"] / math.sqrt(len(diffs)), 2)
-            if abs(stats["mean"]) < mde:
+            # <= , not <: a zero difference at a zero MDE is the NULL
+            # MIRROR's signature, and `<` classified it as a resolved
+            # directional win — the control the instrument exists to check.
+            if abs(stats["mean"]) <= mde:
                 verdict = "UNRESOLVED"
             elif stats["mean"] > 0:
                 verdict = f"{label} ahead"
@@ -259,7 +262,7 @@ def contrasts(per_arm: Mapping[str, Mapping[str, Any]]) -> dict:
             ]
             ruin = paired_stats(ruin_diffs)
             ruin_mde = round(2.0 * ruin["sd"] / math.sqrt(len(ruin_diffs)), 4)
-            if abs(ruin["mean"]) < ruin_mde:
+            if abs(ruin["mean"]) <= ruin_mde:
                 ruin_verdict = "UNRESOLVED"
             elif ruin["mean"] > 0:
                 ruin_verdict = f"{label} busts more"
@@ -296,7 +299,10 @@ def reproduction_gate(report: Mapping[str, Any]) -> dict:
         shared = min(len(want), len(got))
         channels[channel] = {
             "seeds_compared": shared,
-            "identical": want[:shared] == got[:shared],
+            # A channel with nothing to compare is NOT a pass: an empty
+            # frozen arm would otherwise satisfy a gate whose stated
+            # meaning is "this run IS the frozen instrument".
+            "identical": shared > 0 and want[:shared] == got[:shared],
         }
     matched = all(row["identical"] for row in channels.values())
     return {

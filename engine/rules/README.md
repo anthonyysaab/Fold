@@ -1,6 +1,8 @@
 # engine/rules — the composed rule-layer candidates (C1–C5)
 
-**Status: BUILT, ALL DIALS OFF — Phase 3 landed 2026-08-29.** The five
+**Status: BUILT, ALL DIALS OFF — Phase 3 landed 2026-08-29; two
+adversarial sweeps (2026-08-29 foundations, 2026-08-30 fixes) found and
+closed 21 defects between them.** The five
 modules and the composition below exist exactly to this spec; nothing
 consults them until Phase-4 wiring, and importing the package changes no
 behavior (the zero-diff invariant is fuzzed in
@@ -57,6 +59,36 @@ passes the implementation's bug.** Findings 1 and 4 both had green tests
 written from the same wrong premise as the code. Regression tests here
 derive their expectations from an independent source — the pot
 convention, the live journal, or a hand-built state.
+
+## Second sweep, 2026-08-30 — the FIXES reviewed, twelve more defects
+
+The first sweep reviewed the foundations; this one reviewed **the fixes**,
+after they were written fast and merged. 41 agents, zero failures, 36 raw
+findings, **32 confirmed / 4 refuted / 0 unverified** (the earlier run
+conflated dead agents with refutations — the script now separates them).
+Distinct defects, after de-duplication:
+
+| # | where | defect |
+|---|---|---|
+| 10 | `estimate_escalation_shift` → `escalation_margin` | **BLOCKER: κ_e was an artifact of `K_CAP`.** The k-bucket cap was documented as a *display* bucket but was also the regressor: refitting the same 1,903 rows at caps 2 / 3 / 5 / ∞ gives 0.0904 / 0.0671 / 0.0551 / 0.0490 — a **2.8× SE spread** on a constant nobody was treating as a parameter, because the relationship is concave and no single slope survives the choice. The slope is gone; C4 now reads a **measured step table** (+0.0799 at k=2, +0.1190 at k≥3) straight off the per-k means. |
+| 11 | `escalation_margin` | The slope also **extrapolated past its support** — `count − 1` was unbounded over 30 rows above k=3, so a long street demanded more than the validator's own ceiling. The step table saturates by construction. |
+| 12 | `decision_engine` | **C2 and C3A were inert at serve while the extractor applied them.** The engine consults only C1/C4/C5; the composition (C2/C3A) is reached solely by the v9 path, which does not exist until L2 — but `feature_extract_v9` *does* apply them to the branch-cost features. Enabling either would have taught a corpus sizes the engine never plays. The engine now **refuses** those dials rather than silently diverging. |
+| 13 | `decision_engine` (C5) | The damper journaled `fired: "sizes cooled"` on every hot-regime decision where the min discards the damped fraction and the emitted size is byte-identical to dial-off — the same false-attribution class as finding 3, at the engine site. Recorded only when the damped arm actually wins. |
+| 14 | `commitment_gate` | At the effective-stack collapse `spr_post` went **negative**, contradicting the docstring and journaling a nonsense ratio beside a reason about a shove nobody can make. Clamped at 0 (fully committed), which fires the gate identically. |
+| 15 | `decision_engine` | The deadline path's drain carried the comment "nothing can have fired" — false, since that path reaches `_sized_action`, so a C5 verdict was silently discarded. It is now carried out on the result. |
+| 16 | `ruin_damper_sweep` | The verdict boundary used `<` rather than `<=`, so a zero difference at a zero MDE read as a **resolved directional win** — which is precisely the null mirror's signature, meaning the instrument's own control could be labelled a win. Also: the reproduction gate passed **vacuously** when a frozen channel carried no seeds, despite its stated meaning being "this run IS the frozen instrument". |
+| 17 | `estimate_snap_band` | A bin walk reaching bin 0 without ever rejecting was reported RESOLVED with κ = 1.0 — a value `SnapToCoverParams` refuses. That is the flat-null shape; it now reports "no behavioural edge found", and the selftest's flat gate asserts *nothing resolves* rather than "the band is everything". |
+| 18 | tests | `test_free_spot_raise_is_an_active_wager` was **vacuous** — it passed verbatim on the pre-fix contract, because `all-in` alone already made the lane legal; it now omits `all-in` so only `raise` can. The `betRange`/`raiseRange` fallback had **no test at all**. `test_still_blends_inside_the_band` asserted an identity of the implementation; it now asserts the textbook 0.54. |
+| 19 | docs | The fix commit updated the defect table and some docstrings but **not the normative spec sections**: C3A still specified the one-sided band it had just fixed, C4 still specified the opponent-only count and the `neutral_price` placement, C2's docstring still printed the clamp formula that caused its bug, and C4's "corrected" verdict-field list named the two fields that same commit deleted. All rewritten. |
+
+**What this sweep is evidence for.** Reviewing fixes is not optional
+politeness: the fix pass introduced or left twelve defects, one of them a
+blocker in a *published parameter*, and one (finding 12) a train/serve
+divergence that no test could have caught because the suite runs
+dial-off. The three lessons now on the record — a test that mirrors the
+implementation passes its bug; a dead agent is not a refutation; a
+documented "display" constant can be a live regressor — were each paid
+for once.
 
 Five mechanisms elevate money-geometry ratios and coverage into the rule
 layer. Each is its **own module, own parameter dataclass, own default-off
@@ -173,10 +205,14 @@ are.
 
 **Rule A — snap-to-cover (primary).** For each active opponent j hero
 covers, their all-in to-amount is `allin_j = currentBet_j + stack_j`.
-When the composed target satisfies `target_to ≥ (1 − κ)·allin_j`, snap
-`target_to := allin_j` for the **largest covered** such j (covering it
-covers the smaller). A raise that leaves a short stack 4bb behind buys
-the same fold decision at worse leverage; the snap makes it clean.
+When the composed target lands in the band BELOW that all-in —
+`(1 − κ)·allin_j ≤ target_to ≤ allin_j` — snap `target_to := allin_j`
+for the **largest covered** such j (covering it covers the smaller). A
+raise that leaves a short stack 4bb behind buys the same fold decision
+at worse leverage; the snap makes it clean. The band is **two-sided**:
+the rule closes a small gap upward, and a one-sided test admits every
+covered all-in however far below, letting `max()` snap a large wager
+DOWN onto a tiny stack.
 
 **Rule B — cover damp (deferrable).** When an active opponent covers
 hero, scale the aggressive stack cap `s` down with the cover margin.
@@ -205,21 +241,34 @@ toward its top (classical 3-bet/4-bet theory), so required calling
 equity rises with the raise count. Today `_CALL_MARGINS` keys on street
 alone; the third raise of a street prices like the first bet.
 
-**Rule.** `margin += κ_e · max(0, opp_raises_this_street − 1)`, with the
-count **rebuilt to exclude hero's own actions** (the current
-`raises_current_street` includes them — it measures table escalation,
-not opponent pressure). The addition flows into `neutral_price`, so the
-existing wildness blend dissolves it against tracked maniacs
-automatically — no second mechanism, by construction.
+**Rule.** `margin += ESCALATION_STEPS[min(street_aggressions, 3)]`,
+pre-scaled by `(1 − wildness)` inside the module. Two properties, both
+learned the hard way:
 
-**Parameters.** κ_e: **estimated** — recipe: in the complete-information
-replays, measure `E[opponent equity vs hero | k opponent raises]` as a
-function of k; κ_e is the per-extra-raise shift. Direct, because those
-replays carry the opponent's actual cards.
+- The count is the **street ordinal, hero's own aggression included** —
+  the quantity the estimator indexes by. Excluding hero applies a
+  measured number to a different quantity and under-prices the
+  bet-then-raised spot the margin exists for.
+- The scaled margin is added to the **call margin, never to
+  `neutral_price`**. The gate blend is
+  `required = (1 − w)·floor + w·neutral_price`, which slides TOWARD
+  neutral_price as wildness rises — so a margin placed there would be
+  *preserved* against a tracked maniac, exactly backwards.
 
-**Verdict fields.** `rule`, `fired`, `opponent_raises`,
-`margin_added`, `reason`. (The wildness scaling happens at the wiring
-site, on the margin the verdict reports.)
+**Parameters — a MEASURED STEP TABLE, not a fitted slope.** The per-k
+means are the measurement: k=1 **0.6436** (n=1587), k=2 **0.7235**
+(n=231), k≥3 **0.7626** (n=85), so the extra equity demanded is the step
+from k=1: **+0.0799** at k=2, **+0.1190** at k≥3, and it **saturates**
+there. An earlier version fitted a single slope (κ_e = 0.0671) and
+multiplied an unbounded `count − 1`. That failed twice: the slope was an
+artifact of the reporting cap (refitting the same rows at caps 2/3/5/∞
+gives 0.0904/0.0671/0.0551/0.0490 — a 2.8× SE spread on a constant
+documented as a display bucket, because the relationship is concave),
+and it extrapolated past a support of 30 rows above k=3, demanding more
+than the validator's own ceiling on a long street.
+
+**Verdict fields.** `rule`, `fired`, `street_aggressions`, `margin_raw`,
+`wildness`, `margin_applied`, `reason`.
 
 ---
 

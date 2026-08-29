@@ -14,6 +14,7 @@ import unittest
 
 from engine import schema3, schema4
 from engine.aggression_sizing import (
+    active_bet_wager,
     aggressive_target,
     table_boldness,
 )
@@ -101,6 +102,21 @@ def _snapshot(
             },
         ],
     }
+
+
+def _read_equity(table: dict, seed: int) -> float:
+    """g's own read-equity for a snapshot, recomputed independently."""
+
+    from engine.game_state import active_opponent_count
+
+    hero = table["seats"][0]
+    return estimate_equity(
+        (hero["holeCards"][0], hero["holeCards"][1]),
+        tuple(table["boardCards"]),
+        active_opponent_count(table),
+        trials=_EQUITY_TRIALS,
+        seed=seed,
+    )
 
 
 _FREE_SPOT = dict(
@@ -206,6 +222,40 @@ class DeltaDefinitionTests(unittest.TestCase):
         self.assertEqual(values["branch_aggressive_executable"], 0.0)
         self.assertEqual(values["legal_fatal"], 0.0)  # free check: fold dominated
         self.assertGreater(values["cost_active_eff"], 0.0)
+
+    def test_free_spot_raise_shape_uses_the_raise_range(self) -> None:
+        """27 live rows offer 'raise' at to_call == 0 with betRange null.
+
+        Without the raiseRange fallback the cost skips the clamped path
+        entirely, so this asserts the CLAMPED value — which is what the
+        engine would actually wager — not merely that it is non-zero.
+        """
+
+        table = _snapshot(
+            street="preflop",
+            board=(),
+            to_call=0,
+            available=("check", "fold", "raise", "all-in"),
+            bet_range=None,
+            # Minimum deliberately ABOVE g's unclamped wager, so the clamp
+            # decides the cost: the un-fixed path found no range at all and
+            # reported the raw target, which differs here.
+            raise_range=(500, 640),
+        )
+        values = dict(
+            zip(schema4.FEATURE_NAMES_V9, extract_features_v9(table, seed=7))
+        )
+        self.assertEqual(values["legal_active"], 1.0)
+        self.assertEqual(values["legal_aggressive"], 0.0)  # still escalation-only
+
+        eff = max(1, effective_stack_chips(table))
+        raw = active_bet_wager(
+            table["potChips"],
+            table_boldness(table, table["allowedActions"], _read_equity(table, 7)),
+        )
+        self.assertLess(raw, 500)                       # the clamp must bind
+        self.assertEqual(values["cost_active_eff"], min(1.0, 500 / eff))
+        self.assertNotEqual(values["cost_active_eff"], min(1.0, raw / eff))
 
     def test_dials_off_aggressive_cost_is_bare_g(self) -> None:
         """The composed cost with every dial off equals g recomputed here."""

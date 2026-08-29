@@ -10,9 +10,13 @@ The three composition invariants are fuzzed, not asserted in prose:
 - **Attribution** — exactly one setter per composed wager, drawn from the
   closed vocabulary.
 
-Plus per-module checks: C1's derived threshold identity, C4's counter
-excluding hero and its measured default, C3's largest-in-band choice, and
-the same bool/NaN parameter hardening g carries.
+Plus per-module checks: C1's derived threshold identity, C4's street
+ordinal and its measured step table, C3's largest-in-band choice, and the
+same bool/NaN parameter hardening g carries. Every regression test here
+derives its expectation from an INDEPENDENT source (the pot convention,
+the live journal, a textbook value, a hand-built state) — twice now a
+test written from the same premise as the code has passed the code's
+bug.
 """
 
 from __future__ import annotations
@@ -39,7 +43,6 @@ from engine.rules import (
     street_aggressions,
     snap_to_cover,
 )
-from engine.rules.escalation_margin import KAPPA_E_ESTIMATED
 
 _FUZZ_SEED = 0xC0FFEE
 _FUZZ_CASES = 300
@@ -272,7 +275,9 @@ class GeometricTests(unittest.TestCase):
             lane_top=1.0,
         )
         self.assertTrue(verdict.fired)
-        self.assertAlmostEqual(verdict.f_out, verdict.f_geo)
+        # Independent expectation: SPR 4 over 3 remaining streets is the
+        # textbook ~0.54 pot, and at w = 1 the blend IS that target.
+        self.assertAlmostEqual(verdict.f_out, 0.5400, places=3)
         self.assertLess(verdict.f_out, 1.0)
 
 
@@ -346,23 +351,43 @@ class AttributionTests(unittest.TestCase):
 
 
 class EscalationTests(unittest.TestCase):
-    def test_default_is_the_measured_value(self) -> None:
-        self.assertEqual(
-            EscalationMarginParams().kappa_e, KAPPA_E_ESTIMATED
-        )
+    def test_default_is_the_measured_step_table(self) -> None:
+        from engine.rules.escalation_margin import ESCALATION_STEPS
+
+        self.assertEqual(EscalationMarginParams().steps, ESCALATION_STEPS)
+        # The steps ARE the measured per-k means minus the k=1 mean, read
+        # off the artifact rather than restated here as a slope.
+        self.assertAlmostEqual(ESCALATION_STEPS[2], 0.7235 - 0.6436, places=4)
+        self.assertAlmostEqual(ESCALATION_STEPS[3], 0.7626 - 0.6436, places=4)
+
+    def test_margin_saturates_at_the_measured_support(self) -> None:
+        """Regression: the slope form multiplied an UNBOUNDED count, so a
+        long street demanded more than the validator's own ceiling."""
+
+        params = EscalationMarginParams(enabled=True)
+        top = escalation_margin(params, 3).margin_applied
+        for count in (4, 8, 50):
+            self.assertEqual(escalation_margin(params, count).margin_applied, top)
+            self.assertLessEqual(escalation_margin(params, count).margin_applied, 0.5)
+        self.assertIn("measured support ends", escalation_margin(params, 9).reason)
+
+    def test_steps_must_be_non_decreasing_and_bounded(self) -> None:
+        for bad in ((0.0, 0.0, 0.2, 0.1), (0.0, 0.1), (0.0, 0.0, 0.9), (0.0,)):
+            with self.assertRaises(ValueError):
+                EscalationMarginParams(steps=bad)
 
     def test_margin_shape(self) -> None:
         params = EscalationMarginParams(enabled=True)
         self.assertEqual(escalation_margin(params, 0).margin_applied, 0.0)
         self.assertEqual(escalation_margin(params, 1).margin_applied, 0.0)
         self.assertAlmostEqual(
-            escalation_margin(params, 3).margin_applied, 2 * params.kappa_e
+            escalation_margin(params, 2).margin_applied, params.steps[2]
         )
         # The journaled number is the one that moved the gate: already
         # scaled by (1 - wildness), with the raw value kept beside it.
         damped = escalation_margin(params, 3, wildness=0.25)
-        self.assertAlmostEqual(damped.margin_raw, 2 * params.kappa_e)
-        self.assertAlmostEqual(damped.margin_applied, 2 * params.kappa_e * 0.75)
+        self.assertAlmostEqual(damped.margin_raw, params.steps[3])
+        self.assertAlmostEqual(damped.margin_applied, params.steps[3] * 0.75)
 
     def test_counter_is_the_street_ordinal(self) -> None:
         table = {
@@ -667,11 +692,67 @@ class SweepRegressionTests(unittest.TestCase):
 
         from engine.branch_contract_v9 import legal_branch_labels
 
-        labels = legal_branch_labels({"check", "fold", "raise", "all-in"}, 0)
+        # NO 'all-in' and NO 'bet': only 'raise' can make the active lane
+        # legal here. The pre-fix contract passed the with-all-in form
+        # trivially, which is why the first version of this test was
+        # vacuous.
+        labels = legal_branch_labels({"check", "fold", "raise"}, 0)
         self.assertIn("active", labels)
         self.assertIn("passive", labels)
         self.assertNotIn("aggressive", labels)   # escalation-only
         self.assertNotIn("fatal", labels)        # dominated at a free check
+
+    def test_engine_refuses_dials_its_sizer_cannot_honour(self) -> None:
+        """C2/C3A act through the composition, which only the v9 serve path
+        consults — but feature_extract_v9 DOES apply them. Enabling them on
+        this engine would teach a corpus sizes it never plays."""
+
+        from engine.decision_engine import DecisionEngine
+        from engine.rules.composition import RuleLayerParams
+
+        def build(**dials):
+            return type(
+                "Probe", (DecisionEngine,), {"_family": lambda self, f: "check_call"}
+            )(rule_layer=RuleLayerParams(**dials))
+
+        for dials in (
+            {"geometric": GeometricSizingParams(enabled=True)},
+            {"snap": SnapToCoverParams(enabled=True)},
+        ):
+            with self.assertRaises(ValueError):
+                build(**dials)
+        # The three the sizer and ladder DO honour construct fine.
+        build(
+            damper=RuinDamperParams(enabled=True),
+            commitment=CommitmentGateParams(enabled=True),
+            escalation=EscalationMarginParams(enabled=True),
+        )
+
+    def test_damper_verdict_only_journals_when_it_wins(self) -> None:
+        """In the hot regime the damped fraction loses the min, so the size
+        is byte-identical to dial-off; journaling "sizes cooled" there
+        would assert an effect that did not happen."""
+
+        from engine.decision_engine import DecisionEngine
+        from engine.rules.composition import RuleLayerParams
+
+        engine = type(
+            "Probe", (DecisionEngine,), {"_family": lambda self, f: "aggress"}
+        )(
+            seed=3,
+            rule_layer=RuleLayerParams(
+                damper=RuinDamperParams(enabled=True, kappa_r=8.0)
+            ),
+        )
+        table = _snapshot(
+            street="preflop", board=(), to_call=0,
+            available=("check", "bet"), bet_range=(100, 700), raise_range=None,
+        )
+        engine._rule_verdicts = []
+        engine._sized_action("bet", table, table["allowedActions"], 0.05)
+        self.assertEqual(
+            [v for v in engine._rule_verdicts if v["rule"] == "C5-ruin-damper"], []
+        )
 
     def test_verdict_accumulator_closes_after_a_decision(self) -> None:
         from engine.decision_engine import DecisionEngine
@@ -690,8 +771,8 @@ class ParameterHardeningTests(unittest.TestCase):
             lambda: CommitmentGateParams(spr_threshold=float("nan")),
             lambda: SnapToCoverParams(band=True),
             lambda: SnapToCoverParams(band=0.0),
-            lambda: EscalationMarginParams(kappa_e=True),
-            lambda: EscalationMarginParams(kappa_e=float("nan")),
+            lambda: EscalationMarginParams(steps=(0.0, 0.0, True)),
+            lambda: EscalationMarginParams(steps=(0.0, 0.0, float("nan"))),
             lambda: RuinDamperParams(kappa_r=True),
             lambda: RuinDamperParams(kappa_r=0.0),
         ):

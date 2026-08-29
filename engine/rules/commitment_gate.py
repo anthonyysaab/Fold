@@ -101,7 +101,13 @@ def forward_commitment(
     # pot). The first draft double-counted the outstanding bet, which
     # inflated the denominator and fired the gate ~33% past its derived
     # boundary on a pot-sized bet.
-    spr_post = (gate_stack - to_call) / (pot + to_call)
+    # Clamped at 0: when the price exceeds what is behind (the
+    # effective-stack collapse, where gate_stack is 1), the call leaves
+    # nothing, and a NEGATIVE ratio would journal a nonsense spr_post
+    # beside a reason that talks about a next-street shove nobody can
+    # make. Zero is the honest reading — fully committed — and it fires
+    # the gate exactly as before.
+    spr_post = max(0.0, (gate_stack - to_call) / (pot + to_call))
     if spr_post <= params.spr_threshold:
         return CommitmentVerdict(
             RULE_NAME,

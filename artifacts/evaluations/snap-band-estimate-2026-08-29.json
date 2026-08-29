@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T15:08:27.026410+00:00",
+  "generated_at": "2026-08-29T22:54:32.284004+00:00",
   "tool": "tools.estimate_snap_band",
   "recipe": "engine/rules/README.md C3",
   "roots": [
@@ -138,5 +138,5 @@
     "not_facing_a_wager": 1666,
     "excluded_agent_decisions": 98
   },
-  "elapsed_s": 1.6
+  "elapsed_s": 4.9
 }
