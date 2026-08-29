@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-08-29T15:08:27.026410+00:00",
+  "tool": "tools.estimate_snap_band",
+  "recipe": "engine/rules/README.md C3",
+  "roots": [
+    "foreign play data\\20260812T082057Z_poker-playground_s13_top15",
+    "foreign play data\\20260815T210237Z_poker-playground_s14_top15"
+  ],
+  "files_walked": 1196,
+  "excluded_agents": [
+    "Fold-ver-4"
+  ],
+  "rows": 7320,
+  "c_edges": [
+    0.0,
+    0.2,
+    0.4,
+    0.6,
+    0.7,
+    0.8,
+    0.85,
+    0.9,
+    0.95,
+    0.97,
+    1.0
+  ],
+  "result": {
+    "reference": {
+      "range": [
+        0.97,
+        1.0
+      ],
+      "n": 15,
+      "fold_rate": 0.4666666666666667
+    },
+    "per_bin": {
+      "8": {
+        "n": 0
+      },
+      "7": {
+        "n": 0
+      },
+      "6": {
+        "range": [
+          0.85,
+          0.9
+        ],
+        "n": 1,
+        "fold_rate": 1.0,
+        "z_vs_allin": 1.0327955589886446,
+        "rejected": false
+      },
+      "5": {
+        "range": [
+          0.8,
+          0.85
+        ],
+        "n": 1,
+        "fold_rate": 0.0,
+        "z_vs_allin": -0.9108400680852976,
+        "rejected": false
+      },
+      "4": {
+        "range": [
+          0.7,
+          0.8
+        ],
+        "n": 3,
+        "fold_rate": 0.6666666666666666,
+        "z_vs_allin": 0.6324555320336757,
+        "rejected": false
+      },
+      "3": {
+        "range": [
+          0.6,
+          0.7
+        ],
+        "n": 2,
+        "fold_rate": 0.5,
+        "z_vs_allin": 0.0887151079037295,
+        "rejected": false
+      },
+      "2": {
+        "range": [
+          0.4,
+          0.6
+        ],
+        "n": 8,
+        "fold_rate": 0.5,
+        "z_vs_allin": 0.15242153139344594,
+        "rejected": false
+      },
+      "1": {
+        "range": [
+          0.2,
+          0.4
+        ],
+        "n": 19,
+        "fold_rate": 0.42105263157894735,
+        "z_vs_allin": -0.265973244326277,
+        "rejected": false
+      },
+      "0": {
+        "range": [
+          0.0,
+          0.2
+        ],
+        "n": 7271,
+        "fold_rate": 0.6884885160225553,
+        "z_vs_allin": 1.8524352511914384,
+        "rejected": false
+      }
+    },
+    "edge_c": 0.97,
+    "kappa": null,
+    "status": "UNRESOLVED: support ends at an empty bin",
+    "stopped_on": "empty_bin"
+  },
+  "pot_odds_terciles": {
+    "low": {
+      "n": 2442,
+      "kappa": null,
+      "edge_c": 0.97
+    },
+    "mid": {
+      "n": 4774,
+      "kappa": null,
+      "edge_c": 0.97
+    },
+    "high": {
+      "n": 104,
+      "kappa": null,
+      "edge_c": 0.97
+    }
+  },
+  "stats": {
+    "rows": 7320,
+    "not_facing_a_wager": 1666,
+    "excluded_agent_decisions": 98
+  },
+  "elapsed_s": 1.6
+}

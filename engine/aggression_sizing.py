@@ -80,7 +80,14 @@ from engine.game_state import (
 #: Recorded in every v9 architecture block, corpus header, and sidecar.
 #: Bump ONLY with a new identity string — never change formulas under an
 #: existing id; stored corpora re-derive their sizes against this name.
-G_IDENTITY = "g-v9-linear-boldness-1"
+#:
+#: History: "g-v9-linear-boldness-1" (2026-08-29, never harvested
+#: against) -> "g-v9-composed-1" when the rules composition (engine/rules,
+#: C2 geometric blend + C3A snap + C5 damper) joined the sizing path.
+#: With every rules dial OFF, composed-1 reproduces linear-boldness-1
+#: bit-for-bit — the zero-diff invariant in tests/test_rules_composition.py
+#: is the proof, fuzzed per state.
+G_IDENTITY = "g-v9-composed-1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,9 +330,21 @@ def active_bet_wager(
     ``_sized_action`` legalizes.
     """
 
+    return active_wager_from_fraction(
+        pot=pot, fraction=active_bet_fraction(boldness, parameters)
+    )
+
+
+def active_wager_from_fraction(*, pot: int, fraction: float) -> float:
+    """The active-lane chip formula at an explicit fraction.
+
+    Single definition site for the arithmetic — ``active_bet_wager`` and
+    the rules composition both route through here, so they cannot drift.
+    """
+
     if pot < 0:
         raise ValueError("pot cannot be negative")
-    return active_bet_fraction(boldness, parameters) * pot
+    return fraction * pot
 
 
 def aggressive_fractions(
@@ -372,14 +391,57 @@ def aggressive_target(
             "the aggressive lane is masked at to_call == 0 —"
             " unprovoked wagers belong to the active lane"
         )
+    fraction, cap = aggressive_fractions(boldness, parameters)
+    return aggressive_target_from_fractions(
+        pot=pot,
+        to_call=to_call,
+        effective_stack=effective_stack,
+        fraction=fraction,
+        cap=cap,
+    )
+
+
+def aggressive_arms(
+    *,
+    pot: int,
+    to_call: int,
+    effective_stack: int,
+    fraction: float,
+    cap: float,
+) -> tuple[float, float]:
+    """``(pot arm, stack arm)`` at explicit fractions — the ONE place the
+    two arms are written, so consumers that need to know which arm bound
+    (the rules composition's attribution) read it here instead of
+    restating the formula."""
+
     if pot < 0:
         raise ValueError("pot cannot be negative")
     if int(effective_stack) < 0:
         raise ValueError("effective_stack cannot be negative")
-    fraction, cap = aggressive_fractions(boldness, parameters)
-    return min(
+    return (
         to_call + fraction * (pot + to_call),
         cap * max(1, int(effective_stack)),
+    )
+
+
+def aggressive_target_from_fractions(
+    *,
+    pot: int,
+    to_call: int,
+    effective_stack: int,
+    fraction: float,
+    cap: float,
+) -> float:
+    """The aggressive-lane chip formula at explicit fractions."""
+
+    return min(
+        *aggressive_arms(
+            pot=pot,
+            to_call=to_call,
+            effective_stack=effective_stack,
+            fraction=fraction,
+            cap=cap,
+        )
     )
 
 
@@ -421,8 +483,11 @@ __all__ = [
     "table_boldness",
     "active_bet_fraction",
     "active_bet_wager",
+    "active_wager_from_fraction",
+    "aggressive_arms",
     "aggressive_fractions",
     "aggressive_target",
+    "aggressive_target_from_fractions",
     "read_to_context_int",
     "context_int_to_temperature",
 ]

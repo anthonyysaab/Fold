@@ -32,14 +32,17 @@ from engine.learning_contract import (
 )
 from engine.policy_features import FEATURE_NAMES, LABELS
 
-TELEMETRY_SCHEMA_VERSION = 2
+TELEMETRY_SCHEMA_VERSION = 3
 # Versions this process can still READ. Bumping the writer must never orphan a
 # journal: the live archive is the only record of how the deployed policy has
 # actually played, and a reader that accepts one exact version turns a schema
-# bump into silent data loss. Schema 2 adds `state.recent_actions`; every
-# field schema 1 carried is still written, so old records stay loadable and
-# consumers must treat the new field as optional.
-READABLE_TELEMETRY_SCHEMA_VERSIONS = frozenset({1, 2})
+# bump into silent data loss. Schema 2 adds `state.recent_actions`; schema 3
+# adds `rule_verdicts` — the engine/rules attributions that FIRED on the
+# decision (engine/rules/README.md, Phase 5), null on every decision while
+# the dials ship off. Every field the older schemas carried is still
+# written, so old records stay loadable and consumers must treat the new
+# fields as optional.
+READABLE_TELEMETRY_SCHEMA_VERSIONS = frozenset({1, 2, 3})
 CORPUS_SCHEMA_VERSION = 1
 MAX_REPLAY_RECEIPTS = 50
 
@@ -345,6 +348,15 @@ def make_decision_record(
         "lead_position": decision.lead_position if decision is not None else None,
         "bluff_kind": decision.bluff_kind if decision is not None else None,
         "hyper_aggression": hyper_aggression,
+        # Schema 3: which engine/rules dials FIRED, with their inputs —
+        # "this fold was C1 at spr_post 0.8" read from the record, never
+        # inferred. Null whenever no rule fired (every decision until a
+        # dial ships on).
+        "rule_verdicts": (
+            list(decision.rule_verdicts)
+            if decision is not None and decision.rule_verdicts
+            else None
+        ),
         "state": {
             # Schema 2: the betting that led to this decision. The snapshot
             # already carries it and the engine already parses it (aggression

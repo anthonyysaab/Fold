@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-08-29T15:06:24.929689+00:00",
+  "tool": "tools.estimate_escalation_shift",
+  "recipe": "engine/rules/README.md C4",
+  "roots": [
+    "foreign play data\\20260812T082057Z_poker-playground_s13_top15",
+    "foreign play data\\20260815T210237Z_poker-playground_s14_top15"
+  ],
+  "files_walked": 1196,
+  "equity_trials": 200,
+  "k_cap": 3,
+  "excluded_agents": [
+    "Fold-ver-4"
+  ],
+  "rows": 1903,
+  "by_k": {
+    "1": {
+      "n": 1587,
+      "mean_equity_vs_random": 0.6435869565217391,
+      "se_equity": 0.003699873367198752,
+      "mean_strength_percentile": 0.7706034142634118
+    },
+    "2": {
+      "n": 231,
+      "mean_equity_vs_random": 0.723452380952381,
+      "se_equity": 0.008770893933420546,
+      "mean_strength_percentile": 0.9086796336352703
+    },
+    "3": {
+      "n": 85,
+      "mean_equity_vs_random": 0.7626176470588236,
+      "se_equity": 0.011565707567232105,
+      "mean_strength_percentile": 0.9553888573368224
+    }
+  },
+  "kappa_e_equity_per_raise": 0.06714184413250268,
+  "kappa_e_se": 0.006539697212203859,
+  "strength_percentile_shift_per_raise": 0.10951330085073577,
+  "strength_percentile_shift_se": 0.008974358472532324,
+  "shuffle_null": {
+    "slope": -0.005550662553520639,
+    "se": 0.006717352920059004
+  },
+  "stats": {
+    "rows": 1903,
+    "excluded_agent_aggressions": 66
+  },
+  "elapsed_s": 29.5
+}

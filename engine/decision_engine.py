@@ -28,6 +28,13 @@ from risk_temperature import RiskTemperature, measure_risk_temperature
 from engine.hand_strength import board_improvement, estimate_equity
 from engine.learning_contract import build_learning_features
 from engine.opponent_model import AggressionTracker
+from engine.rules.commitment_gate import forward_commitment
+from engine.rules.composition import DEFAULT_RULE_LAYER, RuleLayerParams
+from engine.rules.escalation_margin import (
+    escalation_margin,
+    opponent_raises_this_street,
+)
+from engine.rules.ruin_damper import damped_boldness, damping, table_exposure
 from engine.policy_features import LABELS
 from engine.game_state import (
     _active_seats,
@@ -78,6 +85,11 @@ class DecisionResult:
     behavior_probabilities: tuple[float, float, float] | None = None
     proposed_risk_fraction: float | None = None
     deadline_fallback: bool = False
+    #: engine/rules attributions that FIRED on this decision, in firing
+    #: order (as_mapping() dicts). None when no rule fired — which is
+    #: every decision while the dials ship OFF, so records stay
+    #: byte-identical to the pre-rules era until a dial is turned.
+    rule_verdicts: tuple[dict[str, object], ...] | None = None
     temperature_boldness: float | None = None
     opponent_range_width: float | None = None
     opponent_evidence_confidence: float = 0.0
@@ -498,10 +510,17 @@ class DecisionEngine:
         bluff_settings: BluffSettings | None = None,
         hyper_aggression_chance: float | None = None,
         equity_cache: SharedEquityCache | None = None,
+        rule_layer: RuleLayerParams | None = None,
     ) -> None:
         if equity_trials < 0:
             raise ValueError("equity_trials cannot be negative")
         self.equity_trials = equity_trials
+        # The composed rule-layer dials (engine/rules). Every default is
+        # OFF and every consulting site below guards on the dial, so a
+        # default-constructed engine is byte-identical to the pre-rules
+        # engine — the zero-diff invariant, fuzzed in
+        # tests/test_rules_composition.py and held by the full suite.
+        self.rule_layer = rule_layer if rule_layer is not None else DEFAULT_RULE_LAYER
         # Opt-in memo for the Monte Carlo equity estimate, keyed on every
         # argument the estimate depends on. estimate_equity is deterministic,
         # so a hit returns the bit-identical float and behaviour cannot
@@ -873,6 +892,9 @@ class DecisionEngine:
         if equity is None:
             return True
         tier = self._board_tier(table)
+        # Hoisted above the price check for the C4 scaling below; the
+        # tracker read is pure, so gate behaviour is unchanged.
+        wildness = self.opponent_tracker.max_active_wildness(table)
         margin = self._call_margin(table)
         # Cold situations shave the normal margin, hot ones add to it; the
         # board-discount margin below is a hard gate and never shifts.
@@ -880,13 +902,30 @@ class DecisionEngine:
             table, allowed, equity
         )
         margin += self.safety_gates.board_margin(tier)
+        if self.rule_layer.escalation.enabled:
+            # C4 — each opponent raise beyond the first demands the
+            # measured extra equity, scaled by (1 - wildness): the same
+            # signal the gate floors blend on, so tracked maniacs whose
+            # raises mean nothing dissolve this margin exactly as they
+            # dissolve the floors. Dial-off skips the event walk entirely.
+            hero, _ = _hero_and_seats(table)
+            escalation = escalation_margin(
+                self.rule_layer.escalation,
+                opponent_raises_this_street(
+                    table,
+                    self._street(table),
+                    _integer(hero.get("seatNumber"), "hero seatNumber", minimum=1),
+                ),
+            )
+            if escalation.fired:
+                self._record_rule_verdict(escalation)
+            margin += escalation.margin_added * (1.0 - wildness)
         price = self._pot_odds(table, allowed) + margin
         if equity < price:
             return False
         # Cheap calls into tracked hyper-aggression are shove invitations:
         # the entry bar blends toward the softest stack-gate floor so limps
         # only happen with hands that can stand the pressure.
-        wildness = self.opponent_tracker.max_active_wildness(table)
         if wildness > 0.0:
             gate_floors = [floor for _, floor in self._call_stack_gates()]
             if gate_floors and equity < wildness * min(gate_floors):
@@ -916,9 +955,28 @@ class DecisionEngine:
             + self._call_margin(table)
             + self.safety_gates.board_margin(tier)
         )
-        for stack_fraction, equity_floor in self._call_stack_gates():
+        commitment = None
+        if self.rule_layer.commitment.enabled:
+            # C1 — a call whose post-call SPR is at or under 1 is a
+            # stack-off in installments (a next-street shove prices at
+            # 1/3), so it is judged by the strictest existing gate: same
+            # floor, same reveal penalty, same wildness slide. A new
+            # trigger, never a new floor.
+            commitment = forward_commitment(
+                self.rule_layer.commitment,
+                gate_stack=stack,
+                to_call=to_call,
+                pot=_integer(table.get("potChips"), "potChips"),
+            )
+            if commitment.fired:
+                self._record_rule_verdict(commitment)
+        for index, (stack_fraction, equity_floor) in enumerate(
+            self._call_stack_gates()
+        ):
             equity_floor += reveal_penalty
-            if to_call >= stack_fraction * stack:
+            if to_call >= stack_fraction * stack or (
+                index == 0 and commitment is not None and commitment.fired
+            ):
                 # The gate's premise is that big bets mean strength. Tracked
                 # wildness dissolves that premise proportionally, sliding the
                 # requirement from the gate floor back to the plain price.
@@ -948,6 +1006,23 @@ class DecisionEngine:
     # proposal lands so a counterfactual branch runs the identical serve
     # path -- bluff conversion, engine sizing, and every safety clamp.
     _forced_proposal: tuple[str, float | None] | None = None
+
+    # Per-decision accumulator for engine/rules verdicts that FIRED.
+    # Reset by decide_with_diagnostics; None outside a decision, so a
+    # direct unit call of a gated method records nothing. A plain list on
+    # purpose: counterfactual probes deepcopy the policy per branch and
+    # per-branch isolation is the correct behavior (never the return-self
+    # SharedEquityCache pattern).
+    _rule_verdicts: list[dict[str, object]] | None = None
+
+    def _record_rule_verdict(self, verdict: Any) -> None:
+        if self._rule_verdicts is None:
+            return
+        mapping = verdict.as_mapping()
+        # The call ladder runs more than once per decision (family ladder,
+        # rescue, passive fallback); identical re-firings are one fact.
+        if mapping not in self._rule_verdicts:
+            self._rule_verdicts.append(mapping)
 
     def decide(
         self,
@@ -1018,6 +1093,7 @@ class DecisionEngine:
         # aggression frequencies stay current even on deadline fallbacks.
         self.opponent_tracker.observe(table)
         self._hyper_active = self._hyper_roll(table)
+        self._rule_verdicts = []
         if deadline_s < 2.0:
             action = self._deadline_action(table, allowed, available)
             return DecisionResult(
@@ -1107,6 +1183,9 @@ class DecisionEngine:
             opponent_range_width=top_fraction if equity is not None else None,
             opponent_evidence_confidence=(
                 self.opponent_tracker.pressure_actor_profile(table)[2]
+            ),
+            rule_verdicts=(
+                tuple(self._rule_verdicts) if self._rule_verdicts else None
             ),
             lead_position=lead,
             bluff_kind=bluff_kind,
@@ -1268,10 +1347,26 @@ class DecisionEngine:
             if self._hyper_active:
                 pot_fraction = _HYPER_POT_FRACTION
             else:
+                boldness = self._boldness(table, allowed, equity)
+                if self.rule_layer.damper.enabled:
+                    # C5 — the ruin damper cools the read before sizing.
+                    # This arm is monotone in boldness, so damping can only
+                    # shrink the size (no min-with-undamped needed here,
+                    # unlike the rules composition's geometric blend). The
+                    # hyper branch above deliberately bypasses it: the
+                    # owner's anti-modeling floor is not a tuning surface.
+                    damper_verdict = damping(
+                        self.rule_layer.damper,
+                        bankroll=_integer(
+                            hero.get("stackChips"), "hero stackChips", minimum=1
+                        ),
+                        exposure=table_exposure(table),
+                    )
+                    if damper_verdict.fired:
+                        self._record_rule_verdict(damper_verdict)
+                    boldness = damped_boldness(boldness, damper_verdict)
                 pot_fraction = 0.5 * (
-                    1.0
-                    + self.temperature_shaping.sizing_span
-                    * self._boldness(table, allowed, equity)
+                    1.0 + self.temperature_shaping.sizing_span * boldness
                 )
         desired = base + max(big_blind, round(pot_fraction * (pot + call_chips)))
 

@@ -285,7 +285,7 @@ class TrainingTelemetryTests(unittest.TestCase):
             identity_verified=True,
             recorded_at_ms=1,
         )
-        self.assertEqual(record["telemetry_schema_version"], 2)
+        self.assertEqual(record["telemetry_schema_version"], 3)
         self.assertEqual(
             record["state"]["recent_actions"],
             [
@@ -342,11 +342,13 @@ class TrainingTelemetryTests(unittest.TestCase):
         self.assertEqual(examples[0].submitted_risk_fraction, 0.3)
 
         # An actually unknown version must still be rejected loudly.
+        # (3 became a readable version with the rule_verdicts field, so the
+        # unknown-version case moves to 4.)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "training.jsonl"
             with path.open("w", encoding="utf-8") as handle:
                 handle.write(
-                    json.dumps(dict(legacy, telemetry_schema_version=3)) + "\n"
+                    json.dumps(dict(legacy, telemetry_schema_version=4)) + "\n"
                 )
             with self.assertRaises(TelemetryError):
                 load_training_examples(path)
