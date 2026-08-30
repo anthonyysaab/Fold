@@ -34,6 +34,7 @@ from engine.v9_trainer_phase_b import (
     load_phase_b_corpus_v9,
 )
 from tools.build_phase_b_corpus_v9 import (
+    ContractForcingRecorder,
     PhaseBHarvestSimulatorV9,
     corpus_header_v9,
     corpus_statistics,
@@ -257,6 +258,72 @@ class PurityVerdictTests(unittest.TestCase):
         )
 
 
+class _StubForcedPolicy:
+    """Records forced calls; stands in for a real engine policy."""
+
+    policy_version = "stub"
+
+    def __init__(self) -> None:
+        self.forced_calls: list[tuple[str, float | None]] = []
+
+    def decide_forced(self, table, *, family, pot_fraction=None) -> dict:
+        self.forced_calls.append((family, pot_fraction))
+        return {"action": "raise", "amount": 400, "message": "engine"}
+
+
+class ContractForcingTests(unittest.TestCase):
+    """The forcing table: literal contract actions, engine wagers."""
+
+    def test_fold_and_check_call_are_literal(self) -> None:
+        stub = _StubForcedPolicy()
+        recorder = ContractForcingRecorder(stub)
+        priced = _capture(to_call=100, available=("fold", "call", "raise"))
+        free = _capture(
+            to_call=0, available=("check", "bet"), bet_range=(100, 6_000)
+        )
+        self.assertEqual(
+            recorder.decide_forced(priced, family="fold")["action"], "fold"
+        )
+        self.assertEqual(
+            recorder.decide_forced(free, family="check_call")["action"], "check"
+        )
+        self.assertEqual(
+            recorder.decide_forced(priced, family="check_call")["action"], "call"
+        )
+        # The rails never saw any of it: the policy was not consulted.
+        self.assertEqual(stub.forced_calls, [])
+
+    def test_sized_wagers_still_route_through_the_engine(self) -> None:
+        stub = _StubForcedPolicy()
+        recorder = ContractForcingRecorder(stub)
+        priced = _capture(
+            to_call=100,
+            available=("fold", "call", "raise"),
+            raise_range=(200, 6_000),
+        )
+        payload = recorder.decide_forced(
+            priced, family="aggress", pot_fraction=0.75
+        )
+        self.assertEqual(payload["action"], "raise")
+        self.assertEqual(stub.forced_calls, [("aggress", 0.75)])
+
+    def test_allin_only_escalation_is_the_literal_shove(self) -> None:
+        stub = _StubForcedPolicy()
+        recorder = ContractForcingRecorder(stub)
+        table = {
+            "allowedActions": {
+                "availableActions": ["fold", "call", "all-in"],
+                "betRange": None,
+                "raiseRange": None,
+                "allInToAmount": 6_000,
+            }
+        }
+        payload = recorder.decide_forced(table, family="aggress", pot_fraction=0.6)
+        self.assertEqual(payload["action"], "all-in")
+        self.assertEqual(payload["amount"], 6_000)
+        self.assertEqual(stub.forced_calls, [])
+
+
 # ---------------------------------------------------------------------------
 # Organic end-to-end harvests (cached: each plays once per test session)
 # ---------------------------------------------------------------------------
@@ -270,7 +337,6 @@ def _hero_recorder():
     from test_learned_policy_v9 import _write_artifact
 
     from engine.learned_policy_v9 import load_policy_v9
-    from tools.build_phase_b_corpus import HeroRecorder
 
     global _ARTIFACT_DIR
     if _ARTIFACT_DIR is None:
@@ -283,7 +349,7 @@ def _hero_recorder():
         belief_provider=_provider(),
         potential_trials=40,
     )
-    return HeroRecorder(policy)
+    return ContractForcingRecorder(policy)
 
 
 def _play_harvest(

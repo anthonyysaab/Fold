@@ -38,18 +38,30 @@ enforce):
   the schema's feature convention stays 200 regardless.
 - **The purity check replaces the dedup.** ``_probe_branch_set`` replays
   the deterministic prefix once and reports the action each forced
-  branch actually executes. v9 accepts only the contract's own
-  executions — fatal->fold, passive->check, active->call at a price,
-  active->bet/raise/all-in at a free spot, aggressive->raise/all-in.
-  Anything else means an engine rail retargeted the branch (the rescue
-  rail calling a forced fold, a gate folding a forced call, the bluff
-  mixer upgrading a forced passive, or — until the L5 shove lane lands —
-  an all-in-only escalation demoting to a call), and the decision is
-  DROPPED and counted per class rather than recorded with a lying
-  label: the v9 corpus has no absorption channel, and a slot fed a
-  foreign execution poisons the composition's semantics silently. Drop
-  rates are reported per leg and in the summary; a material rate is a
-  finding, not noise.
+  branch actually executes; :func:`expected_executions` accepts only the
+  contract's own — fatal->fold, passive->check, active->call at a
+  price, active->bet/raise/all-in at a free spot,
+  aggressive->raise/all-in. The v9 slots are SEMANTIC (each carries a
+  fixed value formula: a call's value is eq·(pot+tc) − tc, a fold's is
+  0), so an execution outside the branch's own set poisons its slot's
+  arithmetic, and the v9 corpus has no absorption channel to record the
+  substitution. The engine's rails would retarget literal-intent
+  branches constantly — measured on the first smoke harvest, the
+  call-margin gate folded 45% of forced calls and the bluff mixer
+  raised forced folds and bet forced checks, 40 of 73 selected
+  decisions dropped, biased against exactly the negative-EV call states
+  the model needs fold-beats-call contrast on. So
+  :class:`ContractForcingRecorder` executes fatal / passive / priced
+  active as LITERAL fold / check / call payloads (the rails stay
+  serve-side overrides ABOVE the composed layer — the L2 doctrine,
+  tested there), while the two sized wager lanes still run through the
+  policy's own ``decide_forced`` (the g hand-off needs the engine's
+  floors, rounding and risk cap), and an all-in-only escalation is the
+  literal shove. The purity check remains the ASSERTION of all this:
+  literal lanes are clean by construction, and the one droppable class
+  left is a genuine wager demotion (a risk-cap-collapsed escalation
+  executing as a call/check — the state the L5 demotion rule will own),
+  dropped and counted per class, reported per leg and in the summary.
 - **Rows are the pinned schema-2 shape.** ``decision.context`` is
   exactly ``compose_branch_values_v9``'s argument list (raw ints; the
   read as ``10·T``; ``legal_labels`` in slot order; the serve path's
@@ -178,6 +190,62 @@ def expected_executions(branch: str, to_call_zero: bool) -> frozenset[str]:
     if branch == "aggressive":
         return frozenset({"raise", "all-in"})
     raise PhaseBError(f"unknown v9 branch {branch!r}")
+
+
+class ContractForcingRecorder(HeroRecorder):
+    """HeroRecorder whose FORCED branches execute the contract's actions.
+
+    The hero's own behavior decisions (``decide``) pass through the
+    wrapped policy untouched — only the counterfactual forcing channel
+    changes. ``fold`` and ``check_call`` become literal payloads (the
+    contract's fold / check / call for the state), so the rescue rail,
+    the call-margin gates, and the bluff mixer — serve-side rails that
+    sit ABOVE the composed layer by design — cannot retarget a branch
+    whose value formula is fixed. ``aggress`` still routes through the
+    policy's own ``decide_forced`` so g's fraction is realized with the
+    engine's floors, rounding, and risk cap intact — except at an
+    all-in-only state (no stated bet/raise range), where the escalation
+    is the literal shove: its size is the stack, and the engine cannot
+    choose an optional all-in until the L5 shove lane lands.
+    """
+
+    def decide_forced(
+        self,
+        table: Mapping[str, Any],
+        *,
+        family: str,
+        pot_fraction: float | None = None,
+    ) -> dict:
+        allowed = table.get("allowedActions") or {}
+        available = {
+            str(value) for value in allowed.get("availableActions") or ()
+        }
+        if family == "fold":
+            return {"action": "fold", "message": "contract branch"}
+        if family == "check_call":
+            if "check" in available:
+                return {"action": "check", "message": "contract branch"}
+            return {"action": "call", "message": "contract branch"}
+        if family == "aggress":
+            has_range = (
+                allowed.get("betRange") is not None
+                or allowed.get("raiseRange") is not None
+            )
+            if not has_range:
+                if "all-in" not in available:
+                    raise PhaseBError(
+                        "an aggressive branch was forced with no wager "
+                        "action available"
+                    )
+                return {
+                    "action": "all-in",
+                    "amount": int(allowed.get("allInToAmount") or 0),
+                    "message": "contract branch",
+                }
+            return super().decide_forced(
+                table, family=family, pot_fraction=pot_fraction
+            )
+        raise PhaseBError(f"unknown forced family {family!r}")
 
 
 class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
@@ -671,7 +739,7 @@ def _build_hero_v9(spec: LegSpec, provider: P3BeliefProvider) -> HeroRecorder:
         # hyper_aggression_chance stays None: the v9 line's default is
         # already 0.0 (owner decision 2026-08-30).
     )
-    return HeroRecorder(policy)
+    return ContractForcingRecorder(policy)
 
 
 def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
