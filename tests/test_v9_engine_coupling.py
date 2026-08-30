@@ -239,6 +239,122 @@ class GatedShoveLaneTests(unittest.TestCase):
             _engine(composed=True)._gated_shove(table, allowed, available, 0.95)
 
 
+class SplitWagerFloorTests(unittest.TestCase):
+    """The active/aggressive floor split, v9-scoped and default-inert."""
+
+    def test_default_premium_reproduces_the_unsplit_floor(self) -> None:
+        # Ships 0.0: both lanes must return the base floor unchanged, so
+        # the split is behaviourally inert until someone measures a value.
+        engine = _engine(composed=True)
+        table = _snapshot()
+        self.assertEqual(engine.safety_gates.escalation_floor_premium, 0.0)
+        for to_call in (0, 200):
+            with self.subTest(to_call=to_call):
+                self.assertAlmostEqual(
+                    engine._composed_wager_floor(table, 0.60, to_call), 0.60
+                )
+
+    def test_the_premium_lifts_only_the_escalation_lane(self) -> None:
+        from engine.decision_engine import SafetyGates
+
+        engine = _engine(
+            composed=True,
+            safety_gates=SafetyGates(escalation_floor_premium=0.08),
+        )
+        table = _snapshot()
+        # Hand-derived: the continuation floor is untouched at 0.60; the
+        # escalation floor is 0.60 + 0.08.
+        self.assertAlmostEqual(engine._composed_wager_floor(table, 0.60, 0), 0.60)
+        self.assertAlmostEqual(engine._composed_wager_floor(table, 0.60, 200), 0.68)
+
+    def test_escalation_is_never_below_continuation_at_any_premium(self) -> None:
+        # The invariant is enforced AFTER the clamp, so it must hold even
+        # where the clamp binds. Swept rather than argued.
+        from engine.decision_engine import SafetyGates
+
+        table = _snapshot()
+        for premium in (0.0, 0.01, 0.10, 0.30):
+            engine = _engine(
+                composed=True,
+                safety_gates=SafetyGates(escalation_floor_premium=premium),
+            )
+            for base in (0.0, 0.05, 0.30, 0.60, 0.90, 0.95, 1.0):
+                with self.subTest(premium=premium, base=base):
+                    active = engine._composed_wager_floor(table, base, 0)
+                    escalation = engine._composed_wager_floor(table, base, 200)
+                    self.assertGreaterEqual(escalation, active)
+                    self.assertGreaterEqual(active, 0.05)
+                    self.assertLessEqual(escalation, 0.95)
+
+    def test_the_premium_is_validated(self) -> None:
+        from engine.decision_engine import SafetyGates
+
+        for bad in (-0.01, 0.31):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError):
+                    SafetyGates(escalation_floor_premium=bad)
+
+    def test_legacy_engines_never_reach_the_split(self) -> None:
+        # `serves_composed_sizing` is the whole guard: a legacy engine's
+        # chosen wager must be judged by the unsplit floor, so the two
+        # engines agree wherever the composed path adds nothing.
+        table = _snapshot(
+            pot=400, to_call=0, available=("check", "bet"), bet_range=(100, 6_000)
+        )
+        for equity in (0.20, 0.50, 0.80):
+            with self.subTest(equity=equity):
+                self.assertEqual(
+                    _act(_engine(), table, equity),
+                    _act(_engine(composed=True), table, equity),
+                )
+
+
+class WildnessBlendRestorationTests(unittest.TestCase):
+    """The v9 projection had silently dropped the tracked-wildness blend."""
+
+    def _tracked(self, engine: DecisionEngine, table: dict, wildness: float):
+        engine.opponent_tracker.max_active_wildness = (  # type: ignore[method-assign]
+            lambda _table, _w=wildness: _w
+        )
+        return engine
+
+    def test_wildness_raises_the_bar_toward_the_war_floor(self) -> None:
+        # Hand-derived from the blend's own formula:
+        # (1 - w) * base + w * near_nut_floor, with base 0.30, w 0.5 and
+        # near_nut_floor 0.654 -> 0.477.
+        engine = self._tracked(_engine(composed=True), _snapshot(), 0.5)
+        self.assertAlmostEqual(
+            engine._composed_wager_floor(_snapshot(), 0.30, 200), 0.477
+        )
+
+    def test_no_wildness_leaves_the_floor_alone(self) -> None:
+        engine = self._tracked(_engine(composed=True), _snapshot(), 0.0)
+        self.assertAlmostEqual(
+            engine._composed_wager_floor(_snapshot(), 0.30, 200), 0.30
+        )
+
+    def test_a_blocked_escalation_demotes_through_the_gated_call(self) -> None:
+        """The demotion is `_passive_action`, not a bare call — the
+        distinction the earlier L5 draft got wrong at a cost of 19,000
+        chips at 0.05 equity."""
+
+        table = _snapshot(
+            pot=500,
+            to_call=690,
+            hole=("2c", "7d"),
+            board=("Qs", "Jh", "9s", "3d"),
+            available=("fold", "call", "raise"),
+            raise_range=(1_380, 6_000),
+            hero_stack=6_000,
+            opp_stack=6_000,
+        )
+        engine = self._tracked(_engine(composed=True), table, 1.0)
+        # Wildness 1.0 pins the floor at near_nut_floor, so a 0.30-equity
+        # escalation is blocked; the price is bad, so the gated call
+        # refuses too and the demotion lands on a fold.
+        self.assertEqual(_act(engine, table, 0.30), ("fold", None))
+
+
 class LegacyByteIdentityTests(unittest.TestCase):
     def test_legacy_forced_families_still_route_through_the_ladder(self) -> None:
         # A forced check_call at a terrible price must still FOLD via

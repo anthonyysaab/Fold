@@ -340,6 +340,19 @@ class SafetyGates:
     # -- but "only stricter" is still a live-path behaviour change, and
     # those get measured here, not defaulted.
     pot_odds_exclude_uncallable: bool = False
+    # Extra equity an ESCALATION demands over a continuation, on the v9
+    # line only (`_composed_wager_floor`). The engine sees one "aggress"
+    # family for two different acts — the active lane's unprovoked bet
+    # and the aggressive lane's raise over a live wager — and the v9
+    # contract separates them, so their floors separate too.
+    #
+    # **Ships 0.0, which reproduces the pre-split floor exactly.** A
+    # positive value is a live-path tightening and this project measures
+    # those rather than defaulting them; the field exists so the
+    # measurement has something to move. The invariant that the
+    # escalation floor is never BELOW the continuation floor is
+    # structural and holds at any value (see `_composed_wager_floor`).
+    escalation_floor_premium: float = 0.0
     # Condition the opponent's range on observed aggression even when
     # hero acts FIRST and there is nothing to call.
     #
@@ -375,7 +388,12 @@ class SafetyGates:
                 for trigger, floor in self.call_stack_gates
             ),
         )
-        for name in ("board_margin_kicker", "board_margin_thin", "rescue_call_margin"):
+        for name in (
+            "board_margin_kicker",
+            "board_margin_thin",
+            "rescue_call_margin",
+            "escalation_floor_premium",
+        ):
             if not 0.0 <= float(getattr(self, name)) <= 0.30:
                 raise ValueError(f"{name} must be between 0 and 0.3")
         for name in (
@@ -1384,6 +1402,8 @@ class DecisionEngine:
             )
             if tier_floor is not None:
                 safety_floor = max(safety_floor, tier_floor)
+        if self.serves_composed_sizing and equity is not None:
+            safety_floor = self._composed_wager_floor(table, safety_floor, to_call)
         if equity is not None and equity < safety_floor:
             return self._passive_action(table, allowed, available, equity)
 
@@ -1421,6 +1441,53 @@ class DecisionEngine:
         # aggressive->call and aggressive->fold identically, so the
         # literal call bought the corpus nothing either.
         return self._passive_action(table, allowed, available, equity)
+
+    def _composed_wager_floor(
+        self, table: Mapping[str, Any], base_floor: float, to_call: int
+    ) -> float:
+        """Split the chosen-wager floor across the v9 contract's two lanes.
+
+        **v9 flows only** (`serves_composed_sizing`); the legacy lines
+        never reach here and keep `base_floor` untouched.
+
+        The engine sees a single ``aggress`` family for two different
+        acts: the ACTIVE lane's unprovoked bet (``to_call == 0``) and
+        the AGGRESSIVE lane's escalation over a live wager
+        (``to_call > 0``). The v9 contract separates those, so their
+        floors separate too, and the escalation's floor is never BELOW
+        the continuation's — opening a pot may not be harder than
+        raising one. That invariant is enforced AFTER the clamp, so it
+        holds at every parameter value, and
+        ``escalation_floor_premium`` ships 0.0 so this reproduces the
+        pre-split floor exactly.
+
+        It also RESTORES the tracked-wildness blend that the v9
+        projection silently dropped. The blend lives in
+        ``_equity_family``, which ``learned_policy_v9`` overrides
+        wholesale for its composed argmax — so on the v9 line a tracked
+        maniac had stopped raising hero's bar to aggress at all. The
+        blend's rationale is unchanged and is the v9 demotion rule
+        stated plainly: against an opponent who does not fold, a raise
+        buys no folds and is dominated except for pure value, so
+        marginal hands should defend by CALLING instead. The demotion
+        that produces is ``_passive_action``'s gated call — never a bare
+        one, which is the defect this layer already had to fix once.
+        """
+
+        floor = base_floor
+        wildness = self.opponent_tracker.max_active_wildness(table)
+        if wildness > 0.0:
+            floor = (
+                1.0 - wildness
+            ) * floor + wildness * self.safety_gates.near_nut_floor
+        active_floor = min(0.95, max(0.05, floor))
+        if to_call <= 0:
+            return active_floor
+        escalation_floor = min(
+            0.95,
+            max(0.05, floor + self.safety_gates.escalation_floor_premium),
+        )
+        return max(escalation_floor, active_floor)
 
     def _gated_shove(
         self,

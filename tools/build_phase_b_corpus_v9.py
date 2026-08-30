@@ -472,7 +472,24 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
                 return f"{label} executed {action}"
             if label in sizing_fields:
                 _, to_amount = sizing_fields[label]
-                if amount is None or abs(float(amount) - to_amount) > 0.5:
+                # Tolerance is ONE BIG BLIND plus a chip, and that is a
+                # substantive choice, not slack. The recorded
+                # `sizing_to_amount` is the range-clamped FLOAT, because
+                # the value formula prices exactly that at BOTH train
+                # and serve time (`learned_policy_v9._clamped_wager` —
+                # the v8 approximation, no big-blind floor, no integer
+                # rounding). The engine then legalizes with both. So a
+                # sub-big-blind difference IS the approximation the two
+                # sides already share, and rejecting it would drop good
+                # rows for agreeing with the design — measured, it threw
+                # away 4 of 140 decisions on a production-settings leg.
+                # What the check is FOR is the category error the sweep
+                # found: a cap-refused escalation shoving 6,000 while the
+                # row prices 400. That survives this tolerance intact.
+                if (
+                    amount is None
+                    or abs(float(amount) - to_amount) > self.big_blind + 1
+                ):
                     self.probe_size_mismatches[f"{label}->{action}"] += 1
                     return (
                         f"{label} executed {action} to {amount!r}, but the "

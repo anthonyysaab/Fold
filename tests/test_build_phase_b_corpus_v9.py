@@ -253,6 +253,37 @@ class PurityVerdictTests(unittest.TestCase):
         # The action name alone would have ADMITTED this row.
         self.assertIn("all-in", expected_executions("aggressive", False))
 
+    def test_legalization_sized_differences_are_tolerated(self) -> None:
+        """The engine's big-blind floor and integer rounding are the
+        approximation the value formula already makes at BOTH train and
+        serve time, so a sub-big-blind difference must NOT drop the row.
+        Measured: a tighter tolerance threw away 4 of 140 decisions on a
+        production-settings leg for agreeing with the design."""
+
+        simulator = _bare_simulator()  # big_blind 100
+        candidates = [("passive", "check_call", None), ("active", "aggress", 0.5)]
+        executed = {"passive": ("check", None), "active": ("bet", 250)}
+        # Composed float 202.5 -> engine floors/rounds to 250: inside one
+        # big blind of the recorded amount, so the row survives.
+        self.assertIsNone(
+            simulator._purity_verdict(
+                candidates,
+                executed,
+                to_call_zero=True,
+                sizing_fields={"active": (202.5, 202.5)},
+            )
+        )
+        self.assertEqual(simulator.probe_size_mismatches, Counter())
+        # A category error is still caught at the same tolerance.
+        self.assertIsNotNone(
+            simulator._purity_verdict(
+                candidates,
+                {"passive": ("check", None), "active": ("bet", 6_000)},
+                to_call_zero=True,
+                sizing_fields={"active": (202.5, 202.5)},
+            )
+        )
+
     def test_rail_retargeted_branches_are_dropped_and_classified(self) -> None:
         simulator = _bare_simulator()
         candidates = [("fatal", "fold", None), ("active", "check_call", None)]
