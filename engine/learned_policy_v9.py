@@ -103,7 +103,11 @@ from engine.game_state import (
     effective_stack_chips,
 )
 from engine.hand_strength import prewarm
-from engine.learned_policy import LearnedPolicyError, _load_engine_parameters
+from engine.learned_policy import (
+    DEFAULT_SERVE_EQUITY_TRIALS,
+    LearnedPolicyError,
+    _load_engine_parameters,
+)
 from engine.learned_policy_v8 import (
     RESIDUAL_CAP_POT_FRACTION,
     _clip01,
@@ -537,7 +541,7 @@ _REQUIRED_MANIFEST_KEYS = (
 def load_policy_v9(
     manifest_path: str | Path,
     *,
-    equity_trials: int = 200,
+    equity_trials: int | None = None,
     equity_cache: SharedEquityCache | None = None,
     hyper_aggression_chance: float | None = None,
     belief_provider: BeliefProvider | None = None,
@@ -550,8 +554,12 @@ def load_policy_v9(
 
     Fail-loud before anything is served; mirrors the v8 loader's checks
     at the v9 constants, plus the sizing record and the hybrid refusal.
-    Loading neither promotes nor deploys anything, and
-    ``artifacts/approved.json`` is never read or written here.
+    ``equity_trials`` follows ``load_policy``'s precedence: an explicit
+    argument wins, then the manifest's ``serve.equity_trials`` pin (the
+    v9 Phase-B trainer records the corpus header's value there — harvest
+    == serve, one number), then the module default. Loading neither
+    promotes nor deploys anything, and ``artifacts/approved.json`` is
+    never read or written here.
     """
 
     manifest_file = Path(manifest_path).expanduser().resolve()
@@ -622,6 +630,21 @@ def load_policy_v9(
     )
     serve = manifest.get("serve") or {}
     _require(isinstance(serve, Mapping), "manifest serve block must be an object")
+    # Explicit argument wins; then the artifact's own pin; then the
+    # module default — load_policy's rule, kept so the harvest's
+    # recorded precision is the served precision by default.
+    if equity_trials is None:
+        pinned = serve.get("equity_trials")
+        if pinned is None:
+            equity_trials = DEFAULT_SERVE_EQUITY_TRIALS
+        else:
+            _require(
+                isinstance(pinned, int)
+                and not isinstance(pinned, bool)
+                and pinned > 0,
+                "serve.equity_trials must be a positive integer",
+            )
+            equity_trials = int(pinned)
     prewarm()
     return LearnedPokerPolicyV9(
         model_version=str(manifest["model_version"]),
