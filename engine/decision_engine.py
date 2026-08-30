@@ -1090,12 +1090,18 @@ class DecisionEngine:
     ) -> dict[str, str | int]:
         """Decide with the family proposal pinned to ``family``.
 
-        Counterfactual value branches call this so Q(state, branch)
-        measures the action this policy would actually submit: a pinned
-        passive family may still be upgraded by the bluff module exactly
-        as at serve, and a pinned aggressive family is sized by the engine
-        at ``pot_fraction`` under the normal clamps. The pin applies to
-        one decision and is always cleared.
+        The legacy trio keeps its v7/v8 semantics bit for bit: a pinned
+        ``check_call`` may still be upgraded by the bluff module exactly
+        as at serve (and its call is still gate-laddered), and a pinned
+        ``aggress`` is sized by the engine at ``pot_fraction`` under the
+        normal clamps. The v9-grown families ``check`` and ``call``
+        (L5) are DISTINCT and LITERAL — they execute the contract's own
+        action with no gate ladder and no bluff conversion, because the
+        v9 slots they supervise are semantic (the L4-measured doctrine:
+        rails stay serve-side, above the composed layer). An unknown
+        family raises. The pin applies to one decision and is always
+        cleared; a pin whose action is unavailable dissolves into the
+        policy's own choice, unchanged.
         """
 
         self._forced_proposal = (str(family), pot_fraction)
@@ -1106,11 +1112,33 @@ class DecisionEngine:
 
     @staticmethod
     def _family_available(family: str, available: set[str]) -> bool:
+        """Whether a forced-family pin can execute in this state.
+
+        Grown for v9 (L5): ``check`` and ``call`` are DISTINCT forced
+        families — the v9 contract's passive branch checks and its
+        priced active branch calls, and the old ``check_call`` family is
+        ambiguous exactly there (it executes whichever is available).
+        The legacy trio keeps its meaning bit for bit. An unknown name
+        RAISES instead of defaulting into the aggress arm: this was one
+        of the two silent-corruption channels for version skew — a v9
+        BRANCH name (``"aggressive"``) handed to the family channel used
+        to read as aggress-availability here and then fall to the fold
+        default below, silently. Branch-to-family projection belongs to
+        ``branch_contract_v9.branch_engine_family``, never to this
+        method.
+        """
+
         if family == "fold":
             return "fold" in available
         if family == "check_call":
             return "check" in available or "call" in available
-        return "bet" in available or "raise" in available
+        if family == "check":
+            return "check" in available
+        if family == "call":
+            return "call" in available
+        if family == "aggress":
+            return "bet" in available or "raise" in available
+        raise ArenaSnapshotError(f"unknown forced family {family!r}")
 
     def decide_with_diagnostics(
         self,
@@ -1195,17 +1223,39 @@ class DecisionEngine:
                             break
             if action is None:
                 action = self._aggressive_action(table, allowed, available, equity)
+        elif family == "check":
+            # v9 forced vocabulary (L5): the passive branch's contract
+            # action, LITERAL — no gate ladder, no bluff conversion
+            # below. Availability was checked by _family_available; the
+            # slots this channel supervises are semantic (the L4-measured
+            # doctrine), and the rails stay on the behaviour path.
+            action = ("check", None)
+        elif family == "call":
+            # v9 forced vocabulary (L5): the priced active branch's
+            # contract action, LITERAL — the call-margin ladder does not
+            # run here (routing a forced call through it folded 45% of
+            # them on the first smoke harvest and biased the corpus
+            # against every negative-EV call state).
+            action = ("call", None)
         elif family == "check_call":
             action = self._passive_action(table, allowed, available, equity)
-        else:
+        elif family == "fold":
             action = self._fold_action(table, allowed, available, equity)
+        else:
+            # The second silent-corruption channel for version skew,
+            # hardened (L5): anything unrecognised used to fall into the
+            # fold arm. The known families are exhaustive above.
+            raise ArenaSnapshotError(f"unknown family proposal {family!r}")
 
         # A passive spot may still be attacked as a priced, mixed bluff. The
         # submitted family becomes aggress so telemetry labels match the
-        # action; the bluff kind is recorded as private diagnostics.
+        # action; the bluff kind is recorded as private diagnostics. The
+        # v9 forced check/call pins are excluded: they are literal by
+        # doctrine (see the arms above), and for the legacy trio this
+        # membership test is exactly the old ``family != "aggress"``.
         lead = self._lead_position(table)
         bluff_kind: str | None = None
-        if family != "aggress":
+        if family in ("fold", "check_call"):
             advice = self._consider_bluff(table, allowed, available, equity, lead)
             if advice is not None and advice.bluff and advice.action in available:
                 sized = self._sized_action(
@@ -1360,8 +1410,73 @@ class DecisionEngine:
             sized = self._sized_action("raise", table, allowed, equity)
             if sized is not None:
                 return sized
+        if self.serves_composed_sizing:
+            # v9 flows only (L5): a CHOSEN escalation whose bet/raise
+            # sizing produced nothing reaches the gated shove lane, and
+            # failing that demotes to the active branch at the current
+            # price — never a silent fold. The v7/v8 lines never enter
+            # this block, so their behaviour stays byte-identical.
+            shove = self._gated_shove(table, allowed, available, equity)
+            if shove is not None:
+                return shove
+            to_call = _integer(allowed.get("callChips", 0), "callChips")
+            if to_call > 0 and "call" in available:
+                # The v9 demotion rule (the contract-gap closure recorded
+                # in the plan): the composed layer already valued the
+                # active call and ranked aggression above it, so the
+                # unsizeable escalation falls back to the branch it
+                # outbid — measured on the L4 smoke, today's cascade sent
+                # 6 of 7 such states to a fold through the call ladder.
+                return "call", None
         # The warm-start model never controls an optional all-in in v0.
         return self._passive_action(table, allowed, available, equity)
+
+    def _gated_shove(
+        self,
+        table: Mapping[str, Any],
+        allowed: Mapping[str, Any],
+        available: set[str],
+        equity: float | None,
+    ) -> tuple[str, int] | None:
+        """The L5 shove lane — v9 flows only, and never an open door.
+
+        Reachable ONLY from ``_aggressive_action``'s fallthrough (a
+        chosen escalation with no sizeable bet/raise). Gated exactly as
+        the plan specs, because an ungated chosen shove reopens the
+        2026-08-26 bust class: it fires on near-nut equity
+        (``near_nut_floor``, the same release the risk cap uses), or
+        when the risk-capped maximum already commits the effective
+        stack — which at the sub-near-nut default (0.455 of the
+        effective stack) happens only in the effective-stack-collapse
+        states, where the Arena refunds the uncalled excess and the
+        shove's real risk is the price of a call (the panel's measured
+        benign-collapse finding). The risk cap itself never moves, and
+        ``_first_legal_aggression`` stays the ungated LAST RESORT on
+        the deadline path, never a chosen one.
+        """
+
+        if "all-in" not in available or equity is None:
+            return None
+        raw_all_in = allowed.get("allInToAmount")
+        if raw_all_in is None:
+            return None
+        all_in_to = _integer(raw_all_in, "allInToAmount")
+        if equity >= self.safety_gates.near_nut_floor:
+            return "all-in", all_in_to
+        hero, _ = _hero_and_seats(table)
+        contribution = _integer(hero.get("currentBetChips"), "hero currentBetChips")
+        big_blind = _integer(table.get("bigBlindChips"), "bigBlindChips", minimum=1)
+        gate_stack = self._gate_stack(
+            table, effective=self.safety_gates.risk_cap_on_effective_stack
+        )
+        risk_cap_to = contribution + max(
+            big_blind,
+            round(self.safety_gates.risk_cap_stack_fraction * gate_stack),
+        )
+        effective = max(1, effective_stack_chips(table))
+        if risk_cap_to >= contribution + effective:
+            return "all-in", all_in_to
+        return None
 
     def _sized_action(
         self,
