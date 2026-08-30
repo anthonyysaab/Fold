@@ -369,6 +369,22 @@ class LearnedPokerPolicyV9(DecisionEngine):
         )
         _require(potential_trials >= 1, "potential_trials must be positive")
         self._sizing_params: SizingParameters = sizing
+        if belief_provider is None:
+            # OWNER DECISION 2026-08-30 (block 8 wired): the v9 line
+            # serves the FITTED P3 belief provider by default — the eight
+            # bucket inputs were constant 0.125 on every vector ever
+            # produced before this. Loading fails LOUD if the fit
+            # artifact is missing: serving with buckets the corpus was
+            # not trained on is the exact defect the wire-in closes.
+            # Explicit NeutralBeliefProvider() remains the test override.
+            from engine.p3_belief_provider import P3BeliefProvider
+
+            try:
+                belief_provider = P3BeliefProvider.from_artifact()
+            except Exception as error:  # noqa: BLE001 — refuse, never degrade
+                raise LearnedPolicyV9Error(
+                    f"cannot load the P3 belief fit: {error}"
+                ) from error
         self._belief_provider = belief_provider
         self._potential_trials = int(potential_trials)
         self._feature_seed = int(feature_seed)
