@@ -545,6 +545,20 @@ class EndToEndHarvestTests(unittest.TestCase):
             self.assertIn("p3", row)
 
 
+class OwnerDecisionPinTests(unittest.TestCase):
+    def test_harvest_equity_trials_default_is_the_settled_1000(self) -> None:
+        """Owner decision 2026-08-30 (L4 close): harvest == serve at
+        1,000 trials. The default IS what ships when nobody remembers
+        the flag, so the decision is pinned here — and the v7/v8 serve
+        default stays 200, because the frozen instruments bake it."""
+
+        from engine.learned_policy import DEFAULT_SERVE_EQUITY_TRIALS
+        from tools.build_phase_b_corpus_v9 import _parser
+
+        self.assertEqual(_parser().get_default("equity_trials"), 1_000)
+        self.assertEqual(DEFAULT_SERVE_EQUITY_TRIALS, 200)
+
+
 class RowShapeTests(unittest.TestCase):
     def test_rows_carry_the_pinned_context_and_read(self) -> None:
         simulator = _v9_harvest()

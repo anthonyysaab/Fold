@@ -869,7 +869,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -898,12 +898,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--equity-trials",
         type=int,
-        default=200,
+        # OWNER DECISION 2026-08-30 (settled at L4 close): harvest ==
+        # serve at 1,000 trials. Halves the gate-read noise (sigma(E)
+        # 0.035 -> 0.016; the 2026-08-26 bust hand's 521 BB call cleared
+        # its gate by 0.032 — a coin flip at 200-trial noise), costs
+        # ~27-54 ms per read at serve against the 10 s deadline, and
+        # ~+40 min on a 50k-decision harvest. Scoped to the v9 line:
+        # the v7/v8 serve default (DEFAULT_SERVE_EQUITY_TRIALS = 200)
+        # is untouched — frozen instruments bake it.
+        default=1_000,
         help="the hero policy's gate/serve equity precision; recorded in "
         "the header and pinned at serve.equity_trials by the trainer "
-        "(harvest == serve, one number — the value itself is an OPEN "
-        "owner decision; 1,000 was floated). The feature/read equity "
-        "stays the schema-frozen 200-trial convention regardless.",
+        "(harvest == serve, one number — owner-settled at 1,000 on "
+        "2026-08-30). The feature/read equity stays the schema-frozen "
+        "200-trial convention regardless.",
     )
     parser.add_argument(
         "--potential-trials",
@@ -938,6 +946,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "print its statistics",
     )
     parser.add_argument("--dry-run", action="store_true")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = _parser()
     args = parser.parse_args(argv)
 
     if args.validate:
