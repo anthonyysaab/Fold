@@ -82,6 +82,7 @@ from engine.hand_strength import estimate_equity
 from engine.p3_belief_provider import P3BeliefProvider
 from engine.rules.composition import composed_sizing_record
 from engine.strength_metric import strength_percentile
+from tools.build_p3_dataset import decision_board
 from tools.build_phase_a_dataset import (
     DEFAULT_EQUITY_TRIALS,
     DEFAULT_POTENTIAL_TRIALS,
@@ -106,6 +107,9 @@ DEFAULT_OUTPUT_V9 = Path("artifacts") / "phase_a_v9" / "phase-a-dataset-v9.jsonl
 
 _ACTION_EVENT_TYPES = ("ActionTaken", "TimeoutAction")
 _STREETS = ("preflop", "flop", "turn", "river")
+#: The definitional board size per street — the invariant the look-ahead
+#: repair below restores.
+_BOARD_LENGTH_V9 = {"preflop": 0, "flop": 3, "turn": 4, "river": 5}
 _LABEL_NAMES_V9 = (
     "fold_through_active",
     "fold_through_aggressive",
@@ -182,6 +186,48 @@ def _decision_row_v9(
     street = str(event.get("street") or "").casefold()
     if street not in _STREETS:
         raise ValueError(f"unsupported street {event.get('street')!r}")
+
+    # Repair the board look-ahead the SHARED reconstruction leaves behind.
+    #
+    # `_reconstruct_state` rewinds the actor's own stack and street bet
+    # from the payload's `stackBefore` / `actorCurrentBetBefore`, but it
+    # does NOT rewind `boardCards`, and the event snapshot is the table
+    # AFTER the action resolved. So on every action that closes a
+    # betting round the reconstructed state already carries the next
+    # street's cards. Measured on this archive: 962 of 9,084 decisions
+    # (10.6%), independently reproduced here at 10.1% on a 444-decision
+    # sample — preflop decisions seeing the flop, flop seeing the turn,
+    # turn seeing the river.
+    #
+    # For v9 that is not a cosmetic leak. The board feeds the schema-4
+    # card planes and board tiers, BOTH labels (`range_bucket`'s
+    # strength percentile and `equity_called`'s showdown equity), the
+    # `equity_multiway` feature, AND g's recorded `read_temperature_x10`
+    # — so one un-rewound field would train the network, its labels and
+    # its sizing read on cards the actor had not seen. Phase-A rows are
+    # co-trained inside Phase B, so it would poison both phases.
+    #
+    # The repair is not new work: `build_p3_dataset.decision_board`
+    # already rebuilds the board from the preceding `StreetDealt`
+    # events, cross-checks it against the street's definitional card
+    # count, and raises rather than guessing. It is applied there and in
+    # `measure_field_separation`, and was simply never applied to the
+    # Phase-A builders. Fixed in the v9 SIBLING ONLY — the shared
+    # `_reconstruct_state` feeds the frozen v8 tool and the foreign-play
+    # collection that frozen reports cite, and must not move.
+    snapshot_board = [str(card) for card in state.get("boardCards") or []]
+    true_board = [str(card) for card in decision_board(events, sequence, street)]
+    if true_board != snapshot_board:
+        stats["board_corrected"] += 1
+        state["boardCards"] = true_board
+    if len(true_board) != _BOARD_LENGTH_V9[street]:  # pragma: no cover
+        # decision_board enforces this itself; asserted again here so the
+        # invariant is stated where the row is built, not only upstream.
+        raise PhaseAInvariantError(
+            f"street {street!r} implies {_BOARD_LENGTH_V9[street]} board "
+            f"cards, got {len(true_board)}"
+        )
+
     allowed = state.get("allowedActions")
     if not isinstance(allowed, Mapping):
         raise ValueError("reconstructed state lacks allowedActions")

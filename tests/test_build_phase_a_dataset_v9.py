@@ -162,6 +162,112 @@ class ShowdownHandV9Tests(unittest.TestCase):
             self.assertEqual(row["masks"]["fold_through_aggressive"], 0)
 
 
+class BoardLookAheadRepairTests(unittest.TestCase):
+    """The shared reconstruction leaks the next street's cards; the v9
+    builder must not.
+
+    The assertion is derived from the SCHEMA, not from the builder: the
+    card block is four 52-code planes (hole / flop / turn / river), so a
+    preflop decision must have zero lit flop planes, a flop decision
+    zero lit turn planes, and so on. A row that violates that was scored
+    on cards its actor had not seen.
+    """
+
+    _REAL_REPLAY = (
+        Path("foreign play data")
+        / "20260812T082057Z_poker-playground_s13_top15"
+        / "raw"
+        / "tables"
+        # Chosen because it exercises the defect on three streets at
+        # once (preflop, flop and turn each close a round here); a
+        # replay without a street-closing decision would pass the repair
+        # tests vacuously.
+        / "cmspqjsy7t1h814ca6v9fihch.json"
+    )
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from tools.collect_foreign_play_data import _read_json, _unwrap_rpc
+
+        if not cls._REAL_REPLAY.is_file():
+            raise unittest.SkipTest("archive replay not present")
+        cls.replay = _unwrap_rpc(_read_json(cls._REAL_REPLAY))
+
+    @staticmethod
+    def _plane_indices(plane: str) -> list[int]:
+        from engine import schema4
+
+        return [
+            index
+            for index, name in enumerate(schema4.FEATURE_NAMES_V9)
+            if name.startswith(f"{plane}_")
+        ]
+
+    def test_the_defect_is_real_in_the_shared_reconstruction(self) -> None:
+        """Documents WHY the repair exists — if this ever stops finding a
+        leak, the upstream reconstruction changed and the v9 repair
+        should be re-examined rather than silently kept."""
+
+        from tools.collect_foreign_play_data import _reconstruct_state
+
+        expected = {"preflop": 0, "flop": 3, "turn": 4, "river": 5}
+        leaks = 0
+        for event in self.replay.get("events") or []:
+            if not isinstance(event, dict) or event.get("type") != "ActionTaken":
+                continue
+            street = str(event.get("street") or "").casefold()
+            if street not in expected:
+                continue
+            state = _reconstruct_state(dict(self.replay), dict(event))
+            board = list(state.get("boardCards") or [])
+            if len(board) != expected[street]:
+                leaks += 1
+        self.assertGreater(
+            leaks, 0, "no street-closing decision in this replay to exercise"
+        )
+
+    def test_built_rows_never_see_a_future_street(self) -> None:
+        from engine import schema4
+
+        rows, stats = replay_rows_v9(self.replay, **_FAST)
+        self.assertTrue(rows)
+        # The repair must have fired on this replay.
+        self.assertGreater(stats["board_corrected"], 0)
+
+        street_flag = {
+            street: schema4.feature_index_v9(f"street_{street}")
+            for street in ("preflop", "flop", "turn", "river")
+        }
+        planes = {
+            plane: self._plane_indices(plane)
+            for plane in ("flop", "turn", "river")
+        }
+        # Cards visible on each street, by definition of the planes.
+        visible = {
+            "preflop": set(),
+            "flop": {"flop"},
+            "turn": {"flop", "turn"},
+            "river": {"flop", "turn", "river"},
+        }
+        for row in rows:
+            vector = row["features"]
+            street = row["street"]
+            self.assertEqual(vector[street_flag[street]], 1.0)
+            for plane, indices in planes.items():
+                lit = sum(1 for index in indices if vector[index] != 0.0)
+                if plane in visible[street]:
+                    self.assertGreater(
+                        lit, 0, f"{street} row has an empty {plane} plane"
+                    )
+                else:
+                    self.assertEqual(
+                        lit,
+                        0,
+                        f"{street} row sees {lit} {plane} card(s) it "
+                        "could not have seen",
+                    )
+
+
 class BuildPathV9Tests(unittest.TestCase):
     """The full build over the miniatures, proven through the trainer."""
 
