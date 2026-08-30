@@ -13,6 +13,10 @@ v9 branch contract changes:
   contract is the single source of the masking rules (aggressive dark at
   ``to_call == 0``, fatal dark at a free check); this module only names
   the slots, in contract order.
+- **`equity_multiway`** — the player-count-conditioned strength input
+  schema 3 lacked (owner queue item 1): the unconditioned multiway MC
+  equity vs the active opponent count, identical by construction to the
+  equity feeding g's boldness read at feature time.
 - **Costs re-derived through g** (``engine.aggression_sizing``): the
   schema-3 pair ``cost_aggress_small_eff``/``cost_aggress_large_eff``
   (fixed 0.5/1.0-pot specs) collapses to one ``cost_aggressive_eff`` at
@@ -102,6 +106,16 @@ STRENGTH_FEATURE_NAMES_V9: tuple[str, ...] = (
     "equity_vs_top20",
     "equity_vs_top5",
     "equity_range_slope",
+    # Owner queue item 1 (2026-08-29, approved): the schema-3 contract
+    # had NO player-count-conditioned strength input — the canonical
+    # percentile is deliberately invariant and the range pair is
+    # heads-up, so the network had to synthesize multiway shrinkage from
+    # percentile x player_count. This is the unconditioned multiway MC
+    # equity against the ACTUAL active opponent count — and it is, by
+    # construction, the SAME number that feeds g's boldness read at
+    # feature time (one computation, two consumers): the network sees
+    # exactly the quantity the sizing responds to.
+    "equity_multiway",
     "hand_ppot",
     "hand_npot",
     "cost_active_eff",

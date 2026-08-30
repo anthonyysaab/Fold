@@ -257,6 +257,46 @@ class DeltaDefinitionTests(unittest.TestCase):
         self.assertEqual(values["cost_active_eff"], min(1.0, 500 / eff))
         self.assertNotEqual(values["cost_active_eff"], min(1.0, raw / eff))
 
+    def test_equity_multiway_is_the_read_equity(self) -> None:
+        """Owner queue item 1: the multiway strength input IS g's read
+        equity — one computation, two consumers, proven by recomputing
+        the read independently for several player counts."""
+
+        for extra_seats in (0, 2):
+            table = _snapshot()
+            for offset in range(extra_seats):
+                table["seats"].append(
+                    {
+                        "seatNumber": 3 + offset,
+                        "status": "Active",
+                        "stackChips": 500,
+                        "currentBetChips": 0,
+                        "holeCards": None,
+                    }
+                )
+            values = dict(
+                zip(schema4.FEATURE_NAMES_V9, extract_features_v9(table, seed=11))
+            )
+            self.assertEqual(
+                values["equity_multiway"], _read_equity(table, 11)
+            )
+        # More opponents must not read as MORE equity for the same hand.
+        lone = _snapshot()
+        crowd = _snapshot()
+        crowd["seats"].extend(
+            {
+                "seatNumber": 3 + offset,
+                "status": "Active",
+                "stackChips": 500,
+                "currentBetChips": 0,
+                "holeCards": None,
+            }
+            for offset in range(3)
+        )
+        one = dict(zip(schema4.FEATURE_NAMES_V9, extract_features_v9(lone, seed=11)))
+        many = dict(zip(schema4.FEATURE_NAMES_V9, extract_features_v9(crowd, seed=11)))
+        self.assertLess(many["equity_multiway"], one["equity_multiway"])
+
     def test_dials_off_aggressive_cost_is_bare_g(self) -> None:
         """The composed cost with every dial off equals g recomputed here."""
 

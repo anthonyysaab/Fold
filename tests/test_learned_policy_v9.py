@@ -305,8 +305,8 @@ class LoaderTests(unittest.TestCase):
             ),
         )
         refuses(
-            "wrong input size",
-            lambda m: m.update(input_size=413),
+            "wrong input size (the pre-equity_multiway 412 must refuse)",
+            lambda m: m.update(input_size=412),
         )
         refuses(
             "missing sizing block",

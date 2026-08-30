@@ -185,6 +185,10 @@ def extract_features_v9(
             seed=seed,
         )
     )
+    # One computation, two consumers: this equity is BOTH the schema-4
+    # feature (owner queue item 1 — the player-count-conditioned strength
+    # input schema 3 lacked) and the input to g's boldness read below.
+    new_values["equity_multiway"] = equity_read
     boldness = table_boldness(table, allowed, equity_read, sizing)
     exposure = table_exposure(table)
     covered = _covered_allin_to_amounts(hero, seats)
