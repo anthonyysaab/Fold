@@ -195,6 +195,11 @@ _BOARD_DISCOUNT_RANGE_TIGHTEN = {"kicker": 0.60, "thin": 0.75}
 # opponents while cutting both the EV leak and the data loss well over half.
 # The price of the floor has still never been measured; the constructor
 # override exists precisely for that ablation, queued at 0/2/5%.
+# OWNER 2026-08-30: the v9 serve path defaults this to 0.0 in its own
+# constructor (learned_policy_v9 — "it is part of the bluffing behaviour
+# anyway"). This constant stays 0.02 for the v7/v8 paths ONLY because the
+# frozen instruments' per-seed numbers bake it in and record no chance of
+# their own; changing it here breaks every reproduction gate.
 HYPER_AGGRESSION_CHANCE = 0.02
 _HYPER_FLOOR_DROP = 0.12
 _HYPER_POT_FRACTION = 1.0

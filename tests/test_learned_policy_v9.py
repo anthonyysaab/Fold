@@ -337,6 +337,24 @@ class LoaderTests(unittest.TestCase):
             with self.assertRaises(LearnedPolicyV9Error):
                 load_policy_v9(path)
 
+    def test_hyper_roll_is_off_on_the_v9_line(self) -> None:
+        """Owner decision 2026-08-30: v9 ships hyper at 0 (the bluff mixer
+        already mixes); the module constant survives for the frozen v7/v8
+        instrument paths, whose per-seed numbers bake it in."""
+
+        from engine.decision_engine import HYPER_AGGRESSION_CHANCE, DecisionEngine
+
+        with tempfile.TemporaryDirectory() as raw:
+            policy = load_policy_v9(_write_artifact(Path(raw)))
+        self.assertEqual(policy.hyper_aggression_chance, 0.0)
+        self.assertFalse(policy._hyper_roll(_snapshot()))
+        # The frozen paths keep the owner's 2026-08-12 constant untouched.
+        base = type(
+            "Probe", (DecisionEngine,), {"_family": lambda self, f: "check_call"}
+        )()
+        self.assertEqual(base.hyper_aggression_chance, HYPER_AGGRESSION_CHANCE)
+        self.assertEqual(HYPER_AGGRESSION_CHANCE, 0.02)
+
     def test_tie_break_is_slot_order(self) -> None:
         # Equal centered values must pick the earlier slot. With zero
         # equities and to_call such that active == fatal == 0 is not

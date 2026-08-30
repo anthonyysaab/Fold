@@ -322,6 +322,17 @@ class LearnedPokerPolicyV9(DecisionEngine):
             sizing, rules = parameters_and_rules_from_record(sizing_record)
         except ValueError as error:
             raise LearnedPolicyV9Error(f"invalid sizing record: {error}") from error
+        if hyper_aggression_chance is None:
+            # OWNER DECISION 2026-08-30: the v9 line ships with the
+            # hyper-aggression roll OFF — the bluff mixer already provides
+            # deliberate salted unpredictability, and the roll's decisions
+            # were training-excluded noise. Scoped to v9 ON PURPOSE: the
+            # module constant (2%) survives for the v7/v8 paths because
+            # every frozen instrument's per-seed numbers were produced
+            # with it and record no chance of their own — zeroing it
+            # globally would break the reproduction gates repo-wide.
+            # Explicit override still works (measuring the noise's price).
+            hyper_aggression_chance = 0.0
         super().__init__(
             equity_trials=equity_trials,
             seed=seed,
