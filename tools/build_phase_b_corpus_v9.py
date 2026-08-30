@@ -276,6 +276,14 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
         self.probe_action_mismatches: Counter[str] = Counter()
         #: Decisions dropped because two branches executed one action.
         self.probe_collisions = 0
+        #: Rows whose belief buckets silently degraded to the uniform
+        #: prior (the provider swallows its own errors per decision —
+        #: found by the 2026-08-30 range-note audit: nothing outside the
+        #: Phase-A builder counted these). The row still ships (uniform
+        #: buckets are the neutral convention), but the rate must be
+        #: visible: a material rate means the corpus trained on buckets
+        #: the serve path would not reproduce.
+        self.belief_degrades = 0
 
     # -- the decision's read -------------------------------------------
 
@@ -569,6 +577,8 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
                     f"recorded read's equity {equity_read!r} — one read, "
                     "two consumers is broken"
                 )
+            if getattr(self.belief_provider, "last_degrade_reason", None) is not None:
+                self.belief_degrades += 1
             seats_delta = tuple(
                 after - before
                 for after, before in zip(self.p3_stats.snapshot(), stats_before)
@@ -766,6 +776,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         "decisions_emitted": 0,
         "single_branch_groups": 0,
         "probe_collisions": 0,
+        "belief_degrades": 0,
         "hero_chip_delta": 0,
         "hero_hands": 0,
     }
@@ -813,6 +824,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         totals["decisions_emitted"] += simulator.decisions_emitted
         totals["single_branch_groups"] += simulator.single_branch_groups
         totals["probe_collisions"] += simulator.probe_collisions
+        totals["belief_degrades"] += simulator.belief_degrades
         probe_action_mismatches.update(simulator.probe_action_mismatches)
         totals["hero_chip_delta"] += result.chip_deltas.get("hero", 0)
         totals["hero_hands"] += result.hands_by_agent.get("hero", result.hands)
@@ -845,6 +857,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         ),
         "probe_action_mismatches": dict(sorted(probe_action_mismatches.items())),
         "probe_collisions": totals["probe_collisions"],
+        "belief_degrades": totals["belief_degrades"],
         "branch_rows": sum(len(row["branches"]) for row in rows),
         "hero_bb_per_100": round(hero_bb_per_100, 3),
         "belief_fit_source": provider.fit_source,

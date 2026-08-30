@@ -434,6 +434,9 @@ class EndToEndHarvestTests(unittest.TestCase):
             + simulator.single_branch_groups
             + dropped,
         )
+        # Well-formed sim snapshots never degrade the belief provider;
+        # the counter exists so a real harvest surfaces any that do.
+        self.assertEqual(simulator.belief_degrades, 0)
 
     def test_trainer_loader_accepts_the_organic_corpus(self) -> None:
         simulator = _v9_harvest()
