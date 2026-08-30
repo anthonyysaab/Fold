@@ -190,6 +190,91 @@ def default_v8_architecture() -> dict[str, object]:
     }
 
 
+def default_v9_architecture() -> dict[str, object]:
+    """The v9 architecture block; schema 4 supplies the partition.
+
+    Same encoder/trunk/tower widths as v8 — the v9 change is the branch
+    CONTRACT (slot meanings and the 412-input schema-4 partition), never
+    the network shape. Head sizes come from ``branch_contract_v9``, the
+    single definition site.
+    """
+
+    from engine import schema4
+    from engine.branch_contract_v9 import (
+        EQUITY_SLOTS_V9,
+        FOLD_THROUGH_BRANCHES_V9,
+        MODEL_FAMILY_V9,
+        V9_HEAD_SIZES,
+    )
+
+    return {
+        "family": MODEL_FAMILY_V9,
+        "card_indices": list(schema4.CARD_INDICES_V9),
+        "context_indices": list(schema4.CONTEXT_INDICES_V9),
+        "card_encoder_width": CARD_ENCODER_WIDTH,
+        "context_encoder_width": CONTEXT_ENCODER_WIDTH,
+        "trunk_widths": list(TRUNK_WIDTHS),
+        "head_towers": {name: HEAD_TOWER_WIDTH for name in V9_HEAD_SIZES},
+        "heads": dict(V9_HEAD_SIZES),
+        "fold_through_branches": list(FOLD_THROUGH_BRANCHES_V9),
+        "equity_slots": list(EQUITY_SLOTS_V9),
+        "layer_norm": True,
+        "dropout": None,
+    }
+
+
+def validate_v9_architecture(architecture: Mapping[str, object]) -> None:
+    """Fail-closed validation of a format-4 architecture block.
+
+    A separate validator, never a widening of the v8 one: a validator
+    that accepts both shapes is how a v8 artifact serves under v9 slot
+    meanings without anyone noticing.
+    """
+
+    from engine import schema4
+    from engine.branch_contract_v9 import (
+        EQUITY_SLOTS_V9,
+        FOLD_THROUGH_BRANCHES_V9,
+        MODEL_FAMILY_V9,
+        V9_HEAD_SIZES,
+    )
+
+    if architecture.get("family") != MODEL_FAMILY_V9:
+        raise ValueError(f"architecture family must be {MODEL_FAMILY_V9!r}")
+    if list(architecture.get("card_indices") or []) != list(
+        schema4.CARD_INDICES_V9
+    ):
+        raise ValueError("card_indices must match schema4.CARD_INDICES_V9")
+    if list(architecture.get("context_indices") or []) != list(
+        schema4.CONTEXT_INDICES_V9
+    ):
+        raise ValueError("context_indices must match schema4.CONTEXT_INDICES_V9")
+    if architecture.get("card_encoder_width") != CARD_ENCODER_WIDTH:
+        raise ValueError(f"card_encoder_width must be {CARD_ENCODER_WIDTH}")
+    if architecture.get("context_encoder_width") != CONTEXT_ENCODER_WIDTH:
+        raise ValueError(f"context_encoder_width must be {CONTEXT_ENCODER_WIDTH}")
+    if list(architecture.get("trunk_widths") or []) != list(TRUNK_WIDTHS):
+        raise ValueError(f"trunk_widths must be {list(TRUNK_WIDTHS)}")
+    if dict(architecture.get("heads") or {}) != V9_HEAD_SIZES:
+        raise ValueError(f"heads must be {V9_HEAD_SIZES}")
+    towers = dict(architecture.get("head_towers") or {})
+    if towers != {name: HEAD_TOWER_WIDTH for name in V9_HEAD_SIZES}:
+        raise ValueError(f"head_towers must all be {HEAD_TOWER_WIDTH}")
+    if list(architecture.get("fold_through_branches") or []) != list(
+        FOLD_THROUGH_BRANCHES_V9
+    ):
+        raise ValueError(
+            f"fold_through_branches must be {list(FOLD_THROUGH_BRANCHES_V9)}"
+        )
+    if list(architecture.get("equity_slots") or []) != list(EQUITY_SLOTS_V9):
+        raise ValueError(f"equity_slots must be {list(EQUITY_SLOTS_V9)}")
+    dropout = architecture.get("dropout")
+    if dropout is not None and not (
+        isinstance(dropout, float) and 0.0 <= dropout < 1.0
+    ):
+        raise ValueError("dropout must be None or a float in [0, 1)")
+
+
 def validate_v8_architecture(architecture: Mapping[str, object]) -> None:
     if architecture.get("family") != MODEL_FAMILY_V8:
         raise ValueError(f"architecture family must be {MODEL_FAMILY_V8!r}")

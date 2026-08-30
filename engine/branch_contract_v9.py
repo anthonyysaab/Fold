@@ -174,6 +174,29 @@ def legal_branches(available: Collection[str], to_call: int) -> tuple[int, ...]:
     return tuple(emitted)
 
 
+def branch_engine_family(branch: str, to_call: int) -> str:
+    """The frozen engine trio a v9 branch dispatches through.
+
+    The DecisionEngine's action vocabulary is ``fold`` / ``check_call`` /
+    ``aggress`` and stays frozen (it serves v6/v7/v8 artifacts and 1.73M
+    stored journal rows). The v9 taxonomy reaches it only through this
+    projection: the branch names the INTENT, the family names the code
+    path that executes it. ``active`` is the state-dependent one — a call
+    at a price, an engine-sized wager unprovoked.
+
+    Raises for a branch this state masks, exactly as
+    :func:`branch_action` does: projecting a masked branch is a caller
+    bug, never a fallback.
+    """
+
+    action = branch_action(branch, to_call)
+    if action == "fold":
+        return "fold"
+    if action in ("check", "call"):
+        return "check_call"
+    return "aggress"
+
+
 def legal_branch_labels(
     available: Collection[str], to_call: int
 ) -> frozenset[str]:
@@ -201,6 +224,7 @@ __all__ = [
     "V9_HEAD_SIZES",
     "branch_action",
     "branch_index",
+    "branch_engine_family",
     "legal_branches",
     "legal_branch_labels",
 ]

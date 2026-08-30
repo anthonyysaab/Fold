@@ -496,6 +496,13 @@ class DecisionEngine:
     # policy does); an explicit ``safety_gates`` argument always wins.
     default_safety_gates: SafetyGates = DEFAULT_SAFETY_GATES
 
+    # True only on serve classes whose SIZING routes through
+    # engine.rules.composition (the v9 composed-value path). The base
+    # engine's temperature sizer cannot honour the C2/C3A dials, so the
+    # constructor guard below refuses them unless a subclass declares
+    # this — declaring it is a claim that the composition IS the sizer.
+    serves_composed_sizing: bool = False
+
     def __init__(
         self,
         *,
@@ -531,7 +538,7 @@ class DecisionEngine:
                 ("geometric (C2)", self.rule_layer.geometric),
                 ("snap (C3A)", self.rule_layer.snap),
             )
-            if dial.enabled
+            if dial.enabled and not self.serves_composed_sizing
         ]
         if unsupported:
             raise ValueError(
