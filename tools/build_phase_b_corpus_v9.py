@@ -276,6 +276,9 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
         self.probe_action_mismatches: Counter[str] = Counter()
         #: Decisions dropped because two branches executed one action.
         self.probe_collisions = 0
+        #: Decisions dropped because a wager branch executed at an amount
+        #: other than the one the row would record (see _purity_verdict).
+        self.probe_size_mismatches: Counter[str] = Counter()
         #: Rows whose belief buckets silently degraded to the uniform
         #: prior (the provider swallows its own errors per decision —
         #: found by the 2026-08-30 range-note audit: nothing outside the
@@ -443,15 +446,38 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
         candidates: Sequence[tuple[str, str, float | None]],
         executed: Mapping[str, tuple[str, int | None]],
         to_call_zero: bool,
+        sizing_fields: Mapping[str, tuple[float, float]],
     ) -> str | None:
         """None when every branch executed its own contract action
-        distinctly; otherwise the drop reason (also counted)."""
+        distinctly AT THE SIZE THE ROW WILL RECORD; else the drop reason.
+
+        The size check is not decoration. A wager branch's value formula
+        is priced with ``sizing_to_amount`` as its wager, so a row whose
+        rollout measured a DIFFERENT amount teaches the formula a reward
+        earned at another price. The sweep found this live: a near-nut
+        escalation whose raise the risk cap refused now executes as a
+        shove, which the action-name check admits (``{raise, all-in}``)
+        while the recorded constants still describe the small raise —
+        biasing ``equity_called[aggressive]`` upward at a cheaper price.
+        The loader cannot catch it: it re-derives the same composed
+        number through frozen g, so its cross-check passes tautologically
+        and ``executed`` is read by nothing. Checked here, at the only
+        place that holds both numbers.
+        """
 
         for label, _, _ in candidates:
-            action = executed[label][0]
+            action, amount = executed[label]
             if action not in expected_executions(label, to_call_zero):
                 self.probe_action_mismatches[f"{label}->{action}"] += 1
                 return f"{label} executed {action}"
+            if label in sizing_fields:
+                _, to_amount = sizing_fields[label]
+                if amount is None or abs(float(amount) - to_amount) > 0.5:
+                    self.probe_size_mismatches[f"{label}->{action}"] += 1
+                    return (
+                        f"{label} executed {action} to {amount!r}, but the "
+                        f"row would record sizing_to_amount {to_amount!r}"
+                    )
         pairs = [executed[label] for label, _, _ in candidates]
         if len(set(pairs)) != len(pairs):
             self.probe_collisions += 1
@@ -530,7 +556,9 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
                 deck_for_test,
             )
             to_call_zero = context["to_call"] == 0
-            if self._purity_verdict(candidates, executed, to_call_zero):
+            if self._purity_verdict(
+                candidates, executed, to_call_zero, sizing_fields
+            ):
                 continue
             stats_before = self.p3_stats.snapshot()
             outcomes: dict[str, float] = {}
@@ -577,7 +605,10 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
                     f"recorded read's equity {equity_read!r} — one read, "
                     "two consumers is broken"
                 )
-            if getattr(self.belief_provider, "last_degrade_reason", None) is not None:
+            # Direct attribute access on purpose: a getattr default would
+            # report 0 forever after a provider swap or a rename — the
+            # very silence this counter exists to break.
+            if self.belief_provider.last_degrade_reason is not None:
                 self.belief_degrades += 1
             seats_delta = tuple(
                 after - before
@@ -781,6 +812,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         "hero_hands": 0,
     }
     probe_action_mismatches: Counter[str] = Counter()
+    probe_size_mismatches: Counter[str] = Counter()
     p3_totals = {
         "seats_resampled": 0,
         "tries": 0,
@@ -826,6 +858,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         totals["probe_collisions"] += simulator.probe_collisions
         totals["belief_degrades"] += simulator.belief_degrades
         probe_action_mismatches.update(simulator.probe_action_mismatches)
+        probe_size_mismatches.update(simulator.probe_size_mismatches)
         totals["hero_chip_delta"] += result.chip_deltas.get("hero", 0)
         totals["hero_hands"] += result.hands_by_agent.get("hero", result.hands)
         for key in p3_totals:
@@ -837,7 +870,11 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         if totals["hero_hands"]
         else 0.0
     )
-    dropped = sum(probe_action_mismatches.values()) + totals["probe_collisions"]
+    dropped = (
+        sum(probe_action_mismatches.values())
+        + sum(probe_size_mismatches.values())
+        + totals["probe_collisions"]
+    )
     return {
         "name": spec.name,
         "opponents": list(spec.opponents),
@@ -856,6 +893,7 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
             else 0.0
         ),
         "probe_action_mismatches": dict(sorted(probe_action_mismatches.items())),
+        "probe_size_mismatches": dict(sorted(probe_size_mismatches.items())),
         "probe_collisions": totals["probe_collisions"],
         "belief_degrades": totals["belief_degrades"],
         "branch_rows": sum(len(row["branches"]) for row in rows),
@@ -1050,10 +1088,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     rows: list[dict[str, Any]] = []
     fit_sources = set()
     mismatch_totals: Counter[str] = Counter()
+    size_mismatch_totals: Counter[str] = Counter()
     for leg in leg_results:
         rows.extend(leg.pop("rows"))
         fit_sources.add(leg["belief_fit_source"])
         mismatch_totals.update(leg["probe_action_mismatches"])
+        size_mismatch_totals.update(leg["probe_size_mismatches"])
         print(
             f"{leg['name']}: {leg['branch_rows']} branch rows from "
             f"{leg['decisions_emitted']} decisions over {leg['hands']} hands "
@@ -1101,7 +1141,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "purity_drops": {
             "total": sum(leg["purity_dropped_decisions"] for leg in leg_results),
             "action_mismatches": dict(sorted(mismatch_totals.items())),
+            "size_mismatches": dict(sorted(size_mismatch_totals.items())),
             "collisions": sum(leg["probe_collisions"] for leg in leg_results),
+            "belief_degrades": sum(leg["belief_degrades"] for leg in leg_results),
         },
         "wall_seconds": round(time.monotonic() - started, 1),
     }

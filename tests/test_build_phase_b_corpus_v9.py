@@ -213,10 +213,45 @@ class PurityVerdictTests(unittest.TestCase):
             "aggressive": ("raise", 400),
         }
         self.assertIsNone(
-            simulator._purity_verdict(candidates, executed, to_call_zero=False)
+            simulator._purity_verdict(
+                candidates,
+                executed,
+                to_call_zero=False,
+                sizing_fields={"aggressive": (400.0, 400.0)},
+            )
         )
         self.assertEqual(simulator.probe_action_mismatches, Counter())
+        self.assertEqual(simulator.probe_size_mismatches, Counter())
         self.assertEqual(simulator.probe_collisions, 0)
+
+    def test_a_wager_executed_at_another_size_is_dropped(self) -> None:
+        """The sweep's finding: the action NAME can be admissible while
+        the amount is not the one the row records. A near-nut escalation
+        whose raise the cap refused now shoves — {raise, all-in} admits
+        it — while sizing_to_amount still describes the small raise, so
+        the value formula would price a 6,000 shove's reward at 400."""
+
+        simulator = _bare_simulator()
+        candidates = [
+            ("fatal", "fold", None),
+            ("active", "check_call", None),
+            ("aggressive", "aggress", 0.75),
+        ]
+        executed = {
+            "fatal": ("fold", None),
+            "active": ("call", None),
+            "aggressive": ("all-in", 6_000),
+        }
+        verdict = simulator._purity_verdict(
+            candidates,
+            executed,
+            to_call_zero=False,
+            sizing_fields={"aggressive": (400.0, 400.0)},
+        )
+        self.assertIsNotNone(verdict)
+        self.assertEqual(simulator.probe_size_mismatches["aggressive->all-in"], 1)
+        # The action name alone would have ADMITTED this row.
+        self.assertIn("all-in", expected_executions("aggressive", False))
 
     def test_rail_retargeted_branches_are_dropped_and_classified(self) -> None:
         simulator = _bare_simulator()
@@ -229,14 +264,17 @@ class PurityVerdictTests(unittest.TestCase):
         }
         for expected_key, executed in cases.items():
             verdict = simulator._purity_verdict(
-                candidates, executed, to_call_zero=False
+                candidates, executed, to_call_zero=False, sizing_fields={}
             )
             self.assertIsNotNone(verdict)
             self.assertEqual(simulator.probe_action_mismatches[expected_key], 1)
 
-    def test_pre_l5_allin_only_demotion_is_classified(self) -> None:
-        """Until the L5 shove lane lands, a forced escalation at an
-        all-in-only state demotes to a call; the counter names it."""
+    def test_a_demoted_escalation_is_classified(self) -> None:
+        """An escalation the engine could not size executes as a call
+        (the risk cap refused the raise and the ladder allowed the
+        price); the counter names the class. Renamed after L5: the
+        all-in-only state no longer produces this — it now comes from a
+        RANGED spot whose raise the cap emptied."""
 
         simulator = _bare_simulator()
         candidates = [
@@ -250,7 +288,10 @@ class PurityVerdictTests(unittest.TestCase):
             "aggressive": ("call", None),
         }
         verdict = simulator._purity_verdict(
-            candidates, executed, to_call_zero=False
+            candidates,
+            executed,
+            to_call_zero=False,
+            sizing_fields={"aggressive": (400.0, 400.0)},
         )
         self.assertIsNotNone(verdict)
         self.assertEqual(
@@ -333,7 +374,7 @@ _V9_HARVEST: PhaseBHarvestSimulatorV9 | None = None
 _P3_V9_HARVEST: PhaseBHarvestSimulatorV9 | None = None
 
 
-def _hero_recorder():
+def _hero_recorder(provider: P3BeliefProvider):
     from test_learned_policy_v9 import _write_artifact
 
     from engine.learned_policy_v9 import load_policy_v9
@@ -346,7 +387,7 @@ def _hero_recorder():
     policy = load_policy_v9(
         manifest,
         equity_trials=20,
-        belief_provider=_provider(),
+        belief_provider=provider,
         potential_trials=40,
     )
     return ContractForcingRecorder(policy)
@@ -359,7 +400,12 @@ def _play_harvest(
     from engine.table_simulator import ScriptedAgent
     from tools.build_phase_b_corpus import P3SeatWrapper
 
-    recorder = _hero_recorder()
+    # ONE provider for both the hero policy and the harvester's own
+    # extraction, exactly as run_leg_v9 wires it. The sweep found the
+    # test building two, which made the belief-degrade assertion
+    # unfalsifiable: it watched a provider the hero never touched.
+    provider = _provider()
+    recorder = _hero_recorder(provider)
     simulator = PhaseBHarvestSimulatorV9(
         small_blind=50,
         big_blind=100,
@@ -371,7 +417,7 @@ def _play_harvest(
         hero_recorder=recorder,
         leg_name="v9-mini",
         potential_trials=40,
-        belief_provider=_provider(),
+        belief_provider=provider,
     )
     agents = [("hero", recorder)]
     if with_p3:

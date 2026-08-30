@@ -1,11 +1,18 @@
-"""L5 engine-coupling tests: forced vocabulary, catch-alls, shove lane.
+"""L5 engine-coupling tests: hardened catch-alls and the gated shove lane.
 
-Expectations are hand-derived from the specs, never from the code under
-test. The two byte-identity contrasts are load-bearing: the SAME state
-that a v9 flow demotes to a call must still fold through the legacy
-ladder on a base engine, and the legacy ``check_call`` forced family
-must still be gate-laddered on the exact state where the v9 ``call``
-family executes literally.
+Expectations are hand-derived from the spec, never from the code under
+test — and every fixture here was rebuilt after an adversarial sweep
+showed the first version's premises were hollow (a "never bluff-converts"
+test whose hero held trip queens, so the advisor declined on hand
+strength and the test passed under the OPPOSITE implementation; an
+all-in amount that equalled three different fixture quantities at once;
+a shove test that pinned only the big-blind floor). Each test below
+names the single rule it kills.
+
+The load-bearing test is `test_unsizeable_escalation_obeys_the_call
+_ladder`: it pins the fix for the sweep's blocker, where a v9 flow
+answered the risk cap's refusal with an ungated call — 19,000 of a
+20,000 stack at 0.05 equity.
 """
 
 from __future__ import annotations
@@ -21,197 +28,244 @@ def _snapshot(**overrides) -> dict:
     return base(**overrides)
 
 
-def _base_engine(**overrides) -> DecisionEngine:
+def _engine(*, composed: bool = False, **overrides) -> DecisionEngine:
     kwargs = dict(equity_trials=20, seed=7, hyper_aggression_chance=0.0)
     kwargs.update(overrides)
     probe = type(
-        "Probe", (DecisionEngine,), {"_family": lambda self, features: "fold"}
-    )
-    return probe(**kwargs)
-
-
-def _v9_engine(**overrides) -> DecisionEngine:
-    kwargs = dict(equity_trials=20, seed=7, hyper_aggression_chance=0.0)
-    kwargs.update(overrides)
-    probe = type(
-        "V9Probe",
+        "Probe",
         (DecisionEngine,),
         {
             "_family": lambda self, features: "check_call",
-            "serves_composed_sizing": True,
+            "serves_composed_sizing": composed,
         },
     )
     return probe(**kwargs)
 
 
-def _allin_only_priced(*, opp_stack: int = 6_000, to_call: int = 500) -> dict:
-    """A priced state whose only wager action is all-in."""
+def _unsizeable_escalation(*, opp_stack: int = 8_000, **overrides) -> dict:
+    """A priced state whose raise range the risk cap cannot reach.
+
+    Hand-derived: cap = contribution + max(bb, round(0.455 x gate_stack)).
+    With contribution 0, bb 100 and gate_stack = effective = opp_stack
+    8,000 that is 3,640, below the 4,000 raise minimum — so
+    `_sized_action` returns None and `_aggressive_action` falls through.
+    """
 
     table = _snapshot(
-        pot=500,
-        to_call=to_call,
-        hero_stack=6_000,
+        pot=3_000,
+        to_call=2_000,
+        hero_stack=10_000,
         opp_stack=opp_stack,
-        available=("fold", "call", "all-in"),
-        raise_range=None,
+        available=("fold", "call", "raise"),
+        raise_range=(4_000, 10_000),
+        **overrides,
     )
-    table["allowedActions"]["canAllIn"] = True
-    table["allowedActions"]["allInToAmount"] = 6_000
     return table
 
 
-class ForcedVocabularyTests(unittest.TestCase):
-    """The v9-grown forced families are literal; the legacy trio is not."""
+def _allin_only(*, hero_stack: int = 5_800, contribution: int = 200) -> dict:
+    """A priced state whose only wager action is all-in.
 
-    def test_forced_call_is_literal_where_the_ladder_would_fold(self) -> None:
-        # A terrible price with a weak holding: the call-margin ladder
-        # refuses this call (the legacy contrast below proves it), but
-        # the v9 'call' family executes the contract action literally.
-        table = _snapshot(
-            pot=500,
-            to_call=690,
-            hole=("2c", "7d"),
-            board=("Qs", "Jh", "9s", "3d"),
-            available=("fold", "call", "raise"),
-        )
-        engine = _base_engine()
-        payload = engine.decide_forced(table, family="call")
-        self.assertEqual(payload["action"], "call")
+    Hero carries a live street contribution so the all-in TO-amount
+    (6,000), hero's remaining stack (5,800) and the contribution are
+    three DISTINCT numbers — the sweep found the first fixture made all
+    three equal, so a mutant shoving the wrong one passed.
+    """
 
-    def test_legacy_check_call_is_still_gate_laddered(self) -> None:
-        # The SAME state through the legacy family: no check exists, the
-        # call fails the margin, and the ladder folds — the v8 semantics,
-        # bit for bit.
-        table = _snapshot(
-            pot=500,
-            to_call=690,
-            hole=("2c", "7d"),
-            board=("Qs", "Jh", "9s", "3d"),
-            available=("fold", "call", "raise"),
-        )
-        engine = _base_engine()
-        payload = engine.decide_forced(table, family="check_call")
-        self.assertEqual(payload["action"], "fold")
+    table = _snapshot(
+        pot=500,
+        to_call=500,
+        hero_stack=hero_stack,
+        opp_stack=6_000,
+        available=("fold", "call", "all-in"),
+        raise_range=None,
+    )
+    hero = table["seats"][0]
+    hero["currentBetChips"] = contribution
+    allowed = table["allowedActions"]
+    allowed["canAllIn"] = True
+    allowed["allInToAmount"] = hero_stack + contribution
+    return table
 
-    def test_forced_check_is_literal_and_never_bluff_converted(self) -> None:
-        # The literal arm skips the bluff mixer structurally; across
-        # several salted table ids not one forced check may convert.
-        for index in range(8):
-            table = _snapshot(
-                pot=400,
-                to_call=0,
-                available=("check", "bet"),
-                bet_range=(100, 6_000),
-            )
-            table["tableId"] = table["id"] = f"forced-check-{index}"
-            engine = _base_engine()
-            payload = engine.decide_forced(table, family="check")
-            self.assertEqual(payload["action"], "check")
 
-    def test_unavailable_pin_dissolves_into_the_policy_choice(self) -> None:
-        # 'check' cannot execute at a price; the pin dissolves and the
-        # stub policy's own fold family decides (weak hand: no rescue).
-        table = _snapshot(
-            pot=500,
-            to_call=690,
-            hole=("2c", "7d"),
-            board=("Qs", "Jh", "9s", "3d"),
-            available=("fold", "call", "raise"),
-        )
-        engine = _base_engine()
-        payload = engine.decide_forced(table, family="check")
-        self.assertEqual(payload["action"], "fold")
-
-    def test_unknown_forced_family_raises(self) -> None:
-        table = _snapshot()
-        engine = _base_engine()
-        # A v9 BRANCH name is not a family: projection belongs to the
-        # contract, and this raising is the version-skew tripwire.
-        for bogus in ("aggressive", "fatal", "passive", "garbage"):
-            with self.assertRaises(ArenaSnapshotError):
-                engine.decide_forced(table, family=bogus)
+def _act(engine: DecisionEngine, table: dict, equity: float):
+    allowed = table["allowedActions"]
+    available = {str(name) for name in allowed["availableActions"]}
+    return engine._aggressive_action(table, allowed, available, equity)
 
 
 class HardenedCatchAllTests(unittest.TestCase):
+    """Both silent-corruption channels for version skew now raise."""
+
     def test_family_available_refuses_unknown_names(self) -> None:
-        with self.assertRaises(ArenaSnapshotError):
-            DecisionEngine._family_available("aggressive", {"bet", "raise"})
+        # A v9 BRANCH name is not a family: projection belongs to the
+        # contract. Before L5 this read as aggress-availability and then
+        # fell through to the fold default, silently.
+        for bogus in ("aggressive", "fatal", "passive", "garbage"):
+            with self.assertRaises(ArenaSnapshotError):
+                DecisionEngine._family_available(bogus, {"bet", "raise"})
+
+    def test_family_available_keeps_the_frozen_trio(self) -> None:
+        available = {"fold", "check", "call", "bet", "raise"}
+        self.assertTrue(DecisionEngine._family_available("fold", available))
+        self.assertTrue(DecisionEngine._family_available("check_call", available))
+        self.assertTrue(DecisionEngine._family_available("aggress", available))
+        self.assertFalse(
+            DecisionEngine._family_available("check_call", {"fold", "bet"})
+        )
+        self.assertFalse(DecisionEngine._family_available("aggress", {"fold", "call"}))
 
     def test_dispatch_refuses_an_unknown_policy_family(self) -> None:
-        # equity_trials=0 gives no equity read, so the family comes from
-        # the backend verbatim — the old code silently FOLDED this.
+        # equity_trials=0 gives no equity read, so `_family` is live and
+        # its return reaches the dispatch verbatim — the old code
+        # silently FOLDED this.
         bogus = type(
             "Bogus", (DecisionEngine,), {"_family": lambda self, features: "bogus"}
         )(equity_trials=0, hyper_aggression_chance=0.0)
         with self.assertRaises(ArenaSnapshotError):
             bogus.decide(_snapshot())
 
-    def test_legacy_families_still_available_check(self) -> None:
-        available = {"fold", "check", "call", "bet", "raise"}
-        self.assertTrue(DecisionEngine._family_available("fold", available))
-        self.assertTrue(DecisionEngine._family_available("check_call", available))
-        self.assertTrue(DecisionEngine._family_available("aggress", available))
-        self.assertTrue(DecisionEngine._family_available("check", available))
-        self.assertTrue(DecisionEngine._family_available("call", available))
-        self.assertFalse(DecisionEngine._family_available("check", {"fold", "call"}))
-        self.assertFalse(DecisionEngine._family_available("call", {"fold", "check"}))
+    def test_forced_pin_of_an_unknown_family_raises(self) -> None:
+        engine = _engine()
+        with self.assertRaises(ArenaSnapshotError):
+            engine.decide_forced(_snapshot(), family="aggressive")
+
+
+class DemotionLadderTests(unittest.TestCase):
+    """The sweep's blocker: an unsizeable escalation must obey the gates."""
+
+    def test_unsizeable_escalation_obeys_the_call_ladder(self) -> None:
+        # Sanity FIRST — the state must genuinely reach the fallthrough.
+        table = _unsizeable_escalation()
+        allowed = table["allowedActions"]
+        self.assertIsNone(_engine()._sized_action("raise", table, allowed, 0.30))
+
+        # Hand-derived: pot odds 2000/5000 = 0.40, turn margin 0.05, so a
+        # call needs ~0.45+ equity even before the temperature shave.
+        # 0.30 is below it -> fold, on BOTH engines. Before the fix the
+        # composed engine returned an ungated ('call', None) here.
+        for composed in (False, True):
+            with self.subTest(composed=composed):
+                self.assertEqual(
+                    _act(_engine(composed=composed), table, 0.30), ("fold", None)
+                )
+
+    def test_the_two_engines_agree_wherever_no_shove_is_gated_in(self) -> None:
+        # The demotion is `_passive_action`, shared by both engines, so
+        # sub-near-nut states must produce IDENTICAL actions.
+        table = _unsizeable_escalation()
+        for equity in (0.05, 0.20, 0.30, 0.40, 0.60):
+            with self.subTest(equity=equity):
+                self.assertEqual(
+                    _act(_engine(composed=True), table, equity),
+                    _act(_engine(composed=False), table, equity),
+                )
+
+    def test_a_justified_price_still_calls(self) -> None:
+        """The ladder is a gate, not a veto.
+
+        Note the window this has to live in: "unsizeable" is itself
+        equity-dependent, because the risk cap RELEASES at
+        `near_nut_floor` (0.654) — at 0.90 this same state sizes a
+        raise to 5,336 and never reaches the fallthrough. So the test
+        needs equity above the call's price (~0.45 = pot odds 0.40 +
+        turn margin 0.05) and below the cap's release.
+        """
+
+        table = _unsizeable_escalation()
+        allowed = table["allowedActions"]
+        self.assertIsNone(_engine()._sized_action("raise", table, allowed, 0.60))
+        self.assertEqual(_act(_engine(composed=True), table, 0.60), ("call", None))
 
 
 class GatedShoveLaneTests(unittest.TestCase):
-    """Direct units on _aggressive_action with hand-pinned equities."""
+    """One release only: near-nut equity."""
 
-    def _act(self, engine: DecisionEngine, table: dict, equity: float):
-        allowed = table["allowedActions"]
-        available = {str(name) for name in allowed["availableActions"]}
-        return engine._aggressive_action(table, allowed, available, equity)
+    def test_near_nut_escalation_shoves_the_all_in_to_amount(self) -> None:
+        table = _allin_only()
+        # 6,000 is allInToAmount and is distinct from hero's stack
+        # (5,800) and contribution (200) — so this pins the right field.
+        self.assertEqual(_act(_engine(composed=True), table, 0.90), ("all-in", 6_000))
 
-    def test_near_nut_escalation_shoves_on_the_v9_flow(self) -> None:
-        table = _allin_only_priced()
-        action = self._act(_v9_engine(), table, equity=0.9)
-        # 0.9 >= near_nut_floor (0.654): the gated lane fires.
-        self.assertEqual(action, ("all-in", 6_000))
+    def test_the_near_nut_floor_boundary_is_pinned(self) -> None:
+        # near_nut_floor is 0.654: the boundary pair kills a mutant that
+        # moves the floor, which the first version of this test did not.
+        table = _allin_only()
+        engine = _engine(composed=True)
+        floor = engine.safety_gates.near_nut_floor
+        self.assertEqual(_act(engine, table, floor), ("all-in", 6_000))
+        below = _act(engine, table, floor - 0.001)
+        self.assertNotEqual(below, ("all-in", 6_000))
 
-    def test_sub_near_nut_deep_stack_demotes_to_a_call_never_a_fold(self) -> None:
-        table = _allin_only_priced()
-        action = self._act(_v9_engine(), table, equity=0.30)
-        # Deep effective stack: the risk cap (0.455 x 6,000 = 2,730 as a
-        # to-amount) does not commit the 6,000 effective stack, so no
-        # shove — and the demotion rule returns the active branch's call
-        # instead of cascading into the fold ladder.
-        self.assertEqual(action, ("call", None))
+    def test_sub_near_nut_never_shoves_even_on_a_collapsed_stack(self) -> None:
+        # The deferred second arm: an all-in opponent collapses
+        # effective_stack_chips to 0, which the first draft read as
+        # "the cap already commits the stack" and shoved on at ANY
+        # equity. It must not fire.
+        table = _allin_only()
+        table["seats"][1]["stackChips"] = 0
+        for equity in (0.05, 0.30, 0.50):
+            with self.subTest(equity=equity):
+                self.assertNotEqual(
+                    _act(_engine(composed=True), table, equity)[0], "all-in"
+                )
 
-    def test_effective_stack_collapse_releases_the_shove(self) -> None:
-        # The opponent is all-in with nothing behind: effective stack
-        # clamps to 1, the capped maximum (>= one big blind) already
-        # commits it, and the shove's real risk is the price of a call
-        # (the Arena refunds the uncalled excess — the measured benign
-        # collapse). Fires even at weak equity.
-        table = _allin_only_priced(opp_stack=0)
-        action = self._act(_v9_engine(), table, equity=0.30)
-        self.assertEqual(action, ("all-in", 6_000))
-
-    def test_base_engine_behaviour_is_untouched(self) -> None:
-        # The identical states through a non-v9 engine: no shove lane,
-        # no demotion — the v0 rule stands (never an optional all-in)
-        # and the passive fallback folds the weak hand at this price.
-        table = _allin_only_priced()
-        self.assertEqual(
-            self._act(_base_engine(), table, equity=0.9),
-            ("call", None),
-        )
-        # equity 0.9 clears the call margin, so the passive fallback
-        # calls — but via the LADDER, not the shove lane.
-        self.assertEqual(
-            self._act(_base_engine(), table, equity=0.30),
-            ("fold", None),
-        )
+    def test_base_engine_never_shoves(self) -> None:
+        # The v0 rule: the warm-start model never controls an optional
+        # all-in. This is the guard that keeps L5 off every legacy path.
+        table = _allin_only()
+        for equity in (0.30, 0.90):
+            with self.subTest(equity=equity):
+                self.assertNotEqual(_act(_engine(), table, equity)[0], "all-in")
 
     def test_shove_lane_needs_an_equity_read(self) -> None:
-        table = _allin_only_priced()
-        engine = _v9_engine()
+        table = _allin_only()
         allowed = table["allowedActions"]
         available = {str(name) for name in allowed["availableActions"]}
-        self.assertIsNone(engine._gated_shove(table, allowed, available, None))
+        self.assertIsNone(
+            _engine(composed=True)._gated_shove(table, allowed, available, None)
+        )
+
+    def test_a_malformed_all_in_amount_raises(self) -> None:
+        # A malformed snapshot is not a policy choice — the same posture
+        # `_first_legal_aggression` takes on the identical field. The
+        # first draft returned None and silently degraded a near-nut
+        # shove into whatever followed.
+        table = _allin_only()
+        table["allowedActions"]["allInToAmount"] = None
+        allowed = table["allowedActions"]
+        available = {str(name) for name in allowed["availableActions"]}
+        with self.assertRaises(ArenaSnapshotError):
+            _engine(composed=True)._gated_shove(table, allowed, available, 0.95)
+
+
+class LegacyByteIdentityTests(unittest.TestCase):
+    def test_legacy_forced_families_still_route_through_the_ladder(self) -> None:
+        # A forced check_call at a terrible price must still FOLD via
+        # `_call_clears_margin` — the v7/v8 semantics, unchanged. Hand-
+        # derived: pot odds 690/1190 = 0.58, turn margin 0.05, against a
+        # weak holding whose equity is far below.
+        table = _snapshot(
+            pot=500,
+            to_call=690,
+            hole=("2c", "7d"),
+            board=("Qs", "Jh", "9s", "3d"),
+            available=("fold", "call", "raise"),
+        )
+        payload = _engine().decide_forced(table, family="check_call")
+        self.assertEqual(payload["action"], "fold")
+
+    def test_legacy_families_stay_in_the_frozen_label_set(self) -> None:
+        from engine.policy_features import LABELS
+
+        # Every family the engine can report must be indexable in LABELS:
+        # the sweep found a widened vocabulary produced an all-zero
+        # one-hot that the telemetry contract refuses.
+        table = _snapshot(pot=400, to_call=0, available=("check", "bet"),
+                          bet_range=(100, 6_000))
+        result = _engine().decide_with_diagnostics(table)
+        self.assertIn(result.family, LABELS)
+        self.assertAlmostEqual(sum(result.behavior_probabilities), 1.0)
 
 
 if __name__ == "__main__":
