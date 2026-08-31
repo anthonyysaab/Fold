@@ -168,7 +168,9 @@ it still applies to everything else, and absolutely to the gates.
   of the four defects once listed here are **fixed**: it now states the
   hyper-aggression roll as 2% since 2026-08-15, and it now says outright that
   `promote_candidate.py` does not enforce a gauntlet gate. Still drifted: the
-  archive size (says 16.638 GB, measured 16.839 GB).
+  archive size. **Both the README's "16.638 GB" and the "16.839 GB"
+  correction previously recorded here are GiB mislabelled as GB.**
+  Measured 2026-08-31: 18,080,978,037 bytes = **18.1 GB = 16.8 GiB**.
 - `tests/README.md` — **it already says 142-input**, correctly; the old
   "138-input" complaint here was itself wrong. The real defects: it prints the
   pre-v8 baseline "344 passed, 1 expected CUDA skip", and it documents 18 of
@@ -207,11 +209,14 @@ work. They exist only in the working tree they were written in, with no
 history and no remote copy.
 
 Also excluded and not reproducible from the repo: `foreign play data/`
-(~16.8 GB replay archive — the Phase-A builders, the P3 fit and several
-measurement tools read it), `.arena-credentials` (recreate from your own
-copy; **never** paste the key into any file here), `.arena-training.jsonl`
-(the stored live journal), `runs/`, `artifacts/corpora/`,
-`artifacts/deadhead/` and `.claude/`.
+(the replay archive — **18.1 GB / 16.8 GiB, measured 2026-08-31**; the
+Phase-A builders, the P3 fit and several measurement tools read it),
+`.arena-credentials` (recreate from your own copy; **never** paste the
+key into any file here), `.arena-training.jsonl` (the stored live
+journal, 12 MB), `artifacts/corpora/` (729 MB),
+`artifacts/deadhead/` (35 MB), `runs/` and `.claude/`. Roughly
+**18.9 GB in total**, of which `.handoff/` is 925 KB and is the only
+part with no other source — copy it first.
 
 If you are holding a checkout without them: say so plainly rather than
 reconstructing state from code, and ask for the `.handoff/` directory.
