@@ -1,0 +1,45 @@
+=== rebalance-control 2026-09-02T16:03:17Z
+phase-b corpus: artifacts/phase_b_v9/candidate-v9-phase-b-merged.phase-b.jsonl.gz (56043 decisions, equity_trials 1000)
+phase-a dataset: artifacts/phase_a_v9/phase-a-dataset-v9.jsonl.gz (9084 rows)
+seed 401: val total 3.256389 (value_norm 0.943691, value_mse 0.00659085, fold_through 0.690878, range 1.577021, equity_called 0.044799), best epoch 1, residual share 0.081408, parity max diff 1.27e-07
+supervised normalization: raw (head weights {'fold_through': 1.0, 'range': 1.0, 'equity_called': 1.0})
+selected init seed: 401
+validation losses: {'value_mse': 0.006591, 'value_normalized': 0.943691, 'fold_through': 0.690878, 'range': 1.577021, 'equity_called': 0.044799, 'fold_through_normalized': 1.02013, 'range_normalized': 0.951315, 'equity_called_normalized': 0.832851, 'supervised_total': 2.312698, 'supervised_weighted': 2.312698, 'total': 3.256389}
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-control.manifest.json
+weights: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-control.weights.json
+weights_sha256: 27c42976d3923c58cf0a911f98422762c075e0ef0c81360deeff720e8f7902d3
+wall_time_seconds: 114.2
+=== rebalance-equal 2026-09-02T16:05:43Z
+phase-b corpus: artifacts/phase_b_v9/candidate-v9-phase-b-merged.phase-b.jsonl.gz (56043 decisions, equity_trials 1000)
+phase-a dataset: artifacts/phase_a_v9/phase-a-dataset-v9.jsonl.gz (9084 rows)
+seed 401: val total 3.678782 (value_norm 0.948859, value_mse 0.00662694, fold_through 0.687432, range 1.586686, equity_called 0.040758), best epoch 1, residual share 0.091508, parity max diff 5.8e-08
+supervised normalization: constant-predictor (head weights {'fold_through': 1.0, 'range': 1.0, 'equity_called': 1.0})
+selected init seed: 401
+validation losses: {'value_mse': 0.006627, 'value_normalized': 0.948859, 'fold_through': 0.687432, 'range': 1.586686, 'equity_called': 0.040758, 'fold_through_normalized': 1.015042, 'range_normalized': 0.957145, 'equity_called_normalized': 0.757735, 'supervised_total': 2.314877, 'supervised_weighted': 2.729923, 'total': 3.678782}
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-equal.manifest.json
+weights: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-equal.weights.json
+weights_sha256: 97eb969b911cff2bcf13448542242b43eca17a1210d44902693e2f83627be8e7
+wall_time_seconds: 103.6
+=== rebalance-range-quarter 2026-09-02T16:07:55Z
+phase-b corpus: artifacts/phase_b_v9/candidate-v9-phase-b-merged.phase-b.jsonl.gz (56043 decisions, equity_trials 1000)
+phase-a dataset: artifacts/phase_a_v9/phase-a-dataset-v9.jsonl.gz (9084 rows)
+seed 401: val total 2.980362 (value_norm 0.952577, value_mse 0.00665291, fold_through 0.688572, range 1.592605, equity_called 0.041465), best epoch 1, residual share 0.092391, parity max diff 1.08e-07
+supervised normalization: constant-predictor (head weights {'fold_through': 1.0, 'range': 0.25, 'equity_called': 1.0})
+selected init seed: 401
+validation losses: {'value_mse': 0.006653, 'value_normalized': 0.952577, 'fold_through': 0.688572, 'range': 1.592605, 'equity_called': 0.041465, 'fold_through_normalized': 1.016725, 'range_normalized': 0.960716, 'equity_called_normalized': 0.770881, 'supervised_total': 2.322642, 'supervised_weighted': 2.027785, 'total': 2.980362}
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-range-quarter.manifest.json
+weights: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-range-quarter.weights.json
+weights_sha256: b73e65e86ba17369aab2fe6ac67e68c669be6ba35eff5c011b5f120a35abc7f9
+wall_time_seconds: 99.9
+=== rebalance-no-range 2026-09-02T16:10:00Z
+phase-b corpus: artifacts/phase_b_v9/candidate-v9-phase-b-merged.phase-b.jsonl.gz (56043 decisions, equity_trials 1000)
+phase-a dataset: artifacts/phase_a_v9/phase-a-dataset-v9.jsonl.gz (9084 rows)
+seed 401: val total 2.741768 (value_norm 0.951216, value_mse 0.00664340, fold_through 0.688875, range 2.079442, equity_called 0.041600), best epoch 1, residual share 0.09298, parity max diff 6.8e-08
+supervised normalization: constant-predictor (head weights {'fold_through': 1.0, 'range': 0.0, 'equity_called': 1.0})
+selected init seed: 401
+validation losses: {'value_mse': 0.006643, 'value_normalized': 0.951216, 'fold_through': 0.688875, 'range': 2.079442, 'equity_called': 0.0416, 'fold_through_normalized': 1.017173, 'range_normalized': 1.254393, 'equity_called_normalized': 0.773379, 'supervised_total': 2.809916, 'supervised_weighted': 1.790552, 'total': 2.741768}
+manifest: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-no-range.manifest.json
+weights: C:\Users\user\Fold-ver-4 (multiway)\artifacts\evaluations\loss-rebalance-2026-09-02\rebalance-no-range.weights.json
+weights_sha256: e3b91f5b3d467c51f161ddb543d8dc6937951472137840e420f9d8b4c87fd517
+wall_time_seconds: 90.4
+=== done 2026-09-02T16:11:56Z

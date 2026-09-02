@@ -45,6 +45,19 @@ any of this code existed:
   bet on free-spot rows and as the no-fold-equity call on priced rows,
   with the residual correction on wager executions only (the v8
   discipline, kept).
+- **Supervised-loss normalization (2026-09-02, Phase 1 of the next-layer
+  plan)**: :class:`~engine.supervised_loss_normalization_v9.SupervisedLossConfigV9`
+  scales each Phase-A head's loss by ``weight / baseline`` before the
+  supervised sum, where the baseline is the constant (bias-only)
+  predictor's masked loss on the Phase-A TRAINING split — the treatment
+  the value term already gets from ``target_variance``. The default is
+  ``raw`` (weights only, 1.0 each: the shipped objective, reduced to the
+  original unscaled sum so the 0001-0003 families reproduce
+  bit-for-bit); ``constant-predictor`` is the pre-registered arm
+  (``artifacts/evaluations/v9-loss-rebalance-prereg-2026-09-02.md``).
+  The baselines are measured and stamped in every mode; the manifest's
+  per-head validation numbers stay RAW because the OLS promotion gate
+  reads ``equity_called`` as an MSE.
 
 Torch imports are function-local (the ``offline_trainer`` pattern): the
 module imports cleanly on the stdlib interpreter; training runs in the
@@ -104,6 +117,12 @@ from engine.rules.composition import (
     compose_active_wager,
     compose_aggressive_target,
     parameters_and_rules_from_record,
+)
+from engine.supervised_loss_normalization_v9 import (
+    SupervisedLossConfigV9,
+    check_supervised_loss_config,
+    constant_predictor_baselines,
+    supervised_head_scales,
 )
 from engine.v8_trainer import (
     V8TrainingConfig,
@@ -703,10 +722,18 @@ def fit_phase_b_v9(
     corpus: PhaseBCorpusV9,
     phase_a: Sequence[PhaseARowV9],
     config: PhaseBTrainingConfig,
+    supervised: SupervisedLossConfigV9 | None = None,
 ) -> dict[str, object]:
-    """Fit one init seed with the joint composed + supervised objective."""
+    """Fit one init seed with the joint composed + supervised objective.
 
+    ``supervised`` (default: ``raw`` mode, unit weights) decides how the
+    three Phase-A losses enter the objective; see the module docstring.
+    """
+
+    if supervised is None:
+        supervised = SupervisedLossConfigV9()
     check_phase_b_config(config)
+    check_supervised_loss_config(supervised)
     base = config.base
     pb_train, pb_validation = split_decisions(corpus.decisions, base)
     pa_train, pa_validation = split_rows(phase_a, base)
@@ -720,6 +747,12 @@ def fit_phase_b_v9(
     # fitted on.
     means, stds = context_normalization_v9([*pa_train, *pb_train])
     target_variance = value_target_variance(pb_train)
+    # The constant predictor's Phase-A losses on the TRAINING split:
+    # measured in every mode (stamped, and the *_normalized readouts
+    # divide by them), applied to the gradient only in
+    # constant-predictor mode.
+    supervised_baselines = constant_predictor_baselines(pa_train)
+    head_scales = supervised_head_scales(supervised, supervised_baselines.baselines)
 
     import torch
     from torch import nn
@@ -965,6 +998,23 @@ def fit_phase_b_v9(
 
     weight_value = float(config.value_loss_weight)
     weight_supervised = float(config.supervised_loss_weight)
+    scale_ft = float(head_scales["fold_through"])
+    scale_range = float(head_scales["range"])
+    scale_eq = float(head_scales["equity_called"])
+    identity_scales = scale_ft == 1.0 and scale_range == 1.0 and scale_eq == 1.0
+
+    def weighted_supervised(ft_loss, range_loss, eq_loss):
+        """Sum of scale_h * loss_h over the three Phase-A heads.
+
+        Every scale exactly 1.0 (raw mode, unit weights) takes the
+        original unscaled sum, so the shipped objective is reproduced
+        bit-for-bit rather than through three no-op multiplications.
+        Works on tensors (the training step) and floats (the readout).
+        """
+
+        if identity_scales:
+            return ft_loss + range_loss + eq_loss
+        return scale_ft * ft_loss + scale_range * range_loss + scale_eq * eq_loss
 
     def evaluated_losses(pb_data, pa_data) -> dict[str, float]:
         was_training = model.training
@@ -978,14 +1028,25 @@ def fit_phase_b_v9(
             model.train()
         normalized = raw_value / target_variance
         supervised_total = float(ft_loss) + float(range_loss) + float(eq_loss)
+        supervised_weighted = float(
+            weighted_supervised(float(ft_loss), float(range_loss), float(eq_loss))
+        )
+        baselines = supervised_baselines.baselines
         return {
             "value_mse": raw_value,
             "value_normalized": normalized,
+            # RAW per-head losses: the OLS gate reads equity_called as an MSE.
             "fold_through": float(ft_loss),
             "range": float(range_loss),
             "equity_called": float(eq_loss),
+            # loss / constant-predictor baseline, 1.0 = the constant predictor.
+            "fold_through_normalized": float(ft_loss) / baselines["fold_through"],
+            "range_normalized": float(range_loss) / baselines["range"],
+            "equity_called_normalized": float(eq_loss) / baselines["equity_called"],
             "supervised_total": supervised_total,
-            "total": weight_value * normalized + weight_supervised * supervised_total,
+            # What actually enters ``total`` (== supervised_total in raw mode).
+            "supervised_weighted": supervised_weighted,
+            "total": weight_value * normalized + weight_supervised * supervised_weighted,
         }
 
     pa_order_rng = random.Random(base.init_seed + 2)
@@ -1030,7 +1091,9 @@ def fit_phase_b_v9(
                 ft_loss, range_loss, eq_loss = supervised_losses(
                     pa_train_data, pa_indexes
                 )
-                loss = loss + weight_supervised * (ft_loss + range_loss + eq_loss)
+                loss = loss + weight_supervised * weighted_supervised(
+                    ft_loss, range_loss, eq_loss
+                )
             optimize(loss)
         for parameter in model.parameters():
             if not torch.isfinite(parameter).all():
@@ -1201,6 +1264,10 @@ def fit_phase_b_v9(
         "means": means,
         "stds": stds,
         "target_variance": target_variance,
+        "supervised_normalization": supervised.normalization,
+        "supervised_head_weights": supervised.head_weights(),
+        "supervised_baselines": supervised_baselines.as_record(),
+        "supervised_head_scales": dict(head_scales),
         "pb_train_decisions": len(pb_train),
         "pb_validation_decisions": len(pb_validation),
         "pb_train_tables": len({d.table_id for d in pb_train}),
@@ -1256,6 +1323,7 @@ def train_phase_b_candidate_v9(
     init_seeds: Sequence[int] = (401, 402, 403),
     corpus_path: str | Path | None = None,
     dataset_path: str | Path | None = None,
+    supervised: SupervisedLossConfigV9 | None = None,
 ) -> dict[str, object]:
     """Train every init seed, select by total validation loss, export one.
 
@@ -1266,7 +1334,10 @@ def train_phase_b_candidate_v9(
     invocations) so all can be gauntleted.
     """
 
+    if supervised is None:
+        supervised = SupervisedLossConfigV9()
     check_phase_b_config(config)
+    check_supervised_loss_config(supervised)
     if not init_seeds:
         raise ValueError("at least one init seed is required")
     if len(set(init_seeds)) != len(init_seeds):
@@ -1286,7 +1357,7 @@ def train_phase_b_candidate_v9(
         seed_config = replace(
             config, base=replace(config.base, init_seed=init_seed)
         )
-        result = fit_phase_b_v9(corpus, phase_a, seed_config)
+        result = fit_phase_b_v9(corpus, phase_a, seed_config, supervised)
         results.append(result)
         validation = result["validation_losses"]
         assert isinstance(validation, Mapping)
@@ -1451,6 +1522,28 @@ def train_phase_b_candidate_v9(
                     "from each decision's recorded context"
                 ),
                 "residual_cap_pot_fraction": config.residual_cap_pot_fraction,
+                "supervised_normalization": {
+                    "mode": best["supervised_normalization"],
+                    "head_weights": best["supervised_head_weights"],
+                    "baselines": best["supervised_baselines"],
+                    "effective_scales": best["supervised_head_scales"],
+                    "note": (
+                        "each Phase-A head's loss is multiplied by "
+                        "effective_scales[head] before entering the "
+                        "supervised sum. baselines are the constant "
+                        "(bias-only) predictor's masked losses on the "
+                        "Phase-A TRAINING split (per-lane fold-through "
+                        "marginal, range marginal, per-slot equity mean), "
+                        "measured in every mode; constant-predictor mode "
+                        "scales by head_weight / baseline, raw mode by the "
+                        "head weight alone (1.0 by default - the objective "
+                        "the 0001-0003 families were trained under). The "
+                        "per-head numbers under evaluation.*_losses stay "
+                        "RAW (the OLS gate reads equity_called as an MSE); "
+                        "the *_normalized entries are loss / baseline and "
+                        "supervised_weighted is what enters total"
+                    ),
+                },
                 "supervised_source": (
                     "v9 Phase-A dataset batches interleaved every optimizer "
                     "step (component losses keep flowing)"
@@ -1537,6 +1630,34 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=float,
         default=phase_defaults.residual_weight_decay,
     )
+    supervised_defaults = SupervisedLossConfigV9()
+    parser.add_argument(
+        "--supervised-normalization",
+        choices=("raw", "constant-predictor"),
+        default=supervised_defaults.normalization,
+        help=(
+            "how the three Phase-A losses enter the objective: raw (the "
+            "shipped sum, weights only) or constant-predictor (each head "
+            "divided by the bias-only predictor's training-split loss, the "
+            "treatment the value term already gets)"
+        ),
+    )
+    parser.add_argument(
+        "--fold-through-loss-weight",
+        type=float,
+        default=supervised_defaults.fold_through_weight,
+    )
+    parser.add_argument(
+        "--range-loss-weight",
+        type=float,
+        default=supervised_defaults.range_weight,
+        help="the range head is an auxiliary task whose output is read nowhere",
+    )
+    parser.add_argument(
+        "--equity-called-loss-weight",
+        type=float,
+        default=supervised_defaults.equity_called_weight,
+    )
     parser.add_argument(
         "--residual-cap-pot-fraction",
         type=float,
@@ -1585,6 +1706,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         phase_a_batch_size=args.phase_a_batch_size,
         parity_sample=args.parity_sample,
     )
+    supervised = SupervisedLossConfigV9(
+        normalization=args.supervised_normalization,
+        fold_through_weight=args.fold_through_loss_weight,
+        range_weight=args.range_loss_weight,
+        equity_called_weight=args.equity_called_loss_weight,
+    )
+    check_supervised_loss_config(supervised)
     corpus = load_phase_b_corpus_v9(args.phase_b_corpus)
     print(
         f"phase-b corpus: {args.phase_b_corpus} "
@@ -1601,6 +1729,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         init_seeds=tuple(args.init_seeds),
         corpus_path=args.phase_b_corpus,
         dataset_path=args.phase_a_dataset,
+        supervised=supervised,
+    )
+    print(
+        f"supervised normalization: {supervised.normalization} "
+        f"(head weights {supervised.head_weights()})"
     )
     print(f"selected init seed: {summary['selected_init_seed']}")
     print(f"validation losses: {summary['validation_losses']}")

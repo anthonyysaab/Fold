@@ -1,0 +1,60 @@
+{
+  "corpus": "artifacts\\phase_b_v9\\candidate-v9-phase-b-merged.phase-b.jsonl.gz",
+  "feature_sets": {
+    "belief": {
+      "branch_interacted": false,
+      "columns_dropped_constant": 0,
+      "mse_validation": 0.00756074,
+      "parameters": 9,
+      "r2_validation": 0.0,
+      "value_normalized": 1.0826
+    },
+    "branch-minimal": {
+      "branch_interacted": true,
+      "columns_dropped_constant": 0,
+      "mse_validation": 0.00742166,
+      "parameters": 8,
+      "r2_validation": 0.0184,
+      "value_normalized": 1.0626
+    },
+    "branch-strength": {
+      "branch_interacted": true,
+      "columns_dropped_constant": 1,
+      "mse_validation": 0.00729847,
+      "parameters": 23,
+      "r2_validation": 0.0347,
+      "value_normalized": 1.045
+    },
+    "minimal": {
+      "branch_interacted": false,
+      "columns_dropped_constant": 0,
+      "mse_validation": 0.00756074,
+      "parameters": 2,
+      "r2_validation": 0.0,
+      "value_normalized": 1.0826
+    }
+  },
+  "instrument": {
+    "identity_normalized": 0.0,
+    "identity_verdict": "PASS"
+  },
+  "network": {
+    "candidate": "rebalance-equal",
+    "phase_a_equity_called_mse": 0.040758,
+    "value_mse": 0.006627,
+    "value_normalized": 0.948859
+  },
+  "phase_a_equity_called": {
+    "mse_validation": 0.038873,
+    "parameters": 2,
+    "r2_validation": 0.1979,
+    "train_rows": 7458,
+    "validation_rows": 726,
+    "validation_target_variance": 0.048467
+  },
+  "split_seed": 17,
+  "train_branch_rows": 126027,
+  "train_target_population_variance": 0.006984116,
+  "validation_branch_rows": 13894,
+  "validation_fraction": 0.1
+}
