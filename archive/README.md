@@ -18,7 +18,8 @@
 |---|---|---|
 | `pre-reset-2026-08-16/` | yes (`git mv`, history intact) | `engine/torch_network.py`, `engine/torch_policy.py` (no importers); 22 format-1 candidate files, 18 of their gauntlet reports, 34 of their launch recipes and logs — the architecture retired on 2026-08-16 |
 | `docs-superseded-2026-09-02/` | yes | the previous version of every repo document rewritten in the 2026-09-02 manual pass: `README.md`, `CLAUDE.md`, `engine/README.md`, `engine/rules/README.md` (with the full three-sweep defect ledger), `tools/README.md` (long form), `tests/README.md`, `artifacts/README.md`, `deploy/README.md`, `archive/README.md`, `artifacts/candidates/README-v8-seeds.md`, `artifacts/phase_b/README.md` |
-| `data/` | **no** — gitignored, ~777 MB | `corpora/` (the three v7 harvest corpora), `deadhead/` (the 2026-08-27 retrain set), `eval-bundle-2026-08-14/` (`build/` + `bundle.zip`, pre-rename package name), `antislop-audit-2026-08-12/`, `arena-training.jsonl.backup-2026-08-26` |
+| `data/` | **no** — gitignored; since 2026-09-03 a junction to `D:\fold-archive\data`, ~777 MB plus the row below | `corpora/` (the three v7 harvest corpora), `deadhead/` (the 2026-08-27 retrain set), `eval-bundle-2026-08-14/` (`build/` + `bundle.zip`, pre-rename package name), `antislop-audit-2026-08-12/`, `arena-training.jsonl.backup-2026-08-26` |
+| `data/foreign-play-data-2026-09-03/` | **no** — inside the junction above, 16.8 GiB / 318,574 files | the Arena replay archive (formerly `foreign play data/`), quarantined 2026-09-03 when v9 moved to the PHH dataset; `.handoff/DATA.md` cites it for the Phase-A oracle `ecb4739df9d1b9ec` only |
 
 Not archives: `artifacts/evaluations/` (dated measurement records, never
 edited) and `.handoff/archive/` (the handoff-side archive, same instruction).

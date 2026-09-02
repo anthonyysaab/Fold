@@ -18,7 +18,7 @@ Procedures that chain these: `.handoff/PROCEDURES.md`.
 | `ols_baseline.py` | the k-parameter OLS baseline a v9 candidate must beat (value target and `equity_called`); self-validates on the target itself | `--corpus`, `--phase-a-dataset`, `--split-seed`, `--validation-fraction`, `--candidate` | reads only |
 | `promote_candidate.py` (OWNER) | writes `<v>.approved.manifest.json` and `artifacts/approved.json` atomically; enforces the OLS gate for format 4; never contacts the Arena | `manifest`, `--reason` (required), `--evaluation-note`, `--ols-gate enforce|warn|skip`, `--rollback` | → `artifacts/` |
 | `head_degeneracy_audit.py` | how often a head returns its bias, bit for bit; refuses to report unless three construction-forced controls pass | `--manifest`, `--journal`, `--head`, `--output` | journal → report |
-| `bench_harvest.py` (untracked) | micro-benchmarks of the harvest hot path (`harvest-benchmark-2026-09-02.md`) | | |
+| `bench_harvest.py` | micro-benchmarks of the harvest hot path (`harvest-benchmark-2026-09-02.md`); `oracle` reruns the macro harvest N times and gates on a byte-identical corpus — compare its sha256 to `79e61dbd4edf410a` yourself, the tool checks only self-consistency | `micro` or `oracle --runs 3 --root DIR`; `--candidate` (default `candidate-v9-0001a`) | candidate + P3 fit → `%TEMP%\fold-harvest-bench` |
 
 ## Instruments and estimators (frozen; do not loosen)
 

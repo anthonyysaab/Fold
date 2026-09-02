@@ -11,6 +11,28 @@ the long form is `archive/docs-superseded-2026-09-02/.../SESSION_AUDIT_AND_LINUX
 |---|---|
 | `live_session.service` | systemd unit template (placeholders: paths, user) |
 | `devfun-arena/strategy.py`, `devfun-arena/build_bundle.py` | the Eval-sandbox adapter and bundle builder (`bundle.zip`, 256 KB harness cap; the learned model does not fit) — dormant path, submit with `tools/submit.py`, poll with `tools/poll.py` |
+| `chipzen/` | Chipzen (chipzen.ai) upload bot: the heuristic-aggressive-v6 port (`bot.py` maps Chipzen `GameState` to the Arena-shaped table, inert network weights, so the deterministic equity rules drive every decision — same as `--aggressive`), full-cython Dockerfile, local probes, and the upload artifact `../0fold-heuristic-v1.tar.gz` (gitignored; 23 MB compressed, caps 250 MB/200 MB; caps verified 2026-09-02) |
+
+## Chipzen upload (chipzen.ai/get-started-upload)
+
+Free-to-play; nothing here touches the Arena API or the money rules. The
+learned artifact does not ship: torch blows the 200 MB image cap and the
+seccomp profile. Rebuild loop (Docker Desktop running, Git Bash for the
+binary pipe — PowerShell corrupts it):
+
+1. `python deploy/chipzen/smoke_probes.py` — engine healthy, legal actions, < 2 s/decision
+2. `chipzen-sdk validate deploy/chipzen --check-connectivity` — the platform's own upload checks
+3. `docker build -t 0fold-heuristic:v1 deploy/chipzen`
+4. Git Bash: `docker save 0fold-heuristic:v1 | gzip > deploy/0fold-heuristic-v1.tar.gz`
+5. `gzip -t deploy/0fold-heuristic-v1.tar.gz` before uploading
+
+The image ships no readable `.py`: builder-stage `cythonize -i -3` compiles
+`bot.py` and the trimmed engine closure (modules trimmed to the runtime
+import closure; `training_telemetry`/the v8-v9 trainer chain is unreachable
+on the serve path and is dropped). Runtime: alpine, non-root, `python -u`,
+`CHIPZEN_WS_URL`/`CHIPZEN_TOKEN` from env. The engine's own `deadline_s=4.0`
+decide path plus the check-call-fold fallback chain guarantee a legal,
+in-time action on every turn.
 
 ## Windows (the only host used so far)
 

@@ -31,3 +31,10 @@ artifacts/deadhead/
 # stale Eval bundle, the 2026-08-12 anti-slop audit, the 2026-08-26 journal
 # backup -- and must stay ignored: it is ~777 MB.
 archive/data/
+
+# PHH dataset (2026-09-03): a junction to D:/phh-dataset
+# (github.com/uoftcprg/phh-dataset, tag v3). Clone, never commit.
+phh-dataset/
+# Phase-A datasets built from PHH run to 100+ MB; their .summary.json
+# sidecars stay tracked as the record.
+artifacts/phase_a_v9/*pluribus*.jsonl.gz

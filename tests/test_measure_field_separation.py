@@ -378,6 +378,13 @@ class ParsingConventionTests(unittest.TestCase):
 class RealArchiveTests(unittest.TestCase):
     """The miniatures must not drift from the archive's real shape."""
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        # The Arena archive was quarantined on 2026-09-03 (DATA.md section 1.1);
+        # like every other archive test, skip rather than fail without it.
+        if not _REAL_REPLAY.exists():
+            raise unittest.SkipTest(f"archive replay not present: {_REAL_REPLAY}")
+
     def test_one_real_replay_parses_end_to_end(self) -> None:
         replay = _unwrap_rpc(_read_json(_REAL_REPLAY))
         rows, stats = replay_decisions(replay, collection="s13", seed=3)
