@@ -1,27 +1,27 @@
-# Tests
+# tests
 
-> **This map is incomplete and partly stale** (it omits ~10 test files added
-> since it was written). `python -m pytest tests/ -q` is the source of truth;
-> the current baseline is 344 passed, 1 expected CUDA skip. folder
+Revision 2026-09-02. `python -m pytest tests/ -q` with the stdlib interpreter
+is the source of truth: **1007 passed / 21 skipped / 355 subtests** (~3 min).
+Every skip is torch-availability and passes on the CUDA interpreter; tests
+that read `foreign play data/` skip when it is absent. Nothing here contacts
+the Arena. **A green suite is not evidence of safety on engine code** —
+sweep adversarially and run the tripwire (`.handoff/PROCEDURES.md` §7.3).
+`tests/test_summarize_seed_spread.py` is pytest-only; every other file is
+`unittest`-compatible. Previous map: `archive/docs-superseded-2026-09-02/tests/README.md`.
 
-This folder contains checks that run locally without joining Arena.
+| area | files | covers |
+|---|---|---|
+| live path, money | `test_live_session`, `test_runner_safety`, `test_play_entrypoints`, `test_runtime_layout` | free-Playground guard, hard stops, release paths; deadline and reconnect handling; launchers serve what is deployed; stdlib-only import |
+| gates and shaping | `test_safety_gates`, `test_temperature_shaping`, `test_hyper_aggression`, `test_policy_fixes`, `test_v9_engine_coupling` | `SafetyGates` ranges and round-trips, discriminating cases for the three dark repairs; bounded temperature; the dice roll; thresholds; L5 hardened catch-alls and the gated shove lane |
+| advisors and reads | `test_bluff`, `test_bluff_wiring`, `test_opponent_model`, `test_game_state`, `test_lead_position`, `test_risk_temperature` | bluff advisor and its passive-spot wiring; aggression tracking and the perma-shove remedy; snapshot validation; the two root gauges |
+| equity and metric | `test_hand_strength`, `test_hand_potential`, `test_strength_metric`, `test_treys_evaluator` | MC estimator boundaries; Ppot/Npot; the canonical metric; evaluator vs a brute-force oracle |
+| simulator and journal | `test_table_simulator`, `test_training_telemetry`, `test_action_history` | chip conservation, side pots, determinism, counterfactual replay; append-only journal; history encoder |
+| P3 and beliefs | `test_strength_aware_opponent`, `test_p3_audit`, `test_belief_provider`, `test_p3_belief_provider`, `test_p3_gate` | the fit's invariants on the shipped artifact; the posterior; the `vs-p3` gate |
+| rule layer | `test_rules_composition` | zero-diff fuzz, disjoint firing, damper supremacy, verdict telemetry |
+| v9 line | `test_learned_policy_v9`, `test_feature_extract_v9`, `test_v9_trainer`, `test_v9_trainer_phase_b`, `test_supervised_loss_normalization_v9`, `test_build_phase_a_dataset_v9`, `test_build_phase_b_corpus_v9`, `test_ols_baseline`, `test_evaluate_v8`, `test_head_degeneracy_audit` | composition, projection, format-4 loader and stamps; schema-4 invariants; both trainers (torch parts skip on stdlib); the Phase-1 knob; the builder (board look-ahead regression) and harvester (owner pins, purity, merge); the OLS gate; the gauntlet wrapper and floors; the degeneracy detector |
+| v8 line (frozen) | `test_learned_policy_v8`, `test_feature_extract_v8`, `test_schema3`, `test_v8_parity`, `test_v8_trainer`, `test_v8_trainer_phase_b`, `test_build_phase_b_corpus`, `test_phase_a_dataset`, `test_summarize_seed_spread` | freeze guards |
+| v7 line and instruments | `test_learned_policy`, `test_learning_contract`, `test_offline_trainer`, `test_v7_core`, `test_cuda_trainer`, `test_degenerate_group_filter`, `test_evaluate_policies`, `test_gate_binding_audit`, `test_self_play_cycle`, `test_harvest_parallelism`, `test_measure_field_separation` | promotion and rollback (reads `candidate-v7-0001c`); the 142-input contract; the v7 trainer and forward pass; the gauntlet statistics; the journal audit; the v7 harvest and its parallel equivalence; the field benchmark instrument |
+| replay archive | `test_collect_foreign_play_data`, `test_foreign_corpus_rebuild`, `test_foreign_data` | receipts and state reconstruction; reconcile/rebuild on a fixture with every gap class; the CSV training boundary |
 
-- `README.md` is this folder map.
-- `test_bluff.py` checks the standalone bluff advisor's pricing math, gates, blockers, determinism, and validation.
-- `test_bluff_wiring.py` checks the engine's bluff path: priced semi-bluffs in passive spots, the paired-board and raising-war gates, wildness vetoes, and telemetry marking.
-- `test_foreign_data.py` checks the foreign CSV training boundary (eligibility, clamping, refusals) and the audit tool's calibration summaries.
-- `test_game_state.py` checks numeric validation at the untrusted Arena snapshot boundary.
-- `test_hyper_aggression.py` checks the anti-modeling dice roll: full-pot pressure on trigger, hard gates and the risk cap holding, deterministic rolls, and training exclusion.
-- `test_lead_position.py` checks the lead gauge's bounds, chip monotonicity, positional accentuation, and validation.
-- `test_learned_policy.py` checks artifact loading (checksums, engine parameters), legality of learned decisions, atomic promotion, and rollback.
-- `test_learning_contract.py` protects the exact 142-input model shape and immutable artifact metadata.
-- `test_offline_trainer.py` checks candidate artifact writing and the empty-data guard.
-- `test_opponent_model.py` checks aggression tracking (dedup, hand resets, identity keys, decayed evidence) and proves repeated shoves flip the engine from folding to calling.
-- `test_policy_fixes.py` protects six-player routing and the aggressive policy's authoritative call and raise thresholds.
-- `test_risk_temperature.py` checks the gauge's bounds and monotonic response to strength, street, purse pressure, and player count.
-- `test_runner_safety.py` protects emergency action order, reconnect handling, and runner arguments.
-- `test_safety_gates.py` checks the injectable SafetyGates parameters: softened defaults, the unsoftened originals, validation ranges, JSON round-trips, and that injected gates change decisions.
-- `test_runtime_layout.py` checks policy loading, credential-free runner help, and the dependency-free package import.
-- `test_table_simulator.py` checks chip conservation, side pots, snapshot contract validity, determinism, self-play capture, and the perma-shover tripwire.
-- `test_temperature_shaping.py` checks the bounded temperature response: cold loosens, hot tightens, hard gates never shift, and neutral shaping reproduces legacy play.
-- `test_training_telemetry.py` protects identity-gated decisions, replay validation, settlement joins, and big-blind rewards.
+61 files. `ruff check .` reports 7 pre-existing errors (three of them in
+this folder); not a regression.

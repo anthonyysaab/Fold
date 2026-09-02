@@ -30,7 +30,7 @@ Example::
 
     python -m tools.separation_probe \\
         --manifests artifacts/candidates/candidate-v7-0001c.approved.manifest.json \\
-                    artifacts/deadhead/deadhead-treated-s92.manifest.json \\
+                    archive/data/deadhead/deadhead-treated-s92.manifest.json \\
         --output artifacts/evaluations/separation-probe.json
 """
 

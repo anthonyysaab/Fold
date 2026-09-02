@@ -31,8 +31,11 @@ from typing import Any
 
 CUDA_PYTHON = r"C:\Users\user\poker-nn-training\.venv\Scripts\python.exe"
 STDLIB_PYTHON = r"C:\Users\user\AppData\Local\Programs\Python\Python311\python.exe"
-CORPUS = "artifacts/corpora/candidate-v7-0001.corpus"
-OUTPUT_DIR = "artifacts/deadhead"
+# Both trees were moved under archive/data/ by the 2026-09-02 janitor pass
+# (see archive/README.md); the experiment itself is closed and its result,
+# artifacts/evaluations/dead-head-retrain-2026-08-27.json, is tracked.
+CORPUS = "archive/data/corpora/candidate-v7-0001.corpus"
+OUTPUT_DIR = "archive/data/deadhead"
 
 #: Frozen in the pre-registration. Never recomputed from the runs.
 PAIRED_DIFFERENCE_SD = 9.223

@@ -1,6 +1,15 @@
+> **ARCHIVED 2026-09-02 — SUPERSEDED. NOT STATE, NOT PLAN, NOT RULES.**
+> Do not use this file to learn what the system is, what its state is, or what to do.
+> The live manual is `CLAUDE.md` → `.handoff/CONTEXT.md`. Open this file only for a
+> specific fact that a live document cites here by path. Never edit it, never restore it.
+
 # Phase B corpora — counterfactual value labels vs the repaired P3 opponent
 
 Written 2026-08-17 by the session that built `tools/build_phase_b_corpus.py`.
+
+> **2026-09-02**: this is the **v8** corpus format (corpus schema 1, 413 inputs).
+> The served v9 line uses corpus schema 2 with the 414-input vector, written and
+> validated by `tools/build_phase_b_corpus_v9.py` under `artifacts/phase_b_v9/`.
 This directory holds **v8-native Phase B corpora** (V8_DESIGN §5 Phase B):
 counterfactual branch values harvested with a v8 candidate acting as hero
 against lineups that include the fitted, price-clamped

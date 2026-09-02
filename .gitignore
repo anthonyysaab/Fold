@@ -11,7 +11,6 @@ build/
 .venv/
 .ruff_cache/
 .handoff/
-.antislop/
 .claude/
 artifacts/corpora/
 
@@ -25,3 +24,10 @@ artifacts/corpora/
 # artifacts/evaluations/dead-head-retrain-prereg-2026-08-27.md. The result
 # that matters -- dead-head-retrain-2026-08-27.json -- is tracked.
 artifacts/deadhead/
+
+# Janitor archive (2026-09-02; archive/README.md maps every move). The tracked
+# half, archive/pre-reset-2026-08-16/, is git-mv'd history. The data half holds
+# the moved gitignored bulk -- the v7 corpora, the deadhead retrain set, the
+# stale Eval bundle, the 2026-08-12 anti-slop audit, the 2026-08-26 journal
+# backup -- and must stay ignored: it is ~777 MB.
+archive/data/

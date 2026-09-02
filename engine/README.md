@@ -1,27 +1,57 @@
-# Poker policy package
+# engine
 
-> **Partly pre-reset.** References below to a "128-64 shared trunk" and "three
-> model heads" describe the v6 shape; every v7 artifact on disk uses trunk
-> `[256, 256, 128]` with four heads, and `learned_policy.py` carries a format-2
-> runtime (`LearnedPokerPolicyV7`) beside the v6 one. `.handoff/CONTEXT.md` is
-> authoritative for current state.
+Revision 2026-09-02. Stdlib-only on the serve path: every `torch` import is
+function-local (verified: importing the serve modules leaves `torch` out of
+`sys.modules`). No Arena requests from this package. Architecture:
+`.handoff/notes/V9_ARCHITECTURE.md`. Previous map:
+`archive/docs-superseded-2026-09-02/engine/README.md`.
 
-This folder contains poker decisions and their inputs. It performs no Arena network requests.
+## Serve path — what one live decision touches
 
-- `README.md` is this folder map.
-- `__init__.py` marks this directory as a Python package without loading optional dependencies.
-- `_vendor/` contains a copied poker-card evaluator required at runtime.
-- `decision_engine.py` turns policy proposals into safe, legal actions. It shifts normal thresholds a bounded amount with the situation temperature (`TemperatureShaping`), reads every hard gate from the injectable `SafetyGates` parameter set, consults the bluff advisor in passive spots (fed by the lead gauge and opponent model), and attaches private equity, temperature, lead, and bluff diagnostics.
-- `game_state.py` validates Arena table data and turns it into policy features.
-- `hand_strength.py` estimates showdown strength and evaluates how much the hole cards improve the board.
-- `foreign_data.py` converts the public collector's teacher-eligible CSV rows into validated, behavior-only training examples with explicit foreign provenance. It upgrades stored schema-1 rows to schema 2 with honest neutral values for live-only opponent context.
-- `learned_policy.py` loads a checksummed candidate or the approved artifact into a playing policy. V6 interprets the three action outputs as counterfactual values, uses heuristic sizing by default, and can operate as a confidence/OOD-gated correction layer; every hard gate, temperature, tracker, and bluff path stays in charge.
-- `learning_contract.py` defines the versioned 142 inputs (schema 2 adds opponent evidence and standing), 128-64 shared trunk, three model heads, and immutable artifact manifest.
-- `opponent_model.py` tracks each opponent's observed aggression frequency during a session and floors the engine's range conditioning with it, so a permanent shover stops being credited with strength.
-- `offline_trainer.py` trains same-state legal-family value estimates from counterfactual simulator groups, pretrains the shared trunk with a disposable behavior head, reports best-action accuracy, regret, and held-out hybrid calibration, and writes local candidate artifacts. It does not deploy them.
-- `poker_policy.py` is the live policy entry point. It exposes standard and aggressive rule settings and can read legacy fixed weights.
-- `table_simulator.py` deals seeded 2-6-player no-limit hands that emit Arena-shaped snapshots, with side pots, BB/100 scoring, stable decision-group IDs, and averaged same-state legal-family replay for counterfactual value targets.
-- `policy_features.py` defines the exact 125 inputs and three action-family labels used by policy weights.
-- `training_telemetry.py` validates and appends private local decision and settlement records for later offline learning.
-- `torch_network.py` defines the legacy optional PyTorch network used with old checkpoints.
-- `torch_policy.py` is the legacy PyTorch-backed adapter. Live play does not import it, and its default equity path bypasses its logits.
+| module | role |
+|---|---|
+| `decision_engine.py` | turns any proposal into a safe legal action: `SafetyGates`, `TemperatureShaping`, sizing floors, bluff hookup, opponent tracker, deadline path, the dark C1–C5 dials. **Every edit here is a live-money edit.** |
+| `game_state.py` | validates the Arena snapshot; `effective_stack_chips`, `contested_stack_chips`, `card_reveal_expense`, positions |
+| `hand_strength.py` | Monte Carlo equity, range conditioning, `equity_multiway`, `equity_vs_posterior` |
+| `hand_potential.py` | Ppot / Npot |
+| `strength_metric.py`, `preflop_percentiles.py` | the one canonical hand-strength scale (features, labels, reports) |
+| `opponent_model.py` | session-scoped aggression tracking → range floor |
+| `poker_policy.py` | heuristic policies (`--standard` / `--aggressive`), the fallback when nothing is approved; loads the legacy `tiny-policy-pure.json` at start-up (chooses no actions) |
+| `learned_policy.py` | `load_approved`; format-1/2 runtime; dispatches format 4 to `learned_policy_v9` |
+| `learned_policy_v9.py` | **the served runtime**: composition, projection, format-4 loader, P3 belief provider, hyper roll 0.0 |
+| `aggression_sizing.py` | g — the one sizing function |
+| `branch_contract_v9.py` | the four-branch contract (normative) |
+| `feature_extract_v9.py`, `schema4.py` | the 414-input vector (frozen); built on `feature_extract_v8.py`, `schema3.py`, `action_history.py` |
+| `belief_provider.py`, `p3_belief_provider.py` | belief-bucket interface; the fitted P3 posterior |
+| `strength_aware_opponent.py` | the P3 fold model and battery opponent |
+| `rules/` | C1–C5, wired dark (`rules/README.md`) |
+| `training_telemetry.py` | the journal (schema 3) and `TrainingExample` |
+| `learning_contract.py`, `policy_features.py` | the v7 contract and manifest validator every format passes; the 125 legacy names and the frozen action labels |
+| `_vendor/treys/` | vendored hand evaluator |
+
+Also imported on the serve closure: `offline_trainer.py` (`_forward_v2`, the
+pure-Python v7 serve pass for the rollback target) and `v8_trainer.py` (the
+network factory). Root modules imported on every decision: `bluff.py`,
+`lead_position.py`, `risk_temperature.py`.
+
+## Training only
+
+| module | role |
+|---|---|
+| `v9_trainer.py` | Phase A (supervised heads from the replay archive) |
+| `v9_trainer_phase_b.py` | Phase B (composed value from the harvest; `--supervised-normalization`) |
+| `supervised_loss_normalization_v9.py` | the constant-predictor normalizers behind that knob |
+| `table_simulator.py` | seeded Arena-shaped simulator, scripted archetypes, `decide_forced`; `arena_shaped_call_amounts` is the v9 size-encoding opt-in |
+| `v8_trainer_phase_b.py`, `offline_trainer.py`, `foreign_data.py` | frozen v8 / v7 trainers and the foreign-CSV boundary |
+
+## Lines
+
+| line | format | modules | status |
+|---|---|---|---|
+| v9 | 4 | `*_v9.py`, `schema4`, `aggression_sizing`, `branch_contract_v9`, `rules/` | served (`candidate-v9-0003b`; busted S17 2026-09-02) |
+| v8 | 3 | `*_v8.py`, `schema3`, `v8_trainer*` | frozen; imported by v9 |
+| v7 | 2 | `learning_contract`, `learned_policy`, `offline_trainer` | frozen; rollback target and tripwire subject |
+| v6 | 1 | same modules | artifacts archived |
+
+Retiring v7/v8 is an explicit owner pass (`.handoff/DECISIONS.md` §5.6), not a
+file move.

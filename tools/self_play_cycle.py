@@ -16,9 +16,9 @@ training uses log-percentage counterfactual action values.
 Candidate state only; promotion stays a separate evaluation decision.
 
 Example (module mode puts the repository root on the import path):
-    python -m tools.self_play_cycle --model-version candidate-mixed-0004 \
+    python -m tools.self_play_cycle --model-version candidate-v7-0004 \
         --foreign-csv "foreign play data/.../top15_decisions.csv" \
-        --sparring artifacts/candidates/candidate-mixed-0003.manifest.json \
+        --sparring artifacts/candidates/candidate-v7-0003a.manifest.json \
         --return-scale-pct 20
 """
 

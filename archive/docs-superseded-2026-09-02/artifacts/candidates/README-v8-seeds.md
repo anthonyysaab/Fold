@@ -1,7 +1,17 @@
+> **ARCHIVED 2026-09-02 — SUPERSEDED. NOT STATE, NOT PLAN, NOT RULES.**
+> Do not use this file to learn what the system is, what its state is, or what to do.
+> The live manual is `CLAUDE.md` → `.handoff/CONTEXT.md`. Open this file only for a
+> specific fact that a live document cites here by path. Never edit it, never restore it.
+
 # v8 Phase-A seed artifacts — seed → artifact map
 
 Written 2026-08-16. Covers the three `v8-composed-value` Phase-A candidates
 trained from `artifacts/phase_a/phase-a-dataset.jsonl.gz`.
+
+> **2026-09-02**: a dated record. The trainer module is now `engine.v8_trainer`
+> (the package was renamed from `devfun_poker_playground` on 2026-08-28), and
+> `artifacts/approved.json` has pointed at `candidate-v9-0003b` since
+> 2026-09-01. The sha256 map and the reproducibility claims below stand.
 
 V8_DESIGN §6.1 requires **three init seeds, every seed gauntleted**, with
 validation loss acting as a gate and never as a selector. The original run
