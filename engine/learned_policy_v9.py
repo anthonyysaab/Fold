@@ -50,8 +50,9 @@ What is new versus the v8 serve path, exactly:
   ``fold``/``check_call``/``aggress`` trio. Argmax ties break toward the
   earlier slot in ``BRANCH_LABELS_V9`` (``fatal`` first: conservative).
 
-The loader refuses, fail-loud: any format but 4, any schema but 4 (412
-inputs, the exact ``schema4`` name list), any labels but
+The loader refuses, fail-loud: any format but 4, any schema but 4
+(``schema4.INPUT_SIZE_V9`` inputs, the exact ``schema4`` name list), any
+labels but
 ``BRANCH_LABELS_V9``, a missing or foreign ``sizing`` block (the
 composed record carries g's identity and every dial state — an artifact
 that cannot state its sizing cannot be served), a v8 architecture, a
@@ -362,6 +363,16 @@ class LearnedPokerPolicyV9(DecisionEngine):
             and len(self._stds) == schema4.INPUT_SIZE_V9,
             "feature normalization must cover the full schema-4 vector",
         )
+        # The stamp is enforced HERE as well as in load_policy_v9: the
+        # class is the contract, the loader is a convenience. A future
+        # direct constructor must not silently serve an unstamped block
+        # (pre-harvest decision 5).
+        try:
+            schema4.require_normalization_stamp(normalization)
+        except schema4.Schema4Error as error:
+            raise LearnedPolicyV9Error(
+                f"invalid feature normalization: {error}"
+            ) from error
         _require(
             not (serve or {}).get("margin_quantiles"),
             "v9 defines no hybrid mode: margin_quantiles must not be present",
@@ -395,6 +406,28 @@ class LearnedPokerPolicyV9(DecisionEngine):
         self._use_residual = bool(use_residual)
         self._residual_cap_pot_fraction = float(residual_cap_pot_fraction)
         self._branch_pot_fraction: float | None = None
+        #: Additive serve diagnostics, read by ``DecisionEngine`` via
+        #: getattr exactly like ``_proposed_risk_fraction``: the branch the
+        #: composition chose, and the belief provider's per-decision
+        #: degrade. Reset at the top of every ``_equity_family`` call so a
+        #: fail-closed (heuristic) decision journals neither.
+        self._proposed_branch: str | None = None
+        self._belief_degrade_reason: str | None = None
+
+    def __deepcopy__(self, memo: dict) -> "LearnedPokerPolicyV9":
+        """The base clone, plus an isolated copy of the belief provider.
+
+        ``DecisionEngine.__deepcopy__`` shares every immutable or
+        rebound attribute; the P3 provider's ``last_degrade_reason`` is
+        rebound per decision on the PROVIDER, so a shared provider would
+        let a replay's degrade overwrite the original's reading. The
+        provider's own clone shares the immutable fit and copies the
+        container.
+        """
+
+        clone = super().__deepcopy__(memo)
+        clone._belief_provider = self._belief_provider.clone()
+        return clone
 
     def _family(self, features: tuple[float, ...]) -> str:
         del features
@@ -416,6 +449,11 @@ class LearnedPokerPolicyV9(DecisionEngine):
             sizing=self._sizing_params,
             rules=self.rule_layer,
         )
+        # Journal the RAW schema-4 vector, not the normalized one: the
+        # normalization is an artifact property (the weights file's own
+        # means/stds) and a stored row has to stay readable when a later
+        # artifact normalizes differently.
+        self._schema4_features = tuple(vector)
         normalized = tuple(
             (value - mean) / std
             for value, mean, std in zip(vector, self._means, self._stds)
@@ -472,6 +510,9 @@ class LearnedPokerPolicyV9(DecisionEngine):
         features: tuple[float, ...] | None = None,
     ) -> str:
         self._branch_pot_fraction = None
+        self._proposed_branch = None
+        self._belief_degrade_reason = None
+        self._schema4_features = None
         if equity is None:
             return super()._equity_family(table, allowed, available, equity)
         try:
@@ -484,6 +525,12 @@ class LearnedPokerPolicyV9(DecisionEngine):
             return super()._equity_family(table, allowed, available, equity)
         if not values:
             return super()._equity_family(table, allowed, available, equity)
+        # Serve-side belief-degrade telemetry (L6): the provider degrades
+        # ONE decision to the uniform prior and keeps the reason; the
+        # composition just ran, so this read is THIS decision's degrade.
+        self._belief_degrade_reason = (
+            getattr(self._belief_provider, "last_degrade_reason", None) or None
+        )
         # Centered within the decision; centering never moves an argmax.
         offset = sum(values.values()) / len(values)
         centered = {branch: value - offset for branch, value in values.items()}
@@ -492,6 +539,7 @@ class LearnedPokerPolicyV9(DecisionEngine):
             (branch for branch in BRANCH_LABELS_V9 if branch in centered),
             key=lambda branch: centered[branch],
         )
+        self._proposed_branch = best
         family = branch_engine_family(best, to_call)
         if family == "aggress" and best in wagers:
             composed = wagers[best]
@@ -628,6 +676,16 @@ def load_policy_v9(
         and "stds" in normalization,
         "weights file lacks feature normalization",
     )
+    # Pre-harvest decision 5 (owner-confirmed 2026-08-31): the block must
+    # be identifiably schema-4's own — stamped with the schema version
+    # and the feature-name digest, and card-block identity scales. An
+    # unstamped block is by definition not v9-produced, no grandfather.
+    try:
+        schema4.require_normalization_stamp(normalization)
+    except schema4.Schema4Error as error:
+        raise LearnedPolicyV9Error(
+            f"invalid feature normalization: {error}"
+        ) from error
     serve = manifest.get("serve") or {}
     _require(isinstance(serve, Mapping), "manifest serve block must be an object")
     # Explicit argument wins; then the artifact's own pin; then the

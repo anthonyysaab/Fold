@@ -29,6 +29,7 @@ from pathlib import Path
 from engine.branch_contract_v9 import BRANCH_LABELS_V9
 from engine.learned_policy_v9 import compose_branch_values_v9
 from engine.p3_belief_provider import P3BeliefProvider
+from engine.table_simulator import _CounterfactualPoint
 from engine.v9_trainer_phase_b import (
     compose_from_constants_v9,
     load_phase_b_corpus_v9,
@@ -39,6 +40,7 @@ from tools.build_phase_b_corpus_v9 import (
     corpus_header_v9,
     corpus_statistics,
     expected_executions,
+    merge_corpora_v9,
     write_phase_b_corpus_v9,
 )
 
@@ -75,6 +77,184 @@ def _bare_simulator(**overrides) -> PhaseBHarvestSimulatorV9:
     )
     kwargs.update(overrides)
     return PhaseBHarvestSimulatorV9(**kwargs)
+
+
+class PostflopSelectionTests(unittest.TestCase):
+    """Street-targeted selection for supplemental postflop harvests."""
+
+    @staticmethod
+    def _point(ordinal: int, street: str, agent: str = "hero") -> _CounterfactualPoint:
+        return _CounterfactualPoint(
+            agent_id=agent,
+            decision_ordinal=ordinal,
+            example=None,
+            legal_families=("fold",),
+            proposed_risk_fraction=0.5,
+            street=street,
+        )
+
+    def test_uniform_mode_is_the_frozen_one_per_agent_rule(self) -> None:
+        simulator = _bare_simulator()
+        points = [
+            self._point(index, street)
+            for index, street in enumerate(("preflop", "flop", "turn", "river"))
+        ]
+        selected = simulator._select_points(0, points)
+        expected = random.Random(
+            f"{simulator.seed}:0:hero:counterfactual"
+        ).choice(points)
+        self.assertEqual(len(selected), 1)
+        self.assertIs(selected[0], expected)
+
+    def test_postflop_mode_picks_one_point_per_reached_street(self) -> None:
+        simulator = _bare_simulator(
+            postflop_selection=True,
+            street_quotas={"flop": 5, "turn": 5, "river": 5},
+        )
+        points = [
+            self._point(0, "preflop"),
+            self._point(1, "preflop"),
+            self._point(2, "flop"),
+            self._point(3, "flop"),
+            self._point(4, "turn"),
+            self._point(5, "river"),
+        ]
+        selected = simulator._select_points(0, points)
+        self.assertEqual(sorted(point.street for point in selected), ["flop", "river", "turn"])
+        flop_choices = [point for point in points if point.street == "flop"]
+        expected_flop = random.Random(
+            f"{simulator.seed}:0:hero:postflop:flop"
+        ).choice(flop_choices)
+        self.assertIn(expected_flop, selected)
+
+    def test_postflop_quotas_cap_each_street(self) -> None:
+        simulator = _bare_simulator(
+            postflop_selection=True,
+            street_quotas={"flop": 2, "turn": 1, "river": 3},
+        )
+        flop_points = [self._point(index, "flop") for index in range(5)]
+        selected: list[_CounterfactualPoint] = []
+        for hand in range(4):
+            selected.extend(simulator._select_points(hand, flop_points))
+        self.assertEqual(len(selected), 2)
+
+    def test_streets_without_points_are_skipped(self) -> None:
+        simulator = _bare_simulator(
+            postflop_selection=True,
+            street_quotas={"flop": 5, "turn": 5, "river": 5},
+        )
+        selected = simulator._select_points(0, [self._point(0, "preflop")])
+        self.assertEqual(selected, [])
+
+
+class MergeCorporaTests(unittest.TestCase):
+    """The supplemental-harvest merge: compatible corpora combine, incompatibles refuse."""
+
+    def test_merge_combines_compatible_corpora(self) -> None:
+        from test_v9_trainer_phase_b import _header, _priced_row, _write_corpus
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            base = directory / "base.jsonl.gz"
+            extra = directory / "extra.jsonl.gz"
+            output = directory / "merged.jsonl.gz"
+            _write_corpus(
+                base, [_priced_row("t1", 0)], _header(seeds=[71])
+            )
+            _write_corpus(
+                extra,
+                [_priced_row("t2", 0)],
+                {
+                    **_header(seeds=[72]),
+                    "selection": {
+                        "mode": "postflop",
+                        "street_targets": {"flop": 15_000, "turn": 10_000, "river": 6_000},
+                    },
+                },
+            )
+            report = merge_corpora_v9(base, extra, output)
+        self.assertEqual(report["base_rows"], 1)
+        self.assertEqual(report["extra_rows"], 1)
+        self.assertEqual(report["merged_rows"], 2)
+        self.assertEqual(report["decisions"], 2)
+        self.assertEqual(report["seeds"], [71, 72])
+
+    def test_merge_records_both_selection_provenances(self) -> None:
+        import gzip as _gzip
+
+        from test_v9_trainer_phase_b import _header, _priced_row, _write_corpus
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            base = directory / "base.jsonl.gz"
+            extra = directory / "extra.jsonl.gz"
+            output = directory / "merged.jsonl.gz"
+            _write_corpus(
+                base,
+                [_priced_row("t1", 0)],
+                {**_header(seeds=[71]), "selection": {"mode": "uniform"}},
+            )
+            _write_corpus(
+                extra,
+                [_priced_row("t2", 0)],
+                {**_header(seeds=[72]), "selection": {"mode": "postflop"}},
+            )
+            merge_corpora_v9(base, extra, output)
+            with _gzip.open(output, "rt", encoding="utf-8") as stream:
+                merged_header = json.loads(stream.readline())
+        self.assertEqual(
+            merged_header["selection"],
+            [{"mode": "uniform"}, {"mode": "postflop"}],
+        )
+
+    def test_merge_refuses_incompatible_corpora(self) -> None:
+        from tools.build_phase_b_corpus import PhaseBError
+        from test_v9_trainer_phase_b import _header, _priced_row, _write_corpus
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            base = directory / "base.jsonl.gz"
+            extra = directory / "extra.jsonl.gz"
+            output = directory / "merged.jsonl.gz"
+            _write_corpus(base, [_priced_row("t1", 0)], _header(equity_trials=1000))
+            _write_corpus(extra, [_priced_row("t2", 0)], _header(equity_trials=500))
+            with self.assertRaises(PhaseBError):
+                merge_corpora_v9(base, extra, output)
+
+    def test_merge_refuses_overlapping_leg_seeds(self) -> None:
+        # decision ids are sim-<seed>-<hand>:..., so shared leg seeds
+        # collide probabilistically — the refusal must be structural.
+        from tools.build_phase_b_corpus import PhaseBError
+        from test_v9_trainer_phase_b import _header, _priced_row, _write_corpus
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            base = directory / "base.jsonl.gz"
+            extra = directory / "extra.jsonl.gz"
+            output = directory / "merged.jsonl.gz"
+            _write_corpus(base, [_priced_row("t1", 0)], _header(seeds=[71, 112]))
+            _write_corpus(extra, [_priced_row("t2", 0)], _header(seeds=[112, 117]))
+            with self.assertRaises(PhaseBError):
+                merge_corpora_v9(base, extra, output)
+
+
+class CallEventShapeTests(unittest.TestCase):
+    """Pre-harvest decision 3: the replay's event shape follows the flag.
+
+    A mixed flag — main play in one shape, replays in the other — is the
+    skew the decision exists to remove, rebuilt on the replay side.
+    """
+
+    def test_replay_class_follows_the_flag(self) -> None:
+        from tools.build_phase_b_corpus import PhaseBReplaySimulator
+        from tools.build_phase_b_corpus_v9 import _ArenaShapedReplaySimulator
+
+        on = _bare_simulator()
+        self.assertTrue(on.arena_shaped_call_amounts)
+        self.assertIs(on.replay_class, _ArenaShapedReplaySimulator)
+        off = _bare_simulator(arena_shaped_call_amounts=False)
+        self.assertFalse(off.arena_shaped_call_amounts)
+        self.assertIs(off.replay_class, PhaseBReplaySimulator)
 
 
 class ExpectedExecutionTests(unittest.TestCase):
@@ -672,6 +852,15 @@ class RowShapeTests(unittest.TestCase):
                 self.assertEqual("sizing_target" in entry, is_wager)
                 self.assertEqual("sizing_to_amount" in entry, is_wager)
                 self.assertNotIn("e6_target", entry)
+
+
+# NOTE (2026-09-02): LearnedPanelTests lived here and was removed with the
+# feature it covered. Phase B's counterfactual replay resamples every
+# card-reading opponent's holes conditional on that opponent's own prefix
+# decisions, and only P3SeatWrapper records that prefix -- so a learned
+# seat cannot be harvested honestly without a conditional hole sampler of
+# its own. See the reasoning kept in build_phase_b_corpus._OPPONENT_KINDS.
+
 
 if __name__ == "__main__":
     unittest.main()

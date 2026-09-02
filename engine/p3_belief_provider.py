@@ -95,6 +95,22 @@ class P3BeliefProvider:
         )
         self.last_degrade_reason: str | None = None
 
+    def clone(self) -> "P3BeliefProvider":
+        """A provider copy that isolates the per-decision degrade reason.
+
+        The counterfactual replay clones the serving policy per branch and
+        rollout; a clone sharing its provider would overwrite the
+        original's ``last_degrade_reason`` with the replay's, corrupting
+        the per-decision belief-degrade telemetry. The fitted model is
+        immutable (and already shared across seats via
+        :func:`strength_aware_opponent.load_fit`), so only the container
+        is copied.
+        """
+
+        clone = type(self).__new__(type(self))
+        clone.__dict__ = self.__dict__.copy()
+        return clone
+
     @classmethod
     def from_artifact(cls, path: str | Path = DEFAULT_FIT_PATH) -> "P3BeliefProvider":
         """Load the fitted artifact — loud on any problem, never a fallback."""

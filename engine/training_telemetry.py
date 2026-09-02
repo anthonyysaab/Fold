@@ -30,6 +30,7 @@ from engine.learning_contract import (
     FEATURE_SCHEMA_VERSION,
     LEARNING_FEATURE_NAMES,
 )
+from engine.schema4 import INPUT_SIZE_V9, SCHEMA_VERSION_V9
 from engine.policy_features import FEATURE_NAMES, LABELS
 
 TELEMETRY_SCHEMA_VERSION = 3
@@ -276,6 +277,18 @@ def make_decision_record(
     features = decision.learning_features if decision is not None else None
     if features is not None and len(features) != len(LEARNING_FEATURE_NAMES):
         raise TelemetryError("decision learning features violate the contract")
+    # Additive: the schema-4 vector a v9 policy actually inferred on. The
+    # 142-input `features` above is unchanged and still what every stored
+    # journal and the v7 offline trainer read; this rides alongside so a
+    # v9 deployment's own hands become usable v9 training/audit rows
+    # instead of being recorded in a schema the serving policy never saw.
+    features_v9 = decision.learning_features_v9 if decision is not None else None
+    if features_v9 is not None and len(features_v9) != INPUT_SIZE_V9:
+        raise TelemetryError("decision v9 features violate the schema-4 contract")
+    if features_v9 is not None and not all(
+        math.isfinite(float(value)) for value in features_v9
+    ):
+        raise TelemetryError("decision v9 features must be finite")
     temperature = decision.situation_temperature if decision is not None else None
     if decision is not None and decision.deadline_fallback and fallback_reason is None:
         fallback_reason = "deadline"
@@ -333,6 +346,10 @@ def make_decision_record(
         "policy_version": policy_version,
         "feature_schema_version": FEATURE_SCHEMA_VERSION if features else None,
         "features": list(features) if features else None,
+        # Null on every v7/v8 record and every non-policy decision, so
+        # stored journals and the frozen readers are byte-identical.
+        "features_v9_schema_version": SCHEMA_VERSION_V9 if features_v9 else None,
+        "features_v9": list(features_v9) if features_v9 else None,
         "street": str(table.get("street") or "").casefold(),
         "big_blind_chips": _integer(
             table.get("bigBlindChips"), "bigBlindChips", minimum=1
@@ -396,6 +413,19 @@ def make_decision_record(
             "amount_semantics": str(allowed.get("amountSemantics") or "toAmount"),
         },
         "proposed_family": proposed_family,
+        # Additive (L6): the v9 branch label the composition proposed, and
+        # the serving belief provider's per-decision degrade. Both are
+        # null/false for every v7/v8 record and every non-policy decision,
+        # so stored journals and the frozen consumers keep reading.
+        "proposed_branch": (
+            decision.proposed_branch if decision is not None else None
+        ),
+        "belief_degraded": (
+            decision.belief_degraded if decision is not None else False
+        ),
+        "belief_degrade_reason": (
+            decision.belief_degrade_reason if decision is not None else None
+        ),
         "behavior_probabilities": list(probabilities) if probabilities else None,
         "action": action,
         "amount_to": amount_to,

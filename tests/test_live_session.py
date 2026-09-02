@@ -631,5 +631,72 @@ class TableReleaseTests(unittest.TestCase):
         self.assertEqual(len(leaves), 1)
 
 
+class ExplicitCompetitionGuardTests(unittest.TestCase):
+    """``--competition`` must clear the same money guard as discovery.
+
+    Until 2026-09-02 an explicit id skipped discovery outright, and
+    ``is_free_playground`` with it, so a mistyped id could seat the agent
+    in a paid competition. Every refusal below is a real shape from the
+    active list.
+    """
+
+    @staticmethod
+    def _answer(items):
+        def fake_request(_key, _method, _path, body=None):
+            return 200, items
+
+        return fake_request
+
+    def test_the_free_playground_is_accepted(self) -> None:
+        with patch.object(
+            live_session.run_agent,
+            "request_arena",
+            side_effect=self._answer([EVAL_OPEN_PAID, PLAYGROUND]),
+        ):
+            ok, label = live_session.verify_explicit_competition(
+                "k", PLAYGROUND["id"]
+            )
+        self.assertTrue(ok)
+        self.assertEqual(label, PLAYGROUND["name"])
+
+    def test_a_paid_competition_is_refused(self) -> None:
+        for paid in (EVAL_OPEN_PAID, TOURNAMENT_BUYIN):
+            with self.subTest(paid=paid["name"]):
+                with patch.object(
+                    live_session.run_agent,
+                    "request_arena",
+                    side_effect=self._answer([PLAYGROUND, paid]),
+                ):
+                    ok, reason = live_session.verify_explicit_competition(
+                        "k", paid["id"]
+                    )
+                self.assertFalse(ok)
+                self.assertIn("not the free Playground", reason)
+
+    def test_an_unknown_id_is_refused_rather_than_assumed(self) -> None:
+        with patch.object(
+            live_session.run_agent,
+            "request_arena",
+            side_effect=self._answer([PLAYGROUND]),
+        ):
+            ok, reason = live_session.verify_explicit_competition("k", "no-such-id")
+        self.assertFalse(ok)
+        self.assertIn("not in the active list", reason)
+
+    def test_an_unreadable_list_refuses_rather_than_passing(self) -> None:
+        # Fail-closed: if the guard cannot be evaluated it must not seat.
+        def fake_request(_key, _method, _path, body=None):
+            return 500, {"error": "bad gateway"}
+
+        with patch.object(
+            live_session.run_agent, "request_arena", side_effect=fake_request
+        ):
+            ok, reason = live_session.verify_explicit_competition(
+                "k", PLAYGROUND["id"]
+            )
+        self.assertFalse(ok)
+        self.assertIn("cannot verify", reason)
+
+
 if __name__ == "__main__":
     unittest.main()

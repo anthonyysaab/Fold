@@ -93,6 +93,32 @@ class DecisionResult:
     lead_position: float | None = None
     bluff_kind: str | None = None
     hyper_aggression: bool = False
+    #: The v9 branch label the policy proposed, when the deciding policy
+    #: serves the composed contract (``learned_policy_v9`` stashes it).
+    #: None for v7/v8 policies, every non-policy decision, and every
+    #: decision whose family was overridden by ``decide_forced`` (the
+    #: pin clears it), so records stay additive. The submitted action
+    #: may still differ — the rails (bluff mixer, gates, sizing clamps)
+    #: sit above the composition.
+    proposed_branch: str | None = None
+    #: The schema-4 feature vector the v9 composition actually inferred
+    #: on, when a v9 policy is deciding. ADDITIVE and separate from
+    #: ``learning_features``, which stays the 142-input schema-2 vector
+    #: every ``DecisionEngine`` builds: the v7 offline trainer and every
+    #: stored journal read that field and must not change meaning.
+    #:
+    #: Without this a v9 deployment records only schema-2 features, so
+    #: its own live hands are unusable for v9 training or for
+    #: ``head_degeneracy_audit`` (which selects rows by width) — the
+    #: 2026-09-02 diagnosis's point that live play is the ONLY
+    #: out-of-distribution signal available, thrown away at the recorder.
+    #: None for every non-v9 policy.
+    learning_features_v9: tuple[float, ...] | None = None
+    #: Whether the serving belief provider degraded THIS decision to the
+    #: uniform prior, and why. False for every policy that serves no
+    #: fitted provider (the neutral provider cannot degrade).
+    belief_degraded: bool = False
+    belief_degrade_reason: str | None = None
 
     def to_payload(self) -> dict[str, str | int]:
         return self.action.to_payload()
@@ -603,6 +629,46 @@ class DecisionEngine:
             river_frequency=1.0,
         )
         self._hyper_active = False
+        # Per-decision policy diagnostics (L6), engine-owned: reset at
+        # the top of every decide_with_diagnostics and read via
+        # getattr-free attribute access into the DecisionResult. The v9
+        # serve class overwrites them inside _equity_family; nothing
+        # else ever writes them.
+        self._proposed_branch: str | None = None
+        self._belief_degrade_reason: str | None = None
+        self._schema4_features: tuple[float, ...] | None = None
+
+    def __deepcopy__(self, memo: dict) -> "DecisionEngine":
+        """Clone cheaply: copy the mutable play state, share everything else.
+
+        Counterfactual replay deep-copies seat lists once per branch and
+        rollout, and each seat carries its policy — a generic copy walks
+        the whole weight graph (~75,000 atomic values per learned policy
+        at the harvest's five deepcopy sites, measured 2026-09-02). Every
+        attribute except the two below is either immutable after
+        ``__init__`` (weights, normalization, gates, shaping, settings)
+        or rebound per decision (``_hyper_active``, ``_forced_proposal``,
+        ``_proposed_branch``, ``_belief_degrade_reason``, the
+        per-decision risk fractions), so sharing the reference cannot
+        leak state between a replay and its original. ``equity_cache``
+        stays shared exactly as :meth:`SharedEquityCache.__deepcopy__`
+        already dictates — entries are deterministic function values.
+        The two genuinely in-place-mutated structures are copied: the
+        opponent tracker (``observe`` mutates its stats lists in place)
+        and the rule-verdict accumulator (a plain list, per-branch
+        isolation is the correct behaviour).
+
+        Subclasses holding further per-decision state (the v9 serve
+        class's belief provider) extend this with their own overrides.
+        """
+
+        clone = type(self).__new__(type(self))
+        clone.__dict__ = self.__dict__.copy()
+        clone.opponent_tracker = self.opponent_tracker.clone()
+        if self._rule_verdicts is not None:
+            clone._rule_verdicts = list(self._rule_verdicts)
+        memo[id(self)] = clone
+        return clone
 
     def _family(self, features: tuple[float, ...]) -> str:
         raise NotImplementedError("policy backends must implement _family")
@@ -1186,6 +1252,14 @@ class DecisionEngine:
         self.opponent_tracker.observe(table)
         self._hyper_active = self._hyper_roll(table)
         self._rule_verdicts = []
+        # Engine-owned reset for the per-decision policy diagnostics (the
+        # v9 serve path sets them inside ``_equity_family``): a decision
+        # that never consults the composition — equity_trials == 0, the
+        # deadline path — must not journal the PREVIOUS decision's branch
+        # or belief degrade.
+        self._proposed_branch = None
+        self._belief_degrade_reason = None
+        self._schema4_features = None
         if deadline_s < 2.0:
             action = self._deadline_action(table, allowed, available)
             # The deadline path reaches _sized_action with equity=None,
@@ -1227,6 +1301,11 @@ class DecisionEngine:
         forced_pot_fraction: float | None = None
         if forced is not None and self._family_available(forced[0], available):
             family, forced_pot_fraction = forced
+            # The pin overrode the composition's argmax: the result must
+            # not journal the unforced pick as if it were the proposal
+            # that survived the rails. (The composition DID run — its
+            # belief-degrade state is still this decision's.)
+            self._proposed_branch = None
         if family == "aggress":
             action = None
             if forced_pot_fraction is not None:
@@ -1293,6 +1372,10 @@ class DecisionEngine:
             lead_position=lead,
             bluff_kind=bluff_kind,
             hyper_aggression=self._hyper_active,
+            proposed_branch=getattr(self, "_proposed_branch", None),
+            learning_features_v9=getattr(self, "_schema4_features", None),
+            belief_degraded=bool(getattr(self, "_belief_degrade_reason", None)),
+            belief_degrade_reason=getattr(self, "_belief_degrade_reason", None),
         )
 
     def _equity_family(

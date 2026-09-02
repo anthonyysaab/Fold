@@ -50,6 +50,10 @@ carried across from schema 3.
 
 from __future__ import annotations
 
+import hashlib
+import math
+from collections.abc import Mapping
+
 from engine.schema3 import (
     BELIEF_BUCKETS,
     BELIEF_FEATURE_NAMES,
@@ -116,6 +120,17 @@ STRENGTH_FEATURE_NAMES_V9: tuple[str, ...] = (
     # feature time (one computation, two consumers): the network sees
     # exactly the quantity the sizing responds to.
     "equity_multiway",
+    # Pre-harvest decision 2 (owner-confirmed 2026-08-31): hero's MC
+    # equity where ONE opponent's holding is drawn from the pooled
+    # 8-octile P3 posterior (octile by weight, then a combo uniformly
+    # inside that octile's slice) and the rest stay random — the
+    # correction the unconditioned read needs once opponents have PAID
+    # to continue (measured mean correction -0.0999, growing by street
+    # to -0.178 on the river). Pinned at 1,000 trials; emitted as
+    # ``equity_multiway`` VERBATIM where the posterior is bit-identical
+    # to the uniform prior, so the column only differs where there is
+    # evidence.
+    "equity_vs_posterior",
     "hand_ppot",
     "hand_npot",
     "cost_active_eff",
@@ -137,6 +152,14 @@ CONTEXT_FEATURE_NAMES_V9: tuple[str, ...] = (
 
 FEATURE_NAMES_V9: tuple[str, ...] = (*CARD_FEATURE_NAMES, *CONTEXT_FEATURE_NAMES_V9)
 INPUT_SIZE_V9 = len(FEATURE_NAMES_V9)
+
+#: sha256 of the joined feature names — the identity a
+#: ``feature_normalization`` block must carry to be schema-4's own
+#: (pre-harvest decision 5, owner-confirmed 2026-08-31). Computed once
+#: from the frozen tuple; a schema edit changes it by construction.
+FEATURE_NAME_DIGEST = hashlib.sha256(
+    "\n".join(FEATURE_NAMES_V9).encode("utf-8")
+).hexdigest()
 
 # The dormant reserve keeps schema 3's append-only discipline: appended
 # after every active feature so enabling it is a strict extension, and
@@ -210,6 +233,76 @@ def require_vector_v9(features: tuple[float, ...] | list[float]) -> None:
         )
 
 
+def normalization_stamp() -> dict[str, object]:
+    """The stamp every v9 writer puts on its ``feature_normalization`` block."""
+
+    return {
+        "feature_schema_version": SCHEMA_VERSION_V9,
+        "feature_name_sha": FEATURE_NAME_DIGEST,
+    }
+
+
+def require_normalization_stamp(block: Mapping[str, object]) -> None:
+    """Refuse a ``feature_normalization`` block that is not schema-4's own.
+
+    Pre-harvest decision 5, owner-confirmed 2026-08-31: before this
+    stamp ``load_policy_v9`` accepted any length-matching schema-3
+    array. No grandfather clause — the frozen v7/v8 writers emit no
+    stamp, so an unstamped block is by definition not v9-produced.
+    Also asserts the card-block identity transform (means == 0, stds ==
+    1 on :data:`CARD_INDICES_V9`), which the length checks never
+    inspected, and that every entry is a finite number (a poisoned
+    context entry used to surface as a raw ``ValueError`` from the
+    serve class's float coercion, or as silent NaN).
+    """
+
+    if not isinstance(block, Mapping):
+        raise Schema4Error("feature_normalization must be an object")
+    version = block.get("feature_schema_version")
+    if isinstance(version, bool) or not isinstance(version, int) or (
+        version != SCHEMA_VERSION_V9
+    ):
+        raise Schema4Error(
+            "feature_normalization is unstamped or foreign: "
+            f"feature_schema_version must be the int {SCHEMA_VERSION_V9} "
+            "(the frozen v7/v8 writers emit no stamp, so an unstamped "
+            "block is by definition not v9-produced)"
+        )
+    if block.get("feature_name_sha") != FEATURE_NAME_DIGEST:
+        raise Schema4Error(
+            "feature_normalization feature_name_sha does not match "
+            "schema 4's feature names"
+        )
+    means = block.get("means")
+    stds = block.get("stds")
+    if not isinstance(means, (list, tuple)) or not isinstance(stds, (list, tuple)):
+        raise Schema4Error("feature_normalization means/stds must be arrays")
+    if len(means) != INPUT_SIZE_V9 or len(stds) != INPUT_SIZE_V9:
+        raise Schema4Error(
+            "feature_normalization must cover the full schema-4 vector "
+            f"({INPUT_SIZE_V9} entries)"
+        )
+    card_indices = set(CARD_INDICES_V9)
+    for index, (mean, std) in enumerate(
+        zip(means, stds, strict=True)
+    ):
+        if (
+            isinstance(mean, bool)
+            or isinstance(std, bool)
+            or not isinstance(mean, (int, float))
+            or not isinstance(std, (int, float))
+        ):
+            raise Schema4Error("feature_normalization entries must be numbers")
+        mean_value, std_value = float(mean), float(std)
+        if not math.isfinite(mean_value) or not math.isfinite(std_value):
+            raise Schema4Error("feature_normalization entries must be finite")
+        if index in card_indices and (mean_value != 0.0 or std_value != 1.0):
+            raise Schema4Error(
+                "the card block must be stored at identity scales "
+                "(means == 0, stds == 1)"
+            )
+
+
 _INDEX_BY_NAME_V9 = {name: index for index, name in enumerate(FEATURE_NAMES_V9)}
 _DORMANT_SET_V9 = frozenset(DORMANT_FEATURE_NAMES)
 _SCHEMA3_ONLY = frozenset(
@@ -248,6 +341,7 @@ __all__ = [
     "CONTEXT_INDICES_V9",
     "FEATURE_NAMES_V9",
     "FEATURE_NAMES_V9_EXTENDED",
+    "FEATURE_NAME_DIGEST",
     "HISTORY_CHANNELS",
     "HISTORY_SLOTS",
     "HISTORY_STREETS",
@@ -260,5 +354,7 @@ __all__ = [
     "feature_index_v9",
     "feature_names_v9",
     "legality_index",
+    "normalization_stamp",
+    "require_normalization_stamp",
     "require_vector_v9",
 ]

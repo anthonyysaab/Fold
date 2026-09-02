@@ -1107,6 +1107,7 @@ def train_phase_a_candidate_v9(
             "format_version": MODEL_FORMAT_VERSION_V9,
             "model_version": model_version,
             "feature_normalization": {
+                **schema4.normalization_stamp(),
                 "means": list(best["means"]),  # type: ignore[arg-type]
                 "stds": list(best["stds"]),  # type: ignore[arg-type]
             },
@@ -1153,6 +1154,11 @@ def train_phase_a_candidate_v9(
             ),
             "row_count": len(rows),
             "table_count": len({row.table_id for row in rows}),
+            # The learning contract's own provenance key; same quantity as
+            # ``table_count``. Emitted even though a Phase-A artifact is
+            # never promotable, so the refusal comes from ``deployable``
+            # below and not from an incidental missing field.
+            "hand_count": len({row.table_id for row in rows}),
             "label_coverage": _mask_counts_v9(rows),
             "per_street_rows": dict(sorted(per_street_rows.items())),
         },
@@ -1163,6 +1169,12 @@ def train_phase_a_candidate_v9(
             "bluff_settings": DEFAULT_BLUFF_SETTINGS.to_mapping(),
         },
         "serve": {
+            # Machine-readable refusal. Phase-A trains the component heads
+            # only; the composed-value serve path expects a Phase-B
+            # artifact. The note below has said so since the fork, but a
+            # note cannot stop a promotion and the promotion contract
+            # reads THIS.
+            "deployable": False,
             # By construction the OOD guard watches only the context block
             # (V8_DESIGN §3, unchanged): raw card one-hots never enter it.
             "ood_guard_indices": list(schema4.CONTEXT_INDICES_V9),

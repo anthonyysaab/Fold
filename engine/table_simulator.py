@@ -145,6 +145,7 @@ class TableSimulator:
         collect_examples: bool = False,
         collect_counterfactuals: bool = False,
         counterfactual_rollouts: int = 1,
+        arena_shaped_call_amounts: bool = False,
     ) -> None:
         if small_blind < 1 or big_blind < small_blind:
             raise ValueError("blinds must be positive and ordered")
@@ -157,6 +158,12 @@ class TableSimulator:
         self.collect_examples = collect_examples or collect_counterfactuals
         self.collect_counterfactuals = collect_counterfactuals
         self.counterfactual_rollouts = counterfactual_rollouts
+        # Pre-harvest decision 3 (owner-confirmed 2026-08-31): a call's
+        # event amount is the INCREMENT the caller paid (the Arena's
+        # shape), not the post-call street total — same column, two
+        # quantities otherwise. Default False keeps the frozen v8
+        # instrument byte-identical; the v9 harvest opts in.
+        self.arena_shaped_call_amounts = arena_shaped_call_amounts
         self._evaluator = _shared_evaluator()
         # Branch-set diagnostics: group size stops being constant once
         # branches are emitted by executability and distinctness, and the
@@ -483,7 +490,13 @@ class TableSimulator:
             call_chips = int(allowed["callChips"])
             paid = min(call_chips, seat.stack)
             self._commit(seat, paid)
-            self._record(events, street, seat, "call", seat.street_commit)
+            self._record(
+                events,
+                street,
+                seat,
+                "call",
+                paid if self.arena_shaped_call_amounts else seat.street_commit,
+            )
             return action, current_bet
         # bet / raise / all-in arrive as total street commitments.
         if action == "all-in":
@@ -923,6 +936,11 @@ class TableSimulator:
             big_blind=self.big_blind,
             starting_stack=self.starting_stack,
             seed=self.seed,
+            # The probe must read the SAME event shapes the main play
+            # and the rollouts feed the policy: with a mixed flag the
+            # executed map describes a different state than the rollouts
+            # measured, silently defeating the purity check.
+            arena_shaped_call_amounts=self.arena_shaped_call_amounts,
         )
         result = MatchResult(
             hands=0,
@@ -974,6 +992,7 @@ class TableSimulator:
             big_blind=self.big_blind,
             starting_stack=self.starting_stack,
             seed=self.seed,
+            arena_shaped_call_amounts=self.arena_shaped_call_amounts,
         )
         result = MatchResult(
             hands=0,
@@ -1111,7 +1130,11 @@ class RecordingPolicy:
         pot_fraction: float | None = None,
     ) -> dict:
         # Forced branches are measurements, never teacher demonstrations,
-        # so they bypass diagnostics recording entirely.
+        # so they bypass diagnostics recording entirely — including the
+        # clearing: a stale previous-decision result must not read as
+        # this forced decision's diagnostics (the v9 proposed_branch
+        # field widened exactly that surface).
+        self.last_diagnostics = None
         return self.policy.decide_forced(
             table, family=family, pot_fraction=pot_fraction
         )

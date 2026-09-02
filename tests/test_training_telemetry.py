@@ -301,6 +301,47 @@ class TrainingTelemetryTests(unittest.TestCase):
             ],
         )
 
+    def test_additive_v9_diagnostics_are_null_for_legacy_decisions(self) -> None:
+        """proposed_branch and the belief-degrade pair are additive: a v7/v8
+        decision carries null/false, never a fabricated value."""
+
+        record = make_decision_record(
+            competition_id="comp-1",
+            policy_version="heuristic-test-v1",
+            table=_table(),
+            payload=_decision().to_payload(),
+            decision=_decision(),
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+        )
+        self.assertIsNone(record["proposed_branch"])
+        self.assertFalse(record["belief_degraded"])
+        self.assertIsNone(record["belief_degrade_reason"])
+
+    def test_proposed_branch_and_belief_degrade_are_recorded(self) -> None:
+        decision = replace(
+            _decision(),
+            proposed_branch="aggressive",
+            belief_degraded=True,
+            belief_degrade_reason="ValueError: corrupt event",
+        )
+        record = make_decision_record(
+            competition_id="comp-1",
+            policy_version="candidate-v9-test",
+            table=_table(),
+            payload=decision.to_payload(),
+            decision=decision,
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+        )
+        self.assertEqual(record["proposed_branch"], "aggressive")
+        self.assertTrue(record["belief_degraded"])
+        self.assertEqual(record["belief_degrade_reason"], "ValueError: corrupt event")
+
     def test_schema_one_journals_still_load(self) -> None:
         """The 4.7 MB live journal predates schema 2 and must stay loadable.
 
@@ -438,6 +479,72 @@ class TrainingTelemetryTests(unittest.TestCase):
                 agent_id="agent-1",
             )
         )
+
+
+class Schema4RecordTests(unittest.TestCase):
+    """The additive schema-4 columns, and their contract.
+
+    ``features`` stays the 142-input schema-2 vector every stored journal
+    and the v7 offline trainer read. ``features_v9`` rides alongside so a
+    v9 deployment's own hands are usable for v9 training and for
+    ``head_degeneracy_audit``, which selects rows by feature width.
+    """
+
+    @staticmethod
+    def _record(decision) -> dict:
+        return make_decision_record(
+            competition_id="comp-1",
+            policy_version="candidate-v9-test",
+            table=_table(),
+            payload=decision.to_payload(),
+            decision=decision,
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+            recorded_at_ms=1,
+        )
+
+    def test_a_v9_decision_records_the_schema_4_columns(self) -> None:
+        from engine.learning_contract import FEATURE_SCHEMA_VERSION
+        from engine.schema4 import INPUT_SIZE_V9, SCHEMA_VERSION_V9
+
+        decision = replace(
+            _decision(), learning_features_v9=(0.25,) * INPUT_SIZE_V9
+        )
+        record = self._record(decision)
+
+        self.assertEqual(len(record["features_v9"]), INPUT_SIZE_V9)
+        self.assertEqual(record["features_v9_schema_version"], SCHEMA_VERSION_V9)
+        # The legacy columns are untouched.
+        self.assertEqual(len(record["features"]), LEARNING_INPUT_SIZE)
+        self.assertEqual(record["feature_schema_version"], FEATURE_SCHEMA_VERSION)
+
+    def test_a_v7_decision_records_nulls_not_absences(self) -> None:
+        record = self._record(_decision())
+        self.assertIsNone(record["features_v9"])
+        self.assertIsNone(record["features_v9_schema_version"])
+        self.assertEqual(len(record["features"]), LEARNING_INPUT_SIZE)
+
+    def test_a_wrong_width_v9_vector_is_refused(self) -> None:
+        from engine.schema4 import INPUT_SIZE_V9
+
+        for width in (INPUT_SIZE_V9 - 1, INPUT_SIZE_V9 + 1, LEARNING_INPUT_SIZE):
+            with self.subTest(width=width):
+                decision = replace(
+                    _decision(), learning_features_v9=(0.0,) * width
+                )
+                with self.assertRaises(TelemetryError):
+                    self._record(decision)
+
+    def test_a_non_finite_v9_vector_is_refused(self) -> None:
+        from engine.schema4 import INPUT_SIZE_V9
+
+        vector = [0.0] * INPUT_SIZE_V9
+        vector[7] = float("nan")
+        decision = replace(_decision(), learning_features_v9=tuple(vector))
+        with self.assertRaises(TelemetryError):
+            self._record(decision)
 
 
 if __name__ == "__main__":

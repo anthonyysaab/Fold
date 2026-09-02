@@ -363,3 +363,90 @@ class ApprovedPointerPortabilityTests(unittest.TestCase):
             policy = load_approved(root, equity_trials=1)
 
         self.assertEqual(policy.policy_version, pointer["model_version"])
+
+
+class ApprovedFormatDispatchTests(unittest.TestCase):
+    """``load_approved`` routes by declared format, and refuses rather than
+    falling back.
+
+    Each promotable format has its own loader, its own input schema and
+    its own branch meanings, so the failure this guards is an artifact of
+    one shape being served under another's. These cases all refuse before
+    any weights are read, which is why they need no artifact on disk.
+    """
+
+    def _pointer(self, root: Path, manifest: dict) -> None:
+        candidates = root / "candidates"
+        candidates.mkdir(parents=True, exist_ok=True)
+        (candidates / "c.manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        (root / "approved.json").write_text(
+            json.dumps(
+                {
+                    "approved_at": "2026-09-02T00:00:00Z",
+                    "manifest_file": "candidates/c.manifest.json",
+                    "model_version": "c",
+                    "previous": None,
+                    "weights_sha256": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_a_format_with_no_loader_is_refused_not_fallen_back_on(self) -> None:
+        # Format 3 was never promotable. Silently handing it to the v7
+        # loader would read a 413-input artifact against the 142-input
+        # contract, so the refusal must be explicit.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._pointer(root, {"format_version": 3, "model_version": "c"})
+            with self.assertRaises(LearnedPolicyError) as caught:
+                load_approved(root, equity_trials=1)
+            self.assertIn("no serve path", str(caught.exception))
+
+    def test_a_contract_failure_surfaces_as_a_learned_policy_error(self) -> None:
+        # run_agent's between-hands refresh catches LearnedPolicyError
+        # only. LearningContractError is a sibling of it, not a subclass,
+        # so letting one escape here would take a live session down
+        # instead of keeping the policy already in hand. The exception
+        # TYPE is the assertion; the refusal itself is incidental.
+        from engine import schema4
+        from engine.branch_contract_v9 import (
+            BRANCH_LABELS_V9,
+            MODEL_FORMAT_VERSION_V9,
+        )
+        from engine.v8_trainer import default_v9_architecture
+
+        undeclared = {
+            "format": "fold-multihead-policy",
+            "format_version": MODEL_FORMAT_VERSION_V9,
+            "model_version": "c",
+            "state": "candidate",
+            "parent_version": None,
+            "created_at": "2026-09-02T12:00:00Z",
+            "feature_schema_version": schema4.SCHEMA_VERSION_V9,
+            "input_size": schema4.INPUT_SIZE_V9,
+            "feature_names": list(schema4.FEATURE_NAMES_V9),
+            "action_labels": list(BRANCH_LABELS_V9),
+            "architecture": default_v9_architecture(),
+            "serve": {},
+            "weights_file": "weights.json",
+            "weights_sha256": "b" * 64,
+            "training_window": {"hand_count": 0},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._pointer(root, undeclared)
+            with self.assertRaises(LearnedPolicyError):
+                load_approved(root, equity_trials=1)
+
+    def test_an_unreadable_manifest_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._pointer(root, {"format_version": 1})
+            (root / "candidates" / "c.manifest.json").write_text(
+                "not json", encoding="utf-8"
+            )
+            with self.assertRaises(LearnedPolicyError):
+                load_approved(root, equity_trials=1)

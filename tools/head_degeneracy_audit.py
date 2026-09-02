@@ -368,12 +368,33 @@ def render(report: Mapping[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def default_head(weights: Mapping[str, Any]) -> str:
+    """The head the instrument controls run on, when none is named.
+
+    ``action_value`` when the artifact has it (every v7/v8 artifact does);
+    otherwise width-dynamic — the widest head, which is the closest
+    analogue of a value head in a foreign architecture (``range``, the
+    8-octile head, on a v9 artifact).
+    """
+
+    heads = sorted(weights["heads"])
+    if "action_value" in heads:
+        return "action_value"
+    return max(heads, key=lambda head: len(weights["heads"][head]["out_b"]))
+
+
 def main(argv: list[str] | None = None) -> int:
     _utf8_stdout()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST)
     parser.add_argument("--journal", default=DEFAULT_JOURNAL)
     parser.add_argument("--output", default=None)
+    parser.add_argument(
+        "--head",
+        default=None,
+        help="head the measurement controls run on (default: action_value "
+        "when present, else the widest head)",
+    )
     args = parser.parse_args(argv)
 
     manifest_path = Path(args.manifest)
@@ -381,14 +402,18 @@ def main(argv: list[str] | None = None) -> int:
     rows = load_rows(Path(args.journal), len(means))
     if not rows:
         raise SystemExit("no stored decisions carry a feature vector of that width")
+    head = args.head or default_head(weights)
+    if head not in weights["heads"]:
+        raise SystemExit(f"unknown head {head!r}: artifact heads are {sorted(weights['heads'])}")
 
     instrument = stage_instrument(
-        architecture, weights, rows, means, stds, "action_value"
+        architecture, weights, rows, means, stds, head
     )
     report: dict[str, Any] = {
         "manifest": str(manifest_path),
         "journal": args.journal,
         "rows": len(rows),
+        "instrument_head": head,
         "instrument": instrument,
     }
     if instrument["all_passed"]:

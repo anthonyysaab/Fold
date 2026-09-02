@@ -12,6 +12,7 @@ from engine.table_simulator import (
     _FAMILY_BRANCHES,
     RecordingPolicy,
     ScriptedAgent,
+    SimSeat,
     TableSimulator,
     TexturedAgent,
     board_coordination,
@@ -324,6 +325,45 @@ class TableSimulatorTests(unittest.TestCase):
         )
 
 
+class CallEventEncodingTests(unittest.TestCase):
+    """Pre-harvest decision 3: the call event's amount is the increment.
+
+    The frozen default keeps the post-call street total (the v8
+    instrument's bytes); the v9 harvest opts into the Arena's shape.
+    """
+
+    @staticmethod
+    def _seat() -> SimSeat:
+        return SimSeat(seat_number=1, agent_id="a", agent=None, stack=1_000)
+
+    @staticmethod
+    def _snapshot(call_chips: int) -> dict:
+        return {
+            "allowedActions": {
+                "availableActions": ["fold", "call"],
+                "callChips": call_chips,
+            }
+        }
+
+    def _apply_call(self, sim: TableSimulator) -> int:
+        seat = self._seat()
+        seat.street_commit = 100
+        events: list = []
+        action, _ = sim._apply(
+            seat, {"action": "call"}, self._snapshot(200), 200, 100, events, "flop"
+        )
+        self.assertEqual(action, "call")
+        return events[-1]["summary"]["amount"]
+
+    def test_default_records_the_post_call_street_total(self) -> None:
+        self.assertEqual(self._apply_call(TableSimulator()), 300)
+
+    def test_arena_shaped_records_the_increment(self) -> None:
+        self.assertEqual(
+            self._apply_call(TableSimulator(arena_shaped_call_amounts=True)), 200
+        )
+
+
 class BoardCoordinationTest(unittest.TestCase):
     """The public-board texture signal behind precondition P3."""
 
@@ -596,6 +636,47 @@ class _CapturingSimulator(TableSimulator):
 
 class BranchSetTests(unittest.TestCase):
     """Legality-and-distinctness-aware branch sets (`notes/OPTION_A_DESIGN.md`)."""
+
+    def test_probe_and_rollout_replays_inherit_the_call_event_flag(self) -> None:
+        """Pre-harvest decision 3, sweep finding: the probe's prefix replay
+        and the counterfactual rollouts must read the SAME call-event shape
+        the main play feeds the policy. A mixed flag makes the probe's
+        executed map describe a different state than the rollouts measured —
+        silently defeating the purity check it exists to serve."""
+
+        from unittest import mock
+
+        seen: list[bool] = []
+        original_init = TableSimulator.__init__
+
+        def spying_init(self, **kwargs):
+            seen.append(bool(kwargs.get("arena_shaped_call_amounts", False)))
+            original_init(self, **kwargs)
+
+        with mock.patch.object(TableSimulator, "__init__", spying_init):
+            simulator = _CapturingSimulator(
+                seed=8,
+                collect_counterfactuals=True,
+                counterfactual_rollouts=1,
+                arena_shaped_call_amounts=True,
+            )
+            simulator.play_match(
+                [
+                    (
+                        "hero",
+                        RecordingPolicy(
+                            AggressivePokerPolicy(
+                                weights=_weights_favoring_fold(), equity_trials=20
+                            )
+                        ),
+                    ),
+                    ("median", ScriptedAgent("median", 0.226, 0.5, 0.0, seed=6)),
+                ],
+                hands=8,
+            )
+            self.assertTrue(simulator.captured)
+        self.assertTrue(seen)
+        self.assertTrue(all(seen))
 
     def _harvest(self) -> _CapturingSimulator:
         simulator = _CapturingSimulator(

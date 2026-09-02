@@ -1,0 +1,53 @@
+{
+  "branch_contract": "v9-composed-value",
+  "detail": "candidate self-duel paired diffs identically zero",
+  "hands_per_seed": 100,
+  "mirror_exact": true,
+  "report": {
+    "hands_per_seed": 100,
+    "orientations": {
+      "a_first": [
+        -52.03,
+        138.52
+      ],
+      "b_first": [
+        52.03,
+        -138.52
+      ]
+    },
+    "paired": {
+      "diffs": [
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "se": 0.0,
+      "t": null
+    },
+    "ruin": {
+      "v8-null-A": {
+        "bb_per_100": 0.0,
+        "bust_rate_per_session": 0.375,
+        "busts": 6,
+        "busts_per_100_hands": 1.5,
+        "mean_session_hands": 25.0,
+        "sessions": 16
+      },
+      "v8-null-B": {
+        "bb_per_100": 0.0,
+        "bust_rate_per_session": 0.375,
+        "busts": 6,
+        "busts_per_100_hands": 1.5,
+        "mean_session_hands": 25.0,
+        "sessions": 16
+      }
+    },
+    "seeds": [
+      0.0,
+      0.0
+    ],
+    "v8-null-A_bb_per_100": 0.0
+  },
+  "seeds": 2
+}

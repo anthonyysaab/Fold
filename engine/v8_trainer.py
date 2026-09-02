@@ -194,7 +194,7 @@ def default_v9_architecture() -> dict[str, object]:
     """The v9 architecture block; schema 4 supplies the partition.
 
     Same encoder/trunk/tower widths as v8 — the v9 change is the branch
-    CONTRACT (slot meanings and the 412-input schema-4 partition), never
+    CONTRACT (slot meanings and the ``schema4`` partition), never
     the network shape. Head sizes come from ``branch_contract_v9``, the
     single definition site.
     """

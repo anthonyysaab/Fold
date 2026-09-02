@@ -1,0 +1,112 @@
+{
+  "branch_contract": "v9-composed-value",
+  "empirical_mde_bb_per_100": 6.82,
+  "known_seed_spread_bb_per_100": 16.78,
+  "opponent": "candidate-v7-0001c",
+  "report": {
+    "candidate-v9-0001b_bb_per_100": -28.31,
+    "hands_per_seed": 2000,
+    "orientations": {
+      "a_first": [
+        -5.72,
+        9.05,
+        -28.66,
+        -54.24,
+        -11.39,
+        -42.54,
+        -37.03,
+        -26.87,
+        -6.5,
+        -26.17,
+        -0.81,
+        -74.48,
+        -7.14,
+        8.2,
+        -15.36,
+        -57.17
+      ],
+      "b_first": [
+        -30.75,
+        -32.38,
+        -48.72,
+        -12.92,
+        -32.04,
+        8.88,
+        -60.74,
+        -34.3,
+        -40.88,
+        -74.58,
+        -56.45,
+        -19.83,
+        -7.18,
+        -42.27,
+        -21.95,
+        -23.04
+      ]
+    },
+    "paired": {
+      "diffs": [
+        -18.24,
+        -11.66,
+        -38.69,
+        -33.58,
+        -21.72,
+        -16.83,
+        -48.89,
+        -30.59,
+        -23.69,
+        -50.37,
+        -28.63,
+        -47.16,
+        -7.16,
+        -17.03,
+        -18.65,
+        -40.1
+      ],
+      "mean": -28.31,
+      "sd": 13.63,
+      "se": 3.41,
+      "t": -8.31
+    },
+    "ruin": {
+      "candidate-v7-0001c": {
+        "bb_per_100": 28.31,
+        "bust_rate_per_session": 0.4023,
+        "busts": 692,
+        "busts_per_100_hands": 1.0813,
+        "mean_session_hands": 37.2,
+        "sessions": 1720
+      },
+      "candidate-v9-0001b": {
+        "bb_per_100": -28.31,
+        "bust_rate_per_session": 0.5791,
+        "busts": 996,
+        "busts_per_100_hands": 1.5562,
+        "mean_session_hands": 37.2,
+        "sessions": 1720
+      }
+    },
+    "seeds": [
+      -18.24,
+      -11.66,
+      -38.69,
+      -33.58,
+      -21.72,
+      -16.83,
+      -48.89,
+      -30.59,
+      -23.69,
+      -50.37,
+      -28.63,
+      -47.16,
+      -7.16,
+      -17.03,
+      -18.65,
+      -40.1
+    ]
+  },
+  "resolvable_spread_bb_per_100": 16.78,
+  "seeds": 16,
+  "verdict": "incumbent wins",
+  "verdict_rule": "a margin below the resolvable spread (max of the known 16.78 BB/100 seed spread and 2\u00b7sd/\u221an) is UNRESOLVED, never a win/loss"
+}

@@ -9,8 +9,10 @@ artifact, which is exactly what the wrapper's workers do.
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -151,6 +153,231 @@ class TrivialAgentTests(unittest.TestCase):
             evaluate_v8.TrivialAgent("always_win")
 
 
+def _priced_table() -> dict:
+    """Pot 600, 200 to call, hero has 100 in, effective stack 3900."""
+
+    return {
+        "tableId": "t1",
+        "street": "flop",
+        "potChips": 600,
+        "selfSeatNumber": 1,
+        "boardCards": ["2c", "7d", "Js"],
+        "seats": [
+            {
+                "seatNumber": 1,
+                "status": "Active",
+                "stackChips": 3_900,
+                "currentBetChips": 100,
+                "totalCommittedChips": 100,
+                "holeCards": ["Ah", "Kh"],
+            },
+            {
+                "seatNumber": 2,
+                "status": "Active",
+                "stackChips": 3_900,
+                "currentBetChips": 300,
+                "totalCommittedChips": 300,
+                "holeCards": None,
+            },
+        ],
+        "allowedActions": {
+            "availableActions": ["fold", "call", "raise", "all-in"],
+            "callChips": 200,
+            "raiseRange": {"min": 500, "max": 4_000},
+            "allInToAmount": 4_000,
+        },
+    }
+
+
+def _free_table() -> dict:
+    """Pot 200, free spot, hero has nothing in, betRange 100..1000."""
+
+    return {
+        "tableId": "t2",
+        "street": "flop",
+        "potChips": 200,
+        "selfSeatNumber": 1,
+        "boardCards": ["2c", "7d", "Js"],
+        "seats": [
+            {
+                "seatNumber": 1,
+                "status": "Active",
+                "stackChips": 1_000,
+                "currentBetChips": 0,
+                "totalCommittedChips": 100,
+                "holeCards": ["Ah", "Kh"],
+            },
+            {
+                "seatNumber": 2,
+                "status": "Active",
+                "stackChips": 1_000,
+                "currentBetChips": 0,
+                "totalCommittedChips": 100,
+                "holeCards": None,
+            },
+        ],
+        "allowedActions": {
+            "availableActions": ["fold", "check", "bet", "all-in"],
+            "callChips": 0,
+            "betRange": {"min": 100, "max": 1_000},
+            "allInToAmount": 1_000,
+        },
+    }
+
+
+class V9TrivialAgentTests(unittest.TestCase):
+    def test_every_v9_mode_plays_legally_and_deterministically(self) -> None:
+        for mode in evaluate_v8.V9_TRIVIAL_MODES:
+            with self.subTest(mode=mode):
+                first = _tiny_match(evaluate_v8.TrivialAgent(mode))
+                second = _tiny_match(evaluate_v8.TrivialAgent(mode))
+                self.assertEqual(first.chip_deltas, second.chip_deltas)
+                self.assertEqual(first.hands, second.hands)
+
+    def test_always_fatal_folds_priced_and_checks_free(self) -> None:
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_fatal").decide(_priced_table()),
+            {"action": "fold", "message": "trivial"},
+        )
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_fatal").decide(_free_table()),
+            {"action": "check", "message": "trivial"},
+        )
+
+    def test_always_passive_never_bets_or_raises(self) -> None:
+        spy = _ActionSpy(evaluate_v8.TrivialAgent("always_passive"))
+        _tiny_match(spy)
+        self.assertTrue(spy.actions)
+        self.assertLessEqual(set(spy.actions), {"check", "call", "fold"})
+
+    def test_always_active_calls_priced_and_bets_g_neutral_free(self) -> None:
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_active").decide(_priced_table()),
+            {"action": "call", "message": "trivial"},
+        )
+        # g's active lane at the pinned neutral read: 0.5 * pot = 100.
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_active").decide(_free_table()),
+            {"action": "bet", "amount": 100, "message": "trivial"},
+        )
+
+    def test_always_active_blind_option_spot_uses_the_raise_range(self) -> None:
+        # to_call == 0 with betRange null and raiseRange stated: the contract
+        # reads that "raise" as the active lane's unprovoked wager.
+        table = _free_table()
+        table["allowedActions"]["availableActions"] = ["all-in", "check", "fold", "raise"]
+        table["allowedActions"].pop("betRange")
+        table["allowedActions"]["raiseRange"] = {"min": 100, "max": 1_000}
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_active").decide(table),
+            {"action": "raise", "amount": 100, "message": "trivial"},
+        )
+
+    def test_always_aggressive_raises_at_g_neutral_and_checks_free(self) -> None:
+        # g's aggressive lane at b = 0: min(200 + 0.75*(600+200), 0.325*3900)
+        # = min(800, 1267.5) = 800; to-amount = 100 + 800 = 900.
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_aggressive").decide(_priced_table()),
+            {"action": "raise", "amount": 900, "message": "trivial"},
+        )
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_aggressive").decide(_free_table()),
+            {"action": "check", "message": "trivial"},
+        )
+
+    def test_aggressive_stack_cap_arm_binds(self) -> None:
+        # eff = 900: target = min(800, 0.325*900 = 292.5) = 292.5;
+        # to-amount = 100 + 292.5 = 392.5 -> 392 (round-half-even).
+        table = _priced_table()
+        for seat in table["seats"]:
+            seat["stackChips"] = 900
+        table["allowedActions"]["raiseRange"] = {"min": 300, "max": 1_000}
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_aggressive").decide(table),
+            {"action": "raise", "amount": 392, "message": "trivial"},
+        )
+
+    def test_aggressive_falls_through_all_in_then_passive(self) -> None:
+        no_raise = _priced_table()
+        no_raise["allowedActions"]["availableActions"] = ["fold", "call", "all-in"]
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_aggressive").decide(no_raise),
+            {"action": "all-in", "amount": 4_000, "message": "trivial"},
+        )
+        only_call = _priced_table()
+        only_call["allowedActions"]["availableActions"] = ["fold", "call"]
+        self.assertEqual(
+            evaluate_v8.TrivialAgent("always_aggressive").decide(only_call),
+            {"action": "call", "message": "trivial"},
+        )
+
+
+class FloorSetTests(unittest.TestCase):
+    def test_v8_set_is_the_frozen_five(self) -> None:
+        self.assertEqual(evaluate_v8.FLOOR_SETS["v8"], evaluate_v8.TRIVIAL_MODES)
+
+    def test_v9_set_is_the_contract_floors_plus_uniform_random(self) -> None:
+        self.assertEqual(
+            evaluate_v8.FLOOR_SETS["v9"],
+            evaluate_v8.V9_TRIVIAL_MODES + ("uniform_random_legal",),
+        )
+
+    def test_both_runs_all_nine_without_duplication(self) -> None:
+        self.assertEqual(len(evaluate_v8.FLOOR_SETS["both"]), 9)
+        self.assertEqual(len(set(evaluate_v8.FLOOR_SETS["both"])), 9)
+
+    def test_floor_modes_selects_by_flag(self) -> None:
+        args = argparse.Namespace(floors="v9")
+        self.assertEqual(evaluate_v8.floor_modes(args), evaluate_v8.FLOOR_SETS["v9"])
+        args = argparse.Namespace(floors="both")
+        self.assertEqual(evaluate_v8.floor_modes(args), evaluate_v8.FLOOR_SETS["both"])
+
+
+class FragmentStampTests(unittest.TestCase):
+    def test_write_fragment_stamps_the_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workdir = Path(raw)
+            evaluate_v8._write_fragment(workdir, "duel", {"seeds": [1.0]})
+            fragment = json.loads((workdir / "duel.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            fragment["branch_contract"], evaluate_v8.BRANCH_CONTRACT_ID
+        )
+
+    def test_assemble_refuses_foreign_contract_fragments(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workdir = Path(raw)
+            evaluate_v8._write_fragment(workdir, "duel", {"seeds": [1.0]})
+            (workdir / "battery.json").write_text(
+                json.dumps({"branch_contract": "v9-composed-value", "channels": {}}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(AssertionError):
+                evaluate_v8.assemble_report(
+                    workdir,
+                    candidate_manifest={},
+                    candidate_label="x",
+                    incumbent_label="y",
+                    noise_floor=None,
+                    config={},
+                )
+
+    def test_unstamped_legacy_fragments_are_grandfathered(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workdir = Path(raw)
+            (workdir / "duel.json").write_text(
+                json.dumps({"seeds": [1.0]}), encoding="utf-8"
+            )
+            report = evaluate_v8.assemble_report(
+                workdir,
+                candidate_manifest={},
+                candidate_label="x",
+                incumbent_label="y",
+                noise_floor=None,
+                config={},
+            )
+        self.assertEqual(report["branch_contract"], evaluate_v8.BRANCH_CONTRACT_ID)
+
+
 class TrivialPlanTests(unittest.TestCase):
     def test_plan_mirrors_the_instrument_seed_construction(self) -> None:
         plan = evaluate_v8.trivial_battery_plan(
@@ -209,10 +436,38 @@ class SeparationReportTests(unittest.TestCase):
         report = evaluate_v8.separation_report(records)
         self.assertIsNone(report["river"]["separation_aggress_minus_fold"])
 
+    def test_branch_separation_publishes_beside_the_family_key(self) -> None:
+        records = [
+            ("flop", "aggress", 0.8, "aggressive"),
+            ("flop", "aggress", 0.6, "aggressive"),
+            ("flop", "fold", 0.4, "fatal"),
+            ("flop", "fold", 0.2, "fatal"),
+        ]
+        report = evaluate_v8.separation_report(records)
+        flop = report["flop"]
+        self.assertIn("separation_aggress_minus_fold", flop)
+        self.assertIn("separation_aggressive_minus_fatal", flop)
+        self.assertEqual(
+            flop["separation_aggressive_minus_fatal"],
+            flop["separation_aggress_minus_fold"],
+        )
+        # Records without branch labels produce no branch key — the old
+        # key stays the only one, as the +0.386 benchmark requires.
+        report3 = evaluate_v8.separation_report(
+            [
+                ("flop", "aggress", 0.8),
+                ("flop", "aggress", 0.6),
+                ("flop", "fold", 0.4),
+                ("flop", "fold", 0.2),
+            ]
+        )
+        self.assertNotIn("separation_aggressive_minus_fatal", report3["flop"])
+        self.assertEqual(report3["flop"]["separation_aggress_minus_fold"], 0.4)
+
 
 class StrengthRecorderTests(unittest.TestCase):
     def test_records_streets_families_and_bounded_strengths(self) -> None:
-        records: list[tuple[str, str, float]] = []
+        records: list[tuple[str, str, float, str | None]] = []
         recorder = evaluate_v8.StrengthRecorder(
             build_policy(aggressive=True, equity_trials=10), records
         )
@@ -224,11 +479,13 @@ class StrengthRecorderTests(unittest.TestCase):
         self.assertTrue(records)
         streets = {"preflop", "flop", "turn", "river"}
         families = {"fold", "check_call", "aggress"}
-        for street, family, strength in records:
+        for street, family, strength, branch in records:
             self.assertIn(street, streets)
             self.assertIn(family, families)
             self.assertGreaterEqual(strength, 0.0)
             self.assertLessEqual(strength, 1.0)
+            # A non-v9 policy never proposes a v9 branch.
+            self.assertIsNone(branch)
 
 
 class BatteryComparisonTests(unittest.TestCase):

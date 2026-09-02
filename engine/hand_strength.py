@@ -7,7 +7,9 @@ The evaluator's lookup tables are built once per process and reused.
 
 from __future__ import annotations
 
+import math
 from collections import Counter
+from collections.abc import Sequence
 from random import Random
 
 from engine._vendor.treys import Card, Deck, Evaluator
@@ -217,33 +219,205 @@ def estimate_equity(
 
     evaluator = _shared_evaluator()
     rng = Random(seed)
+    hero_list = list(hero)
+    # The hero's cards plus a complete board are the same seven cards on
+    # every trial; on the turn only the river card varies. Both are pure
+    # evaluations of a subset of the deal, so caching them is exact: the
+    # same arguments produce the same rank bit for bit, and the equity
+    # float is unchanged. Preflop and flop hero reads still vary freely
+    # (two or more missing board cards share too little per trial).
+    if len(board) == 5:
+        hero_score_fixed: int | None = evaluator.evaluate(list(board), hero_list)
+    else:
+        hero_score_fixed = None
+    hero_score_by_river: dict[int, int] | None = {} if len(board) == 4 else None
     equity = 0.0
     for _ in range(trials):
-        opponents: list[tuple[int, int]] = []
+        opponents: list[list[int]] = []
         if restricted is None:
             sample = rng.sample(deck, cards_needed)
             cursor = 0
             for _ in range(opponent_count):
-                opponents.append((sample[cursor], sample[cursor + 1]))
+                opponents.append([sample[cursor], sample[cursor + 1]])
                 cursor += 2
             runout = [*board, *sample[cursor:]]
         else:
             aggressor = restricted[rng.randrange(len(restricted))]
-            opponents.append(aggressor)
-            rest = [card for card in deck if card not in aggressor]
+            opponents.append([aggressor[0], aggressor[1]])
+            rest = [
+                card for card in deck if card != aggressor[0] and card != aggressor[1]
+            ]
             sample = rng.sample(rest, cards_needed - 2)
             cursor = 0
             for _ in range(opponent_count - 1):
-                opponents.append((sample[cursor], sample[cursor + 1]))
+                opponents.append([sample[cursor], sample[cursor + 1]])
                 cursor += 2
             runout = [*board, *sample[cursor:]]
 
-        hero_score = evaluator.evaluate(runout, list(hero))
-        opponent_scores = [evaluator.evaluate(runout, list(hole)) for hole in opponents]
+        if hero_score_fixed is not None:
+            hero_score = hero_score_fixed
+        elif hero_score_by_river is not None:
+            river_card = runout[4]
+            score = hero_score_by_river.get(river_card)
+            if score is None:
+                score = evaluator.evaluate(runout, hero_list)
+                hero_score_by_river[river_card] = score
+            hero_score = score
+        else:
+            hero_score = evaluator.evaluate(runout, hero_list)
+        opponent_scores = [evaluator.evaluate(runout, hole) for hole in opponents]
         best_score = min(hero_score, *opponent_scores)
         if hero_score == best_score:
             equity += 1.0 / (1 + sum(score == best_score for score in opponent_scores))
     return equity / trials
 
 
-__all__ = ["board_improvement", "estimate_equity", "prewarm"]
+def estimate_equity_vs_posterior(
+    hero_hole_cards: tuple[str, str],
+    board_cards: tuple[str, ...],
+    opponent_count: int,
+    octile_weights: Sequence[float],
+    *,
+    trials: int,
+    seed: int,
+) -> float:
+    """MC equity of hero against a posterior-weighted opponent range.
+
+    The v9 ``equity_vs_posterior`` feature (pre-harvest decision 2,
+    owner-confirmed 2026-08-31). ONE opponent's holding is drawn from the
+    pooled 8-octile posterior — an octile drawn by weight, then a combo
+    uniformly inside that octile's slice of the strength-sorted holding
+    list — and any remaining opponents stay uniformly random, exactly as
+    ``estimate_equity``'s top-fraction path does. The posterior is
+    ``p3_belief_provider``'s pooled distribution over all continuing
+    opponents, never per-opponent.
+
+    Slice ordering: postflop the made-hand rank on the current board
+    (canonical up to card-removal effects — measured: zero of ~36k
+    combos shift by two octiles); preflop the frozen percentile table,
+    because the made-hand/Chen ordering is a genuinely different metric
+    there. ``octile_weights`` is any finite non-negative 8-sequence,
+    normalised internally.
+
+    Deterministic in ``seed``. A SEPARATE computation from the
+    schema-frozen 200-trial unconditioned read: this feature is pinned
+    at 1,000 trials, and where the posterior is bit-identical to the
+    uniform prior the caller emits the unconditioned read verbatim, so
+    the column only differs where there is evidence.
+    """
+
+    if len(hero_hole_cards) != 2:
+        raise ValueError("hero_hole_cards must contain two cards")
+    if len(board_cards) not in (0, 3, 4, 5):
+        raise ValueError("board_cards must have 0, 3, 4 or 5 cards")
+    if opponent_count < 1:
+        return 1.0
+    if trials < 1:
+        raise ValueError("trials must be positive")
+    if len(octile_weights) != 8:
+        raise ValueError("octile_weights must have 8 entries")
+    weights = tuple(float(value) for value in octile_weights)
+    if not all(math.isfinite(value) and value >= 0.0 for value in weights):
+        raise ValueError("octile_weights must be finite and non-negative")
+    total = sum(weights)
+    if total <= 0.0:
+        raise ValueError("octile_weights must not sum to zero")
+
+    hero = tuple(_treys_card(card) for card in hero_hole_cards)
+    board = tuple(_treys_card(card) for card in board_cards)
+    known = {*hero, *board}
+    if len(known) != len(hero) + len(board):
+        raise ValueError("known cards must be unique")
+
+    deck = [card for card in _full_deck() if card not in known]
+    missing_board = 5 - len(board)
+    cards_needed = 2 * opponent_count + missing_board
+    if cards_needed > len(deck):
+        raise ValueError("not enough cards remain to simulate the table")
+
+    combos = [
+        (deck[i], deck[j]) for i in range(len(deck)) for j in range(i + 1, len(deck))
+    ]
+    evaluator = _shared_evaluator()
+    if board:
+        # treys ranks are LOWER-is-stronger, so ascending puts the
+        # strongest made hands first. The posterior's octile 0 is the
+        # WEAKEST slice, so the sort is reversed: slice 0 = weakest,
+        # aligning the slice index with the provider's bucket index.
+        board_list = list(board)
+        combos.sort(
+            key=lambda combo: evaluator.evaluate(board_list, list(combo)),
+            reverse=True,
+        )
+    else:
+        from engine.preflop_percentiles import PREFLOP_PERCENTILES
+        from engine.strength_metric import canonical_class
+
+        def _percentile(combo: tuple[int, int]) -> float:
+            return PREFLOP_PERCENTILES[
+                canonical_class(
+                    [Card.int_to_str(combo[0]), Card.int_to_str(combo[1])]
+                )
+            ]
+
+        combos.sort(key=_percentile)
+
+    size = len(combos)
+    slices = tuple(
+        (size * index // 8, size * (index + 1) // 8) for index in range(8)
+    )
+
+    cumulative: list[float] = []
+    running = 0.0
+    for weight in weights:
+        running += weight
+        cumulative.append(running / total)
+
+    rng = Random(seed)
+    hero_list = list(hero)
+    # Same exact caching as ``estimate_equity``: a complete board fixes
+    # the hero's seven cards, a turn board leaves only the river card
+    # free. Pure evaluations, bit-identical results.
+    if len(board) == 5:
+        hero_score_fixed: int | None = evaluator.evaluate(list(board), hero_list)
+    else:
+        hero_score_fixed = None
+    hero_score_by_river: dict[int, int] | None = {} if len(board) == 4 else None
+    equity = 0.0
+    for _ in range(trials):
+        draw = rng.random()
+        octile = 0
+        while octile < 7 and draw >= cumulative[octile]:
+            octile += 1
+        low, high = slices[octile]
+        posterior = combos[rng.randrange(low, high)]
+        opponents = [[posterior[0], posterior[1]]]
+        rest = [
+            card for card in deck if card != posterior[0] and card != posterior[1]
+        ]
+        sample = rng.sample(rest, cards_needed - 2)
+        cursor = 0
+        for _ in range(opponent_count - 1):
+            opponents.append([sample[cursor], sample[cursor + 1]])
+            cursor += 2
+        runout = [*board, *sample[cursor:]]
+
+        if hero_score_fixed is not None:
+            hero_score = hero_score_fixed
+        elif hero_score_by_river is not None:
+            river_card = runout[4]
+            score = hero_score_by_river.get(river_card)
+            if score is None:
+                score = evaluator.evaluate(runout, hero_list)
+                hero_score_by_river[river_card] = score
+            hero_score = score
+        else:
+            hero_score = evaluator.evaluate(runout, hero_list)
+        opponent_scores = [evaluator.evaluate(runout, hole) for hole in opponents]
+        best_score = min(hero_score, *opponent_scores)
+        if hero_score == best_score:
+            equity += 1.0 / (1 + sum(score == best_score for score in opponent_scores))
+    return equity / trials
+
+
+__all__ = ["board_improvement", "estimate_equity", "estimate_equity_vs_posterior", "prewarm"]

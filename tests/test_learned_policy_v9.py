@@ -197,17 +197,20 @@ def _zero_weights(architecture: dict) -> dict:
     return weights
 
 
-def _write_artifact(directory: Path, *, mutate=None) -> Path:
+def _write_artifact(directory: Path, *, mutate=None, mutate_weights=None) -> Path:
     architecture = default_v9_architecture()
     document = {
         "format_version": MODEL_FORMAT_VERSION_V9,
         "model_version": "candidate-v9-test",
         "weights": _zero_weights(architecture),
         "feature_normalization": {
+            **schema4.normalization_stamp(),
             "means": [0.0] * schema4.INPUT_SIZE_V9,
             "stds": [1.0] * schema4.INPUT_SIZE_V9,
         },
     }
+    if mutate_weights is not None:
+        mutate_weights(document)
     weights_path = directory / "candidate-v9-test.weights.json"
     weights_path.write_text(json.dumps(document), encoding="utf-8")
     manifest = {
@@ -305,8 +308,8 @@ class LoaderTests(unittest.TestCase):
             ),
         )
         refuses(
-            "wrong input size (the pre-equity_multiway 412 must refuse)",
-            lambda m: m.update(input_size=412),
+            "wrong input size",
+            lambda m: m.update(input_size=schema4.INPUT_SIZE_V9 - 1),
         )
         refuses(
             "missing sizing block",
@@ -334,6 +337,42 @@ class LoaderTests(unittest.TestCase):
                 weights.read_text(encoding="utf-8").replace("0.0", "0.1", 1),
                 encoding="utf-8",
             )
+            with self.assertRaises(LearnedPolicyV9Error):
+                load_policy_v9(path)
+
+    def test_unstamped_normalization_is_refused(self) -> None:
+        # Pre-harvest decision 5: an unstamped block is by definition not
+        # v9-produced (the frozen v7/v8 writers emit no stamp) — no
+        # grandfather clause.
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write_artifact(
+                Path(raw),
+                mutate_weights=lambda d: d["feature_normalization"].pop(
+                    "feature_schema_version"
+                ),
+            )
+            with self.assertRaises(LearnedPolicyV9Error):
+                load_policy_v9(path)
+
+    def test_foreign_normalization_digest_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write_artifact(
+                Path(raw),
+                mutate_weights=lambda d: d["feature_normalization"].update(
+                    feature_name_sha="deadbeef"
+                ),
+            )
+            with self.assertRaises(LearnedPolicyV9Error):
+                load_policy_v9(path)
+
+    def test_non_identity_card_scales_are_refused(self) -> None:
+        # The length checks never inspected values: a schema-3 z-scored
+        # card block would load silently before the stamp.
+        def poison(document) -> None:
+            document["feature_normalization"]["means"][0] = 0.5
+
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write_artifact(Path(raw), mutate_weights=poison)
             with self.assertRaises(LearnedPolicyV9Error):
                 load_policy_v9(path)
 
@@ -365,6 +404,88 @@ class LoaderTests(unittest.TestCase):
         )
         self.assertEqual(best, "fatal")
 
+    def test_serve_stashes_the_proposed_branch(self) -> None:
+        # The L6 additive diagnostic: the composed decision's argmax must
+        # reach the DecisionResult. Zero weights make fatal win the priced
+        # case and active win the free case (the round-trip test's math).
+        with tempfile.TemporaryDirectory() as raw:
+            policy = load_policy_v9(_write_artifact(Path(raw)))
+            priced = _snapshot(
+                hole=("2c", "7d"),
+                board=("As", "Kh", "Qs", "Jh"),
+                raise_range=(600, 700),
+            )
+            result = policy.decide_with_diagnostics(priced)
+            self.assertEqual(result.action.action, "fold")
+            self.assertEqual(result.proposed_branch, "fatal")
+            self.assertFalse(result.belief_degraded)
+            self.assertIsNone(result.belief_degrade_reason)
+
+            free = _snapshot(
+                to_call=0,
+                available=("check", "bet"),
+                bet_range=(100, 700),
+                raise_range=None,
+            )
+            result = policy.decide_with_diagnostics(free)
+            self.assertEqual(result.action.action, "bet")
+            self.assertEqual(result.proposed_branch, "active")
+
+    def test_serve_journals_a_belief_provider_degrade(self) -> None:
+        # A provider that swallows its error and serves the uniform prior
+        # (the P3 contract) must have that degrade surfaced per decision.
+        class _DegradingProvider:
+            last_degrade_reason: str | None = None
+
+            def continuing_range_buckets(self, table, records):
+                self.last_degrade_reason = "FakeDegrade: test"
+                return tuple(1.0 / 8 for _ in range(8))
+
+        with tempfile.TemporaryDirectory() as raw:
+            policy = load_policy_v9(
+                _write_artifact(Path(raw)), belief_provider=_DegradingProvider()
+            )
+            result = policy.decide_with_diagnostics(
+                _snapshot(
+                    hole=("2c", "7d"),
+                    board=("As", "Kh", "Qs", "Jh"),
+                    raise_range=(600, 700),
+                )
+            )
+            self.assertTrue(result.belief_degraded)
+            self.assertEqual(result.belief_degrade_reason, "FakeDegrade: test")
+
+    def test_the_deadline_path_journals_neither_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            policy = load_policy_v9(_write_artifact(Path(raw)))
+            result = policy.decide_with_diagnostics(_snapshot(), deadline_s=1.0)
+        self.assertEqual(result.family, "deadline")
+        self.assertIsNone(result.proposed_branch)
+        self.assertFalse(result.belief_degraded)
+        self.assertIsNone(result.belief_degrade_reason)
+
+    def test_a_decision_without_an_equity_read_does_not_leak_the_previous_branch(
+        self,
+    ) -> None:
+        # equity_trials == 0 skips the composition entirely (the engine's
+        # `_family` path). The previous decision's stash must NOT survive
+        # into this one's record — the engine resets the diagnostics at
+        # decision start.
+        with tempfile.TemporaryDirectory() as raw:
+            policy = load_policy_v9(_write_artifact(Path(raw)))
+            priced = _snapshot(
+                hole=("2c", "7d"),
+                board=("As", "Kh", "Qs", "Jh"),
+                raise_range=(600, 700),
+            )
+            first = policy.decide_with_diagnostics(priced)
+            self.assertEqual(first.proposed_branch, "fatal")
+            policy.equity_trials = 0
+            result = policy.decide_with_diagnostics(priced)
+        self.assertIsNone(result.proposed_branch)
+        self.assertFalse(result.belief_degraded)
+        self.assertIsNone(result.belief_degrade_reason)
+
 
 class NonFiniteGuardTests(unittest.TestCase):
     def test_infinite_equity_is_absorbed_by_the_clip(self) -> None:
@@ -383,6 +504,62 @@ class NonFiniteGuardTests(unittest.TestCase):
         heads["fold_through"] = [0.0, math.nan]
         values, _ = _compose(heads=heads)
         self.assertFalse(math.isfinite(values["aggressive"]))
+
+
+class Schema4JournalFeatureTests(unittest.TestCase):
+    """A v9 decision must carry the schema-4 vector it actually inferred on.
+
+    Before 2026-09-02 the journal recorded only the 142-input schema-2
+    vector every ``DecisionEngine`` builds, so a v9 deployment's own live
+    hands could not train or audit a v9 artifact — the diagnosis's point
+    that live play is the only out-of-distribution signal available, lost
+    at the recorder.
+    """
+
+    def test_a_v9_decision_carries_the_schema_4_vector(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            policy = load_policy_v9(_write_artifact(Path(raw)), equity_trials=1)
+            result = policy.decide_with_diagnostics(_snapshot())
+
+        self.assertIsNotNone(result.learning_features_v9)
+        self.assertEqual(len(result.learning_features_v9), schema4.INPUT_SIZE_V9)
+        self.assertTrue(
+            all(math.isfinite(value) for value in result.learning_features_v9)
+        )
+        # The legacy field keeps its own contract, unchanged.
+        if result.learning_features is not None:
+            self.assertEqual(len(result.learning_features), 142)
+
+    def test_the_vector_is_raw_not_normalized(self) -> None:
+        # Normalization is a property of the artifact's weights file, so a
+        # stored row must survive a later artifact normalizing differently.
+        from engine.feature_extract_v9 import extract_features_v9
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            policy = load_policy_v9(_write_artifact(directory), equity_trials=1)
+            table = _snapshot()
+            result = policy.decide_with_diagnostics(table)
+            expected = extract_features_v9(
+                table,
+                belief_provider=policy._belief_provider,
+                potential_trials=policy._potential_trials,
+                seed=policy._feature_seed,
+                sizing=policy._sizing_params,
+                rules=policy.rule_layer,
+            )
+
+        self.assertEqual(tuple(result.learning_features_v9), tuple(expected))
+
+    def test_a_non_v9_policy_records_nothing(self) -> None:
+        # Additive: v7/v8 records must stay byte-identical.
+        from engine.decision_engine import DecisionEngine
+
+        probe = type(
+            "Probe", (DecisionEngine,), {"_family": lambda self, f: "check_call"}
+        )()
+        result = probe.decide_with_diagnostics(_snapshot())
+        self.assertIsNone(result.learning_features_v9)
 
 
 if __name__ == "__main__":

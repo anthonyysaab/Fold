@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 
+from engine.branch_contract_v9 import MODEL_FORMAT_VERSION_V9
 from engine.policy_features import FEATURE_NAMES, LABELS
 
 # Schema 2 (2026-08-12) adds the session opponent model and table standing
@@ -301,40 +302,125 @@ def _validate_engine_parameters(parameters: object) -> None:
             ) from exc
 
 
+def _validate_v9_manifest_schema(
+    manifest: Mapping[str, object], architecture: Mapping[str, object]
+) -> None:
+    """Contract-side schema checks for a format-4 (v9) artifact.
+
+    Format 4 is schema 4: 414 inputs, the four v9 branch labels, and the
+    composed-value architecture. None of the 142-input constants in this
+    module describe it, so this is a separate path rather than a widening
+    of them -- the reasoning ``validate_v9_architecture`` records, that a
+    check accepting both shapes is how an artifact of one schema reaches
+    live play under the other's meanings unnoticed.
+
+    ``validate_v9_architecture`` lives in :mod:`engine.v8_trainer`, which
+    imports this module, so that import is deferred to call time.
+    """
+
+    from engine import schema4
+    from engine.branch_contract_v9 import BRANCH_LABELS_V9
+    from engine.v8_trainer import validate_v9_architecture
+
+    if manifest.get("feature_schema_version") != schema4.SCHEMA_VERSION_V9:
+        raise LearningContractError("unsupported feature schema version")
+    if manifest.get("input_size") != schema4.INPUT_SIZE_V9:
+        raise LearningContractError("artifact input size does not match the contract")
+    if tuple(manifest.get("feature_names", ())) != tuple(schema4.FEATURE_NAMES_V9):
+        raise LearningContractError("artifact feature names do not match the contract")
+    if tuple(manifest.get("action_labels", ())) != tuple(BRANCH_LABELS_V9):
+        raise LearningContractError(
+            "format-4 artifacts must label the four v9 branches"
+        )
+    try:
+        validate_v9_architecture(architecture)
+    except ValueError as error:
+        raise LearningContractError(f"invalid v9 architecture: {error}") from error
+
+    # Phase-A and Phase-B v9 artifacts are indistinguishable by format,
+    # architecture, and action labels -- a Phase-A artifact trains the
+    # component heads only, and its own trainer has always stamped a prose
+    # note saying it must not be deployed. Prose cannot stop a promotion,
+    # so the trainers now emit ``serve.deployable`` and this reads it.
+    # Fail-closed on absence: an artifact that does not claim to be
+    # servable is not servable, which keeps every manifest written before
+    # the marker existed out of live play until it is re-stamped.
+    serve = manifest.get("serve")
+    if not isinstance(serve, Mapping):
+        raise LearningContractError("format-4 artifacts must carry a serve block")
+    if serve.get("deployable") is not True:
+        raise LearningContractError(
+            "artifact does not declare serve.deployable: only a Phase-B "
+            "composed-value v9 artifact may be promoted"
+        )
+    # The marker on its own is a declaration, and a declaration can be
+    # hand-edited onto a Phase-A manifest. Require the Phase-B trainer's
+    # own provenance alongside it, so claiming deployability also means
+    # forging a corpus record: Phase A writes ``dataset``/``row_count``
+    # and has no ``phase_b_decisions`` to offer.
+    window = manifest.get("training_window")
+    decisions = window.get("phase_b_decisions") if isinstance(window, Mapping) else None
+    if isinstance(decisions, bool) or not isinstance(decisions, int) or decisions < 1:
+        raise LearningContractError(
+            "a deployable format-4 artifact must record "
+            "training_window.phase_b_decisions: Phase-A component heads "
+            "are not a serve path"
+        )
+
+
 def validate_artifact_manifest(manifest: Mapping[str, object]) -> None:
     """Validate metadata for an immutable, retrievable policy artifact."""
 
     if manifest.get("format") != MODEL_FORMAT:
         raise LearningContractError("unsupported artifact format")
     format_version = manifest.get("format_version")
-    if format_version not in {MODEL_FORMAT_VERSION, MODEL_FORMAT_VERSION_V7}:
+    if format_version not in {
+        MODEL_FORMAT_VERSION,
+        MODEL_FORMAT_VERSION_V7,
+        MODEL_FORMAT_VERSION_V9,
+    }:
         raise LearningContractError("unsupported artifact format version")
-    if manifest.get("feature_schema_version") != FEATURE_SCHEMA_VERSION:
-        raise LearningContractError("unsupported feature schema version")
-    if manifest.get("input_size") != LEARNING_INPUT_SIZE:
-        raise LearningContractError("artifact input size does not match the contract")
-    if tuple(manifest.get("feature_names", ())) != LEARNING_FEATURE_NAMES:
-        raise LearningContractError("artifact feature names do not match the contract")
     architecture = manifest.get("architecture")
     if not isinstance(architecture, Mapping):
         raise LearningContractError("artifact architecture must be an object")
-    if format_version == MODEL_FORMAT_VERSION_V7:
-        if tuple(manifest.get("action_labels", ())) != BRANCH_LABELS:
-            raise LearningContractError(
-                "format-2 artifacts must label the four value branches"
-            )
-        validate_v7_architecture(architecture)
+    if format_version == MODEL_FORMAT_VERSION_V9:
+        # Format 4 carries schema 4 (414 inputs, four v9 branches), so the
+        # 142-input checks below cannot apply to it. Kept as a separate
+        # branch rather than widened constants for the reason
+        # ``validate_v9_architecture`` records: a check that accepts both
+        # schemas is how an artifact of one shape reaches live play under
+        # the other's meanings without anyone noticing.
+        _validate_v9_manifest_schema(manifest, architecture)
     else:
-        if tuple(manifest.get("action_labels", ())) != LABELS:
+        if manifest.get("feature_schema_version") != FEATURE_SCHEMA_VERSION:
+            raise LearningContractError("unsupported feature schema version")
+        if manifest.get("input_size") != LEARNING_INPUT_SIZE:
             raise LearningContractError(
-                "artifact action labels do not match the contract"
+                "artifact input size does not match the contract"
             )
-        if tuple(architecture.get("hidden_sizes", ())) != HIDDEN_SIZES:
+        if tuple(manifest.get("feature_names", ())) != LEARNING_FEATURE_NAMES:
             raise LearningContractError(
-                "artifact hidden sizes do not match the contract"
+                "artifact feature names do not match the contract"
             )
-        if architecture.get("heads") != HEAD_SIZES:
-            raise LearningContractError("artifact heads do not match the contract")
+        if format_version == MODEL_FORMAT_VERSION_V7:
+            if tuple(manifest.get("action_labels", ())) != BRANCH_LABELS:
+                raise LearningContractError(
+                    "format-2 artifacts must label the four value branches"
+                )
+            validate_v7_architecture(architecture)
+        else:
+            if tuple(manifest.get("action_labels", ())) != LABELS:
+                raise LearningContractError(
+                    "artifact action labels do not match the contract"
+                )
+            if tuple(architecture.get("hidden_sizes", ())) != HIDDEN_SIZES:
+                raise LearningContractError(
+                    "artifact hidden sizes do not match the contract"
+                )
+            if architecture.get("heads") != HEAD_SIZES:
+                raise LearningContractError(
+                    "artifact heads do not match the contract"
+                )
 
     model_version = manifest.get("model_version")
     if not isinstance(model_version, str) or not model_version.strip():

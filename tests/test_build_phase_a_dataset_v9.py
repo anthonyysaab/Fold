@@ -283,6 +283,19 @@ class BuildPathV9Tests(unittest.TestCase):
             root = directory / name
             tables = root / "raw" / "tables"
             tables.mkdir(parents=True)
+            # The shared fixtures carry one table id; the builder now
+            # deduplicates by table id (the widened archive holds 536
+            # byte-identical duplicate tables), so each root gets its own
+            # identity. The reconstructed state prefers the event
+            # SNAPSHOT's tableId over the table metadata, so both are
+            # stamped. Distinct ids also mean the per-decision seeds
+            # differ, which the pinned expectations do not depend on.
+            replay["table"]["tableId"] = f"{name}-table"
+            replay["table"]["id"] = f"{name}-table"
+            for event in replay.get("events") or []:
+                snapshot = event.get("snapshot")
+                if isinstance(snapshot, dict):
+                    snapshot["tableId"] = f"{name}-table"
             (tables / f"{name}.json").write_text(
                 json.dumps({"result": {"data": {"json": replay}}}),
                 encoding="utf-8",

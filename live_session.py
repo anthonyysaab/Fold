@@ -380,6 +380,47 @@ def discover_competition(api_key: str) -> tuple[str | None, str]:
     return str(chosen.get("id")), str(chosen.get("name"))
 
 
+def verify_explicit_competition(
+    api_key: str, competition: str
+) -> tuple[bool, str]:
+    """Check an operator-supplied competition id against the money guard.
+
+    ``--competition`` used to skip discovery entirely, and with it
+    :func:`is_free_playground` -- the only thing standing between a
+    mistyped id and a paid competition. The active list has carried a
+    real-money entry (``[Poker] Eval Open S4``, paid per run in USD.T0)
+    and a buy-in tournament alongside the free Playground, so an
+    unchecked id is a live financial hazard, not a theoretical one.
+
+    Fail-closed on every path: an id absent from the active list, an
+    unreadable list, and a competition that fails the free-Playground
+    test are all refusals. Returns ``(ok, label_or_reason)``.
+    """
+
+    status, body = run_agent.request_arena(
+        api_key, "GET", "/api/arena/competition/list-active"
+    )
+    if status != 200 or not isinstance(body, list):
+        return False, (
+            f"cannot verify --competition {competition!r}: could not list "
+            f"active competitions (HTTP {status})"
+        )
+    for item in body:
+        if not isinstance(item, Mapping) or str(item.get("id")) != competition:
+            continue
+        name = str(item.get("name"))
+        if is_free_playground(item):
+            return True, name
+        return False, (
+            f"--competition {competition!r} is {name!r}, which is not the "
+            "free Playground; refusing to join"
+        )
+    return False, (
+        f"--competition {competition!r} is not in the active list; refusing "
+        "to join an unverifiable competition"
+    )
+
+
 def discover_competition_with_retry(
     api_key: str,
     *,
@@ -656,7 +697,12 @@ def main(argv: list[str] | None = None) -> int:
                     exit_code = EXIT_DISCOVERY_FAILED
                     break
             else:
-                label = competition
+                # An explicit id still has to clear the money guard.
+                ok, label = verify_explicit_competition(api_key, competition)
+                if not ok:
+                    stop_reason = label
+                    exit_code = EXIT_DISCOVERY_FAILED
+                    break
             seat["competition"] = competition
 
             participant = participant_state(api_key, competition)

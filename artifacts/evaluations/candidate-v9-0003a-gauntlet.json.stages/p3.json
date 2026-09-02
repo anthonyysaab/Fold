@@ -1,0 +1,260 @@
+{
+  "arms": {
+    "candidate-v7-0001c": {
+      "bb_per_100": 65.81,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 65.81,
+        "bust_rate_per_session": 0.1008,
+        "busts": 12,
+        "busts_per_100_hands": 0.15,
+        "mean_session_hands": 67.2,
+        "sessions": 119
+      },
+      "seeds": [
+        62.65,
+        36.35,
+        77.8,
+        43.91,
+        81.87,
+        44.51,
+        104.05,
+        75.32
+      ]
+    },
+    "candidate-v9-0003a": {
+      "bb_per_100": 67.03,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 67.03,
+        "bust_rate_per_session": 0.0862,
+        "busts": 10,
+        "busts_per_100_hands": 0.125,
+        "mean_session_hands": 69.0,
+        "sessions": 116
+      },
+      "seeds": [
+        74.53,
+        40.17,
+        80.82,
+        52.46,
+        66.42,
+        53.17,
+        81.32,
+        87.36
+      ]
+    },
+    "trivial-always_active": {
+      "bb_per_100": 149.15,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 149.15,
+        "bust_rate_per_session": 0.2765,
+        "busts": 125,
+        "busts_per_100_hands": 1.5625,
+        "mean_session_hands": 17.7,
+        "sessions": 452
+      },
+      "seeds": [
+        144.1,
+        140.62,
+        221.93,
+        152.86,
+        101.7,
+        111.34,
+        166.79,
+        153.84
+      ]
+    },
+    "trivial-always_aggressive": {
+      "bb_per_100": 83.95,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": 83.95,
+        "bust_rate_per_session": 0.3294,
+        "busts": 113,
+        "busts_per_100_hands": 1.4125,
+        "mean_session_hands": 23.3,
+        "sessions": 343
+      },
+      "seeds": [
+        59.59,
+        157.22,
+        104.6,
+        53.98,
+        104.03,
+        65.55,
+        66.1,
+        60.55
+      ]
+    },
+    "trivial-always_fatal": {
+      "bb_per_100": -25.88,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": -25.88,
+        "bust_rate_per_session": 0.8,
+        "busts": 32,
+        "busts_per_100_hands": 0.4,
+        "mean_session_hands": 200.0,
+        "sessions": 40
+      },
+      "seeds": [
+        -24.85,
+        -24.7,
+        -24.8,
+        -24.85,
+        -27.45,
+        -27.75,
+        -25.35,
+        -27.3
+      ]
+    },
+    "trivial-always_passive": {
+      "bb_per_100": -15.57,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": -15.57,
+        "bust_rate_per_session": 0.529,
+        "busts": 146,
+        "busts_per_100_hands": 1.825,
+        "mean_session_hands": 29.0,
+        "sessions": 276
+      },
+      "seeds": [
+        -21.88,
+        26.16,
+        56.8,
+        40.37,
+        -69.01,
+        -54.23,
+        -59.67,
+        -43.09
+      ]
+    },
+    "trivial-uniform_random_legal": {
+      "bb_per_100": -132.33,
+      "hands_per_seed": 1000,
+      "ruin": {
+        "bb_per_100": -132.33,
+        "bust_rate_per_session": 0.8381,
+        "busts": 207,
+        "busts_per_100_hands": 2.5875,
+        "mean_session_hands": 32.4,
+        "sessions": 247
+      },
+      "seeds": [
+        -81.67,
+        -119.85,
+        -120.0,
+        -117.31,
+        -182.17,
+        -168.0,
+        -95.79,
+        -173.88
+      ]
+    }
+  },
+  "branch_contract": "v9-composed-value",
+  "channel": "vs-p3",
+  "fit": "artifacts\\p3\\p3-fit.json",
+  "paired_vs_candidate": {
+    "candidate-v7-0001c": {
+      "diffs": [
+        -11.88,
+        -3.82,
+        -3.02,
+        -8.55,
+        15.45,
+        -8.66,
+        22.73,
+        -12.04
+      ],
+      "mean": -1.22,
+      "sd": 13.1,
+      "se": 4.63,
+      "t": -0.26
+    },
+    "trivial-always_active": {
+      "diffs": [
+        69.57,
+        100.45,
+        141.11,
+        100.4,
+        35.28,
+        58.17,
+        85.47,
+        66.48
+      ],
+      "mean": 82.12,
+      "sd": 32.36,
+      "se": 11.44,
+      "t": 7.18
+    },
+    "trivial-always_aggressive": {
+      "diffs": [
+        -14.94,
+        117.05,
+        23.78,
+        1.52,
+        37.61,
+        12.38,
+        -15.22,
+        -26.81
+      ],
+      "mean": 16.92,
+      "sd": 45.86,
+      "se": 16.21,
+      "t": 1.04
+    },
+    "trivial-always_fatal": {
+      "diffs": [
+        -99.38,
+        -64.87,
+        -105.62,
+        -77.31,
+        -93.87,
+        -80.92,
+        -106.67,
+        -114.66
+      ],
+      "mean": -92.91,
+      "sd": 17.07,
+      "se": 6.04,
+      "t": -15.39
+    },
+    "trivial-always_passive": {
+      "diffs": [
+        -96.41,
+        -14.01,
+        -24.02,
+        -12.09,
+        -135.43,
+        -107.4,
+        -140.99,
+        -130.45
+      ],
+      "mean": -82.6,
+      "sd": 56.57,
+      "se": 20.0,
+      "t": -4.13
+    },
+    "trivial-uniform_random_legal": {
+      "diffs": [
+        -156.2,
+        -160.02,
+        -200.82,
+        -169.77,
+        -248.59,
+        -221.17,
+        -177.11,
+        -261.24
+      ],
+      "mean": -199.36,
+      "sd": 40.55,
+      "se": 14.34,
+      "t": -13.91
+    }
+  },
+  "seed_count": 8
+}

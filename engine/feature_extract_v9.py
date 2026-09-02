@@ -3,7 +3,7 @@
 ``extract_features_v9`` WRAPS ``extract_features_v8`` rather than
 restating it: every feature the two schemas share is read out of the v8
 assembler by name, so the shared values are bit-identical by
-construction and cannot drift. Only schema 4's seven-name delta is
+construction and cannot drift. Only schema 4's eight-name delta is
 computed here (the plan wrote this as "v9 paths in feature_extract_v8";
 a sibling module is the same content with the v8 assembler left
 byte-identical, per the additive-only discipline):
@@ -16,14 +16,26 @@ byte-identical, per the additive-only discipline):
   composed bet wager at a free one; ``cost_aggressive_eff`` is the
   composed escalation to-amount, clamped into the legal raise range
   (the v8 branch-block's feature-time approximation, kept: no big-blind
-  minimum increment, no integer rounding). At a free spot the aggressive
-  lane is masked by the contract, so its cost is 0.0 and
+  minimum increment, no integer rounding). Both divide by the CONTESTED
+  stack (pre-harvest decision 4): the chips-behind count collapses to
+  zero exactly where the most chips are contested. The shared
+  ``cost_allin_eff`` keeps the v8 assembler's denominator — the
+  decision's scope was the two v9-owned lane costs. At a free spot the
+  aggressive lane is masked by the contract, so its cost is 0.0 and
   ``legal_aggressive`` carries the mask.
 - **``branch_aggressive_executable``** — whether the clamped composed
   to-amount is a genuine escalation (strictly above the call-to
   amount) within an existing legal range. Mirrors the v8 executability
   convention (legal range only; the serve-side risk cap and its
   near-nut release are equity-dependent and stay serve-side).
+- **``equity_vs_posterior``** — hero's MC equity with ONE opponent
+  drawn from the pooled 8-octile P3 posterior (octile by weight, then a
+  combo uniformly inside that octile's slice of the strength-sorted
+  holding list) and the rest random, pinned at
+  :data:`EQUITY_VS_POSTERIOR_TRIALS`. Emitted as ``equity_multiway``
+  VERBATIM wherever the posterior is bit-identical to the uniform
+  prior. Postflop slices order by the made-hand rank (canonical up to
+  card-removal effects); preflop by the frozen percentile table.
 
 The boldness read for the composed sizing is g's own depth-invariant
 read at feature time, fed by the UNCONDITIONED multiway Monte-Carlo
@@ -50,11 +62,12 @@ from engine.aggression_sizing import (
     table_boldness,
 )
 from engine.branch_contract_v9 import BRANCH_LABELS_V9, legal_branch_labels
-from engine.belief_provider import BeliefProvider
+from engine.belief_provider import BeliefProvider, require_buckets
 from engine.feature_extract_v8 import (
     _EQUITY_TRIALS,
     FeatureExtractError,
     _clip01,
+    _hand_events,
     extract_features_v8,
 )
 from engine.game_state import (
@@ -64,9 +77,10 @@ from engine.game_state import (
     _mapping,
     _sequence,
     active_opponent_count,
+    contested_stack_chips,
     effective_stack_chips,
 )
-from engine.hand_strength import estimate_equity
+from engine.hand_strength import estimate_equity, estimate_equity_vs_posterior
 from engine.rules.composition import (
     DEFAULT_RULE_LAYER,
     RuleLayerParams,
@@ -76,6 +90,13 @@ from engine.rules.composition import (
 from engine.rules.ruin_damper import table_exposure
 
 __all__ = ["extract_features_v9"]
+
+#: The schema-4 ``equity_vs_posterior`` column's trial count — a
+#: SEPARATE constant from ``_EQUITY_TRIALS`` (the 200-trial unconditioned
+#: read convention): the decision pack measured that 200-trial noise is
+#: ~half the correction's signal, so the column is pinned at 1,000
+#: (pre-harvest decision 2, owner-confirmed 2026-08-31).
+EQUITY_VS_POSTERIOR_TRIALS = 1000
 
 
 def _lane_range(
@@ -119,6 +140,22 @@ def _covered_allin_to_amounts(
     return tuple(amounts)
 
 
+class _ReplayedBucketsProvider:
+    """Feeds one precomputed bucket read to a second consumer.
+
+    The fitted provider runs ONCE per decision: the belief block and the
+    posterior column must read the same posterior, and a second provider
+    call would double its per-event predictions (and would silently split
+    the two consumers if a future provider were stateful).
+    """
+
+    def __init__(self, buckets: tuple[float, ...]) -> None:
+        self._buckets = buckets
+
+    def continuing_range_buckets(self, table, records):
+        return self._buckets
+
+
 def extract_features_v9(
     table: Mapping[str, object],
     *,
@@ -135,12 +172,23 @@ def extract_features_v9(
     v8 assembler's own values, bit for bit.
     """
 
+    # One provider read per decision: the same posterior feeds the
+    # belief block (via the replaying wrapper into the shared extraction)
+    # and the ``equity_vs_posterior`` column below.
+    posterior_buckets: tuple[float, ...] | None = None
+    shared_provider: BeliefProvider | None = belief_provider
+    if belief_provider is not None:
+        posterior_buckets = require_buckets(
+            belief_provider.continuing_range_buckets(table, _hand_events(table))
+        )
+        shared_provider = _ReplayedBucketsProvider(posterior_buckets)
+
     shared = dict(
         zip(
             schema3.FEATURE_NAMES_V8,
             extract_features_v8(
                 table,
-                belief_provider=belief_provider,
+                belief_provider=shared_provider,
                 potential_trials=potential_trials,
                 seed=seed,
             ),
@@ -160,6 +208,13 @@ def extract_features_v9(
     hole = _cards(hero.get("holeCards"), "hero holeCards", expected=2)
     board = _cards(table.get("boardCards"), "boardCards")
     eff = max(1, effective_stack_chips(table))
+    # Pre-harvest decision 4 (owner-confirmed 2026-08-31): the two
+    # v9-owned lane costs divide by the CONTESTED stack, not the
+    # chips-behind count — the behind form collapses to 0 exactly where
+    # the most chips are contested (the same defect class the L5 sweep
+    # found in the shove lane). g's composition itself keeps the
+    # chips-behind effective stack (its own spec, corpus-pinned).
+    cost_denominator = max(1, contested_stack_chips(table))
     hero_stack = _integer(hero.get("stackChips"), "hero stackChips", minimum=1)
 
     # The label form of the contract query — the index form invites a
@@ -189,12 +244,31 @@ def extract_features_v9(
     # feature (owner queue item 1 — the player-count-conditioned strength
     # input schema 3 lacked) and the input to g's boldness read below.
     new_values["equity_multiway"] = equity_read
+    # equity_vs_posterior (pre-harvest decision 2): hero's equity with
+    # one opponent's holding drawn from the pooled P3 posterior and the
+    # rest random. Verbatim equity_multiway wherever the posterior is
+    # bit-identical to the uniform prior — no evidence, no correction.
+    posterior_has_evidence = posterior_buckets is not None and any(
+        bucket != 1.0 / schema3.BELIEF_BUCKETS for bucket in posterior_buckets
+    )
+    new_values["equity_vs_posterior"] = (
+        estimate_equity_vs_posterior(
+            (hole[0], hole[1]),
+            tuple(board),
+            opponents,
+            posterior_buckets,
+            trials=EQUITY_VS_POSTERIOR_TRIALS,
+            seed=seed,
+        )
+        if posterior_has_evidence
+        else equity_read
+    )
     boldness = table_boldness(table, allowed, equity_read, sizing)
     exposure = table_exposure(table)
     covered = _covered_allin_to_amounts(hero, seats)
 
     if to_call > 0:
-        new_values["cost_active_eff"] = _clip01(to_call / eff)
+        new_values["cost_active_eff"] = _clip01(to_call / cost_denominator)
         composed = compose_aggressive_target(
             boldness=boldness,
             pot=pot,
@@ -214,7 +288,9 @@ def extract_features_v9(
         if lane_range is None:
             # No stated range: the escalation is not executable; the cost
             # keeps the nominal composed price so the axis still ranks.
-            new_values["cost_aggressive_eff"] = _clip01(composed.target / eff)
+            new_values["cost_aggressive_eff"] = _clip01(
+                composed.target / cost_denominator
+            )
             new_values["branch_aggressive_executable"] = 0.0
         else:
             low, high = lane_range
@@ -226,7 +302,7 @@ def extract_features_v9(
                 else contribution + to_call
             )
             new_values["cost_aggressive_eff"] = _clip01(
-                (to_amount - contribution) / eff
+                (to_amount - contribution) / cost_denominator
             )
             new_values["branch_aggressive_executable"] = (
                 1.0 if to_amount > call_to_amount else 0.0
@@ -254,11 +330,15 @@ def extract_features_v9(
             allowed, "raiseRange"
         )
         if lane_range is None:
-            new_values["cost_active_eff"] = _clip01(composed.target / eff)
+            new_values["cost_active_eff"] = _clip01(
+                composed.target / cost_denominator
+            )
         else:
             low, high = lane_range
             to_amount = min(high, max(low, composed.to_amount))
-            new_values["cost_active_eff"] = _clip01((to_amount - contribution) / eff)
+            new_values["cost_active_eff"] = _clip01(
+                (to_amount - contribution) / cost_denominator
+            )
         # The aggressive lane does not exist at a free spot under the v9
         # contract; legal_aggressive carries the mask, the cost is zero.
         new_values["cost_aggressive_eff"] = 0.0

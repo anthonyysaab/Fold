@@ -102,6 +102,7 @@ import time
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ProcessPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -147,6 +148,7 @@ from tools.build_phase_b_corpus import (
     P3SeatWrapper,
     PhaseBError,
     PhaseBHarvestSimulator,
+    PhaseBReplaySimulator,
     _build_opponents,
     _harvest_workers,
     default_leg_specs,
@@ -248,13 +250,27 @@ class ContractForcingRecorder(HeroRecorder):
         raise PhaseBError(f"unknown forced family {family!r}")
 
 
+class _ArenaShapedReplaySimulator(PhaseBReplaySimulator):
+    """The v9 rollout replay: call events carry the Arena's increment.
+
+    Pre-harvest decision 3 (owner-confirmed 2026-08-31): the rollout
+    policy must see the same history shape the serve path will — the
+    frozen v8 replay keeps the legacy street-total record.
+    """
+
+    def __init__(self, *, swap=None, **kwargs: Any) -> None:
+        super().__init__(swap=swap, arena_shaped_call_amounts=True, **kwargs)
+
+
 class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
     """Harvest simulator emitting v9 (schema-2) Phase-B decision rows.
 
     Inherits the arranged replay, the conditional P3 hole swap, the
     selection RNG and the probe from the v8 harvester; overrides only
     the branch layer (contract candidates, composed sizing, the purity
-    check) and the emitted rows.
+    check), the emitted rows, and the call-event size encoding
+    (pre-harvest decision 3: the Arena's increment, so Phase-B simulator
+    rows agree with Phase-A and live).
     """
 
     def __init__(
@@ -263,9 +279,26 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
         belief_provider: P3BeliefProvider,
         sizing: SizingParameters = DEFAULT_SIZING_PARAMETERS,
         rules: RuleLayerParams = DEFAULT_RULE_LAYER,
+        arena_shaped_call_amounts: bool = True,
+        postflop_selection: bool = False,
+        street_quotas: Mapping[str, int] | None = None,
         **kwargs: Any,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(arena_shaped_call_amounts=arena_shaped_call_amounts, **kwargs)
+        # The rollout replays must carry the SAME event shape as the main
+        # play and the probe — a mixed flag re-creates the skew on the
+        # replay side instead.
+        self.replay_class = (
+            _ArenaShapedReplaySimulator
+            if arena_shaped_call_amounts
+            else PhaseBReplaySimulator
+        )
+        # Street-targeted selection for supplemental postflop harvests:
+        # one point per reached postflop street instead of one per hand,
+        # capped per street so the corpus meets deliberate quotas. The
+        # default (False) is the uniform one-per-hand rule, verbatim.
+        self.postflop_selection = bool(postflop_selection)
+        self._street_quota_remaining: dict[str, int] = dict(street_quotas or {})
         self.belief_provider = belief_provider
         self.sizing = sizing
         self.rules = rules
@@ -503,6 +536,47 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
 
     # -- rows ----------------------------------------------------------
 
+    def _select_points(self, hand_index: int, points: list) -> list:
+        """The point-selection rule for one hand.
+
+        Uniform (the default, and the v8 rule verbatim): one point per
+        agent, the same RNG key the frozen v8 harvester uses. Postflop
+        (supplemental harvests): one point per reached postflop street,
+        each capped by that street's remaining quota — the street-balanced
+        sampler NEXT.md item 1 demanded, run as a supplement instead of a
+        full re-harvest.
+        """
+
+        if not self.postflop_selection:
+            selected = []
+            for agent_id in sorted({point.agent_id for point in points}):
+                choices = [point for point in points if point.agent_id == agent_id]
+                selected.append(
+                    random.Random(
+                        f"{self.seed}:{hand_index}:{agent_id}:counterfactual"
+                    ).choice(choices)
+                )
+            return selected
+        selected = []
+        for street in ("flop", "turn", "river"):
+            remaining = self._street_quota_remaining.get(street, 0)
+            if remaining <= 0:
+                continue
+            choices = [
+                point
+                for point in points
+                if point.agent_id == self.hero_id and point.street == street
+            ]
+            if not choices:
+                continue
+            selected.append(
+                random.Random(
+                    f"{self.seed}:{hand_index}:{self.hero_id}:postflop:{street}"
+                ).choice(choices)
+            )
+            self._street_quota_remaining[street] = remaining - 1
+        return selected
+
     def _counterfactual_examples(
         self,
         initial_seats: list,
@@ -519,14 +593,7 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
         the v9 contract's.
         """
 
-        selected = []
-        for agent_id in sorted({point.agent_id for point in points}):
-            choices = [point for point in points if point.agent_id == agent_id]
-            selected.append(
-                random.Random(
-                    f"{self.seed}:{hand_index}:{agent_id}:counterfactual"
-                ).choice(choices)
-            )
+        selected = self._select_points(hand_index, points)
         inclusion_counts = {
             point.agent_id: len(
                 [entry for entry in points if entry.agent_id == point.agent_id]
@@ -687,28 +754,30 @@ def corpus_header_v9(
     starting_stack: int,
     big_blind: int,
     seeds: Sequence[int],
+    selection: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The schema-2 header, canonicalized the way the trainer reads it."""
 
-    return json.loads(
-        json.dumps(
-            {
-                "kind": CORPUS_KIND_V9,
-                "corpus_schema_version": CORPUS_SCHEMA_VERSION_V9,
-                "feature_schema_version": schema4.SCHEMA_VERSION_V9,
-                "input_size": schema4.INPUT_SIZE_V9,
-                "branch_labels": list(BRANCH_LABELS_V9),
-                "sizing": dict(sizing_record),
-                "belief_fit_source": belief_fit_source,
-                "equity_trials": int(equity_trials),
-                "starting_stack": int(starting_stack),
-                "big_blind": int(big_blind),
-                "seeds": [int(seed) for seed in seeds],
-            },
-            sort_keys=True,
-            allow_nan=False,
+    payload: dict[str, Any] = {
+        "kind": CORPUS_KIND_V9,
+        "corpus_schema_version": CORPUS_SCHEMA_VERSION_V9,
+        "feature_schema_version": schema4.SCHEMA_VERSION_V9,
+        "input_size": schema4.INPUT_SIZE_V9,
+        "branch_labels": list(BRANCH_LABELS_V9),
+        "sizing": dict(sizing_record),
+        "belief_fit_source": belief_fit_source,
+        "equity_trials": int(equity_trials),
+        "starting_stack": int(starting_stack),
+        "big_blind": int(big_blind),
+        "seeds": [int(seed) for seed in seeds],
+    }
+    # The sampling provenance: a merged corpus is a UNION of sampling
+    # schemes and must say so, or its statistics lie.
+    if selection is not None:
+        payload["selection"] = json.loads(
+            json.dumps(selection, sort_keys=True, allow_nan=False)
         )
-    )
+    return json.loads(json.dumps(payload, sort_keys=True, allow_nan=False))
 
 
 def write_phase_b_corpus_v9(
@@ -860,6 +929,8 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
             belief_provider=provider,
             sizing=sizing,
             rules=rules,
+            postflop_selection=spec.postflop_selection,
+            street_quotas=spec.street_quotas,
         )
         agents = [("hero", recorder)] + opponents
         result = simulator.play_match(agents, hands=chunk, reset_stacks=False)
@@ -1014,7 +1085,126 @@ def _parser() -> argparse.ArgumentParser:
         "print its statistics",
     )
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--postflop",
+        action="store_true",
+        help="street-targeted selection: one point per reached postflop "
+        "street, capped by --street-targets — the supplemental-harvest "
+        "mode for street balance (default: the uniform one-per-hand rule)",
+    )
+    parser.add_argument(
+        "--street-targets",
+        default="15000,10000,6000",
+        help="total per-street decision targets for --postflop, as "
+        "FLOP,TURN,RIVER (divided across legs; default 15000,10000,6000)",
+    )
+    parser.add_argument(
+        "--merge",
+        nargs=2,
+        metavar=("BASE", "EXTRA"),
+        default=None,
+        help="merge two v9 corpora (base then extra) into --corpus-name in "
+        "--output-dir; refuses incompatible headers",
+    )
     return parser
+
+
+def _raw_corpus_parts(path: Path) -> tuple[dict[str, Any], list[str]]:
+    """(header, raw row lines) — read, never re-serialized."""
+
+    with gzip.open(path, "rt", encoding="utf-8") as stream:
+        header = json.loads(stream.readline())
+        rows = [line for line in stream if line.strip()]
+    return header, rows
+
+
+#: Header fields two corpora must agree on to be mergeable — everything
+#: the trainer validates per-row against the header, plus anything that
+#: would make a mixed corpus dishonest.
+_MERGE_COMPAT_KEYS = (
+    "corpus_schema_version",
+    "feature_schema_version",
+    "input_size",
+    "branch_labels",
+    "sizing",
+    "belief_fit_source",
+    "equity_trials",
+    "starting_stack",
+    "big_blind",
+)
+
+
+def merge_corpora_v9(
+    base: str | Path, extra: str | Path, output: str | Path
+) -> dict[str, Any]:
+    """Merge two v9 corpora (base first) into one, refusing incompatibles.
+
+    The merged header records the union of seeds and the list of both
+    harvests' ``selection`` provenance blocks, so a union of sampling
+    schemes is stated, never disguised. Both inputs are validated by the
+    trainer's own loader before anything is written, and the output is
+    validated the same way before it is blessed.
+    """
+
+    base_path = Path(base).expanduser().resolve()
+    extra_path = Path(extra).expanduser().resolve()
+    if base_path == extra_path:
+        raise PhaseBError("cannot merge a corpus with itself")
+    load_phase_b_corpus_v9(base_path)
+    load_phase_b_corpus_v9(extra_path)
+    base_header, base_rows = _raw_corpus_parts(base_path)
+    extra_header, extra_rows = _raw_corpus_parts(extra_path)
+    for key in _MERGE_COMPAT_KEYS:
+        if base_header.get(key) != extra_header.get(key):
+            raise PhaseBError(
+                f"corpora disagree on header {key!r}; merging them would "
+                "produce a corpus the trainer's per-row checks reject"
+            )
+    # decision ids are ``sim-<seed>-<hand>:hero:<ordinal>``, so shared
+    # leg seeds collide PROBABILISTICALLY — refuse the overlap outright
+    # rather than hoping no hand index happens to match.
+    overlap = set(base_header["seeds"]) & set(extra_header["seeds"])
+    if overlap:
+        raise PhaseBError(
+            f"corpora share leg seeds {sorted(overlap)}; decision ids "
+            "would collide. Harvest the supplement with a disjoint "
+            "--seed base and re-merge"
+        )
+    selections = [
+        selection
+        for selection in (
+            base_header.get("selection"),
+            extra_header.get("selection"),
+        )
+        if selection is not None
+    ]
+    merged = dict(base_header)
+    merged["seeds"] = sorted(set(base_header["seeds"]) | set(extra_header["seeds"]))
+    if selections:
+        merged["selection"] = selections
+    else:
+        merged.pop("selection", None)
+    rows = [json.loads(line) for line in base_rows + extra_rows]
+    write_phase_b_corpus_v9(output, merged, rows)
+    corpus = load_phase_b_corpus_v9(output)
+    return {
+        "base": str(base_path),
+        "extra": str(extra_path),
+        "output": str(Path(output).expanduser().resolve()),
+        "base_rows": len(base_rows),
+        "extra_rows": len(extra_rows),
+        "merged_rows": len(rows),
+        "decisions": len(corpus.decisions),
+        "seeds": merged["seeds"],
+    }
+
+
+def merge_corpora_v9_cli(args: argparse.Namespace) -> int:
+    output_dir = Path(args.output_dir).expanduser().resolve()
+    output = output_dir / f"{args.corpus_name}.phase-b.jsonl.gz"
+    report = merge_corpora_v9(args.merge[0], args.merge[1], output)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1025,6 +1215,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         corpus = load_phase_b_corpus_v9(args.validate)
         print(json.dumps(corpus_statistics(corpus), indent=2, sort_keys=True))
         return 0
+
+    if args.merge:
+        return merge_corpora_v9_cli(args)
 
     if args.counterfactual_rollouts < 1:
         parser.error("--counterfactual-rollouts must be positive")
@@ -1037,6 +1230,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.equity_trials < 1:
         parser.error("--equity-trials must be positive")
 
+    street_targets: dict[str, int] | None = None
+    if args.postflop:
+        parts = [part.strip() for part in args.street_targets.split(",")]
+        if len(parts) != 3:
+            parser.error("--street-targets must be FLOP,TURN,RIVER")
+        try:
+            values = [int(part) for part in parts]
+        except ValueError:
+            parser.error("--street-targets values must be integers")
+        if any(value < 0 for value in values):
+            parser.error("--street-targets values must be non-negative")
+        street_targets = {
+            street: value for street, value in zip(("flop", "turn", "river"), values)
+        }
+
     specs = default_leg_specs(args)
     if args.legs:
         wanted = [part.strip() for part in args.legs.split(",") if part.strip()]
@@ -1047,6 +1255,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         ]
     if not specs:
         parser.error("no legs selected")
+    if street_targets is not None:
+        leg_count = len(specs)
+        # Ceiling so shortfalls are impossible-by-construction; a quota
+        # is a cap, and availability may bind first (documented).
+        per_leg = {
+            street: math.ceil(value / leg_count)
+            for street, value in street_targets.items()
+        }
+        specs = [
+            replace(spec, postflop_selection=True, street_quotas=dict(per_leg))
+            for spec in specs
+        ]
     stacks = {spec.starting_stack for spec in specs}
     blinds = {spec.big_blind for spec in specs}
     if len(stacks) != 1 or len(blinds) != 1:
@@ -1058,6 +1278,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     output_dir = Path(args.output_dir).expanduser().resolve()
     corpus_path = output_dir / f"{args.corpus_name}.phase-b.jsonl.gz"
     summary_path = output_dir / f"{args.corpus_name}.phase-b.summary.json"
+
+    selection_provenance: dict[str, Any] | None = None
+    if street_targets is not None:
+        selection_provenance = {
+            "mode": "postflop",
+            "street_targets": street_targets,
+        }
 
     plan = {
         "candidate": args.candidate,
@@ -1073,6 +1300,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "p3_accept_threshold": args.p3_accept_threshold,
         "p3_resample_tries": args.p3_resample_tries,
         "seed": args.seed,
+        "selection": selection_provenance,
     }
     if args.dry_run:
         # Fail loud on a bad candidate or missing fit before anyone
@@ -1137,6 +1365,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         starting_stack=specs[0].starting_stack,
         big_blind=specs[0].big_blind,
         seeds=[spec.seed for spec in specs],
+        selection=selection_provenance,
     )
     write_phase_b_corpus_v9(corpus_path, header, rows)
     # The proof, not a formality: the corpus is reloaded through the

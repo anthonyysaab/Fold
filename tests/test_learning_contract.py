@@ -125,5 +125,135 @@ class LearningContractTests(unittest.TestCase):
                 validate_artifact_manifest(invalid)
 
 
+def _manifest_v9() -> dict:
+    """A format-4 manifest as the v9 Phase-B trainer writes one.
+
+    Built from the live constants rather than a checked-in artifact:
+    ``artifacts/candidates/`` is gitignored, so a test that read one
+    would pass here and skip on every fresh clone.
+    """
+
+    from engine import schema4
+    from engine.branch_contract_v9 import BRANCH_LABELS_V9, MODEL_FORMAT_VERSION_V9
+    from engine.v8_trainer import default_v9_architecture
+
+    return {
+        "format": MODEL_FORMAT,
+        "format_version": MODEL_FORMAT_VERSION_V9,
+        "model_version": "candidate-v9-0000",
+        "state": "candidate",
+        "parent_version": None,
+        "created_at": "2026-09-02T12:00:00Z",
+        "feature_schema_version": schema4.SCHEMA_VERSION_V9,
+        "input_size": schema4.INPUT_SIZE_V9,
+        "feature_names": list(schema4.FEATURE_NAMES_V9),
+        "action_labels": list(BRANCH_LABELS_V9),
+        "architecture": default_v9_architecture(),
+        "serve": {"deployable": True},
+        "weights_file": "weights.json",
+        "weights_sha256": "b" * 64,
+        "training_window": {"hand_count": 12, "phase_b_decisions": 56043},
+        "evaluation": {},
+        "promotion": None,
+    }
+
+
+class FormatFourPromotionTests(unittest.TestCase):
+    """The contract gate that makes a v9 artifact promotable, and only a v9
+    Phase-B one. Format 4 is schema 4 (414 inputs, four v9 branches); none
+    of the 142-input constants describe it, so the risk this class guards
+    is a manifest of one schema passing under the other's checks."""
+
+    def test_a_phase_b_v9_manifest_validates(self) -> None:
+        validate_artifact_manifest(_manifest_v9())
+
+    def test_the_142_input_schema_is_not_accepted_under_format_four(self) -> None:
+        for field, wrong in (
+            ("input_size", LEARNING_INPUT_SIZE),
+            ("feature_schema_version", FEATURE_SCHEMA_VERSION),
+            ("feature_names", list(LEARNING_FEATURE_NAMES)),
+            ("action_labels", list(LABELS)),
+        ):
+            invalid = _manifest_v9()
+            invalid[field] = wrong
+            with self.assertRaises(
+                LearningContractError, msg=f"format 4 accepted a v1 {field}"
+            ):
+                validate_artifact_manifest(invalid)
+
+    def test_a_format_two_body_relabelled_format_four_is_refused(self) -> None:
+        # The cross-schema case that matters: an artifact of the old shape
+        # wearing the new version number must not reach the v9 branch and
+        # be served under v9 slot meanings.
+        relabelled = _manifest()
+        relabelled["format_version"] = 4
+        with self.assertRaises(LearningContractError):
+            validate_artifact_manifest(relabelled)
+
+    def test_a_phase_a_artifact_is_refused(self) -> None:
+        # Phase A trains the component heads only and its own trainer has
+        # always stamped a prose note saying it must not be deployed. The
+        # two phases are identical in format, architecture and labels, so
+        # the refusal has to come from the machine-readable marker.
+        phase_a = _manifest_v9()
+        phase_a["serve"] = {"deployable": False}
+        with self.assertRaises(LearningContractError):
+            validate_artifact_manifest(phase_a)
+
+    def test_the_marker_is_fail_closed(self) -> None:
+        # Every manifest written before the marker existed lacks it, and
+        # must stay out of live play rather than inherit a default.
+        missing_key = _manifest_v9()
+        missing_key["serve"] = {}
+        no_block = _manifest_v9()
+        del no_block["serve"]
+        for invalid in (missing_key, no_block):
+            with self.assertRaises(LearningContractError):
+                validate_artifact_manifest(invalid)
+
+    def test_the_marker_must_be_a_real_boolean(self) -> None:
+        # A JSON round-trip that turned the flag into a truthy string, or
+        # an int, must not read as consent to deploy.
+        for truthy in ("true", 1, [1], {"yes": True}):
+            invalid = _manifest_v9()
+            invalid["serve"] = {"deployable": truthy}
+            with self.assertRaises(
+                LearningContractError, msg=f"{truthy!r} read as deployable"
+            ):
+                validate_artifact_manifest(invalid)
+
+    def test_deployability_also_requires_phase_b_provenance(self) -> None:
+        # The marker alone is a declaration, and a declaration can be
+        # hand-edited onto a Phase-A manifest. Claiming deployability has
+        # to mean forging a corpus record as well: Phase A writes
+        # ``dataset``/``row_count`` and has no phase_b_decisions.
+        phase_a_window = _manifest_v9()
+        phase_a_window["training_window"] = {
+            "hand_count": 1195,
+            "dataset": "phase-a-dataset-v9.jsonl.gz",
+            "row_count": 9084,
+        }
+        with self.assertRaises(LearningContractError):
+            validate_artifact_manifest(phase_a_window)
+
+        for bogus in (0, -1, True, "56043", None):
+            invalid = _manifest_v9()
+            invalid["training_window"] = {
+                "hand_count": 12,
+                "phase_b_decisions": bogus,
+            }
+            with self.assertRaises(
+                LearningContractError, msg=f"{bogus!r} read as a corpus"
+            ):
+                validate_artifact_manifest(invalid)
+
+    def test_a_v8_architecture_cannot_ride_a_format_four_manifest(self) -> None:
+        invalid = _manifest_v9()
+        invalid["architecture"] = dict(invalid["architecture"])
+        invalid["architecture"]["family"] = "v8-composed-value"
+        with self.assertRaises(LearningContractError):
+            validate_artifact_manifest(invalid)
+
+
 if __name__ == "__main__":
     unittest.main()

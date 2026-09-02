@@ -1392,6 +1392,7 @@ def train_phase_b_candidate_v9(
             "format_version": MODEL_FORMAT_VERSION_V9,
             "model_version": model_version,
             "feature_normalization": {
+                **schema4.normalization_stamp(),
                 "means": list(best["means"]),  # type: ignore[arg-type]
                 "stds": list(best["stds"]),  # type: ignore[arg-type]
             },
@@ -1435,6 +1436,11 @@ def train_phase_b_candidate_v9(
             "phase_b_corpus": None if corpus_path is None else str(corpus_path),
             "phase_b_decisions": len(decisions),
             "phase_b_tables": len({d.table_id for d in decisions}),
+            # The learning contract's own provenance key. Same quantity as
+            # ``phase_b_tables`` (one table id per hand); emitted under the
+            # contract's name because ``validate_artifact_manifest`` requires
+            # it and a promotion cannot read our richer spelling.
+            "hand_count": len({d.table_id for d in decisions}),
             "phase_b_branch_counts": dict(sorted(branch_counts.items())),
             "phase_b_decisions_per_street": dict(sorted(per_street.items())),
             "phase_b_free_spot_decisions": sum(
@@ -1458,6 +1464,13 @@ def train_phase_b_candidate_v9(
             "bluff_settings": DEFAULT_BLUFF_SETTINGS.to_mapping(),
         },
         "serve": {
+            # Machine-readable deployability. A Phase-B composed-value
+            # artifact is what ``learned_policy_v9`` expects, so this one
+            # is eligible for promotion; the Phase-A trainer stamps
+            # ``False``. The promotion contract reads THIS, never the
+            # prose note below -- a note cannot stop a promotion, and
+            # both phases otherwise carry an identical format 4 manifest.
+            "deployable": True,
             "ood_guard_indices": list(schema4.CONTEXT_INDICES_V9),
             # Harvest == serve, one number (pinned): load_policy_v9
             # honours this pin when the caller passes no explicit value.

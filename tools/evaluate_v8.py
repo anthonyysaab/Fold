@@ -14,7 +14,12 @@ what the v7 tool cannot field:
    scored by one instrument.  The aggress baselines size at the E6
    stack-aware branch targets and the ``always_fold`` intent follows the v7
    absorption convention (a fold the table would give away for free is
-   played as the free check — that *is* what the engine would execute);
+   played as the free check — that *is* what the engine would execute).
+   The v9 contract floors (``always_fatal`` / ``always_passive`` /
+   ``always_active`` / ``always_aggressive``) are selected with
+   ``--floors v9`` (or ``both``); each pins one v9 branch, and the two
+   sized lanes run ``g`` pinned to the neutral reference read (b = 0) —
+   never the table's equity;
 3. per-street strength separation (DECISIONS §5) from a dedicated
    recording simulation, on the canonical ``strength_metric`` scale;
 4. a self-duel null check: the candidate dueled against itself must be an
@@ -46,9 +51,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from engine.aggression_sizing import active_bet_wager, aggressive_target
+from engine.branch_contract_v9 import MODEL_FAMILY_V9
 from engine.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
 from engine.game_state import effective_stack_chips
 from engine.learned_policy_v8 import load_policy_v8
+from engine.learned_policy_v9 import load_policy_v9
 from engine.strength_aware_opponent import (
     DEFAULT_FIT_PATH as P3_DEFAULT_FIT_PATH,
 )
@@ -61,6 +69,7 @@ from engine.table_simulator import (
     _family_of,
     run_sessions,
 )
+from engine.v8_trainer import MODEL_FAMILY_V8
 from tools.evaluate_policies import (
     _BATTERIES,
     _battery_entry,
@@ -91,6 +100,35 @@ TRIVIAL_MODES = (
     "uniform_random_legal",
 )
 
+#: The v9 contract floors, one per ``branch_contract_v9.BRANCH_LABELS_V9``
+#: slot. Where the contract masks the branch the floor plays the engine's
+#: own fallback: ``fatal`` absorbs to the free check (the v7 convention, a
+#: fold the table gives away for free is never executed), ``passive`` plays
+#: the check/call ladder at a price, and a masked ``aggressive`` falls
+#: through the passive ladder exactly as the L5 demotion does. The two
+#: sized lanes run ``g`` pinned to :data:`V9_FLOOR_REFERENCE_BOLDNESS` —
+#: the floors never read the table's equity.
+V9_TRIVIAL_MODES = (
+    "always_fatal",
+    "always_passive",
+    "always_active",
+    "always_aggressive",
+)
+
+#: The boldness the v9 sized floors pin g's read to. 0 is the neutral
+#: reference: active bets 0.5 pot, aggressive raises at (0.75, 0.325).
+V9_FLOOR_REFERENCE_BOLDNESS = 0.0
+
+#: Which floor set the trivial and p3 stages run, selected by ``--floors``.
+#: ``v8`` is the frozen five (byte-identical to every published report);
+#: ``v9`` is the four contract floors plus the contract-agnostic
+#: ``uniform_random_legal``; ``both`` runs all nine.
+FLOOR_SETS: dict[str, tuple[str, ...]] = {
+    "v8": TRIVIAL_MODES,
+    "v9": V9_TRIVIAL_MODES + ("uniform_random_legal",),
+    "both": TRIVIAL_MODES + V9_TRIVIAL_MODES,
+}
+
 _STAGES = (
     "nullcheck",
     "trivial",
@@ -100,6 +138,15 @@ _STAGES = (
     "duel",
     "strength",
 )
+
+#: The branch-contract identity of every fragment this tool writes and of
+#: the reports it assembles. Every stage fragment is stamped with it, and
+#: ``assemble_report`` refuses to mix fragments carrying a different stamp
+#: (a battery fragment from a v9-gauntlet workdir must never meet a duel
+#: fragment from this tool's). Unstamped fragments — written before the
+#: stamp existed, so by construction from v8 runs — are grandfathered as
+#: this id, which keeps old ``--workdir`` scratch reusable.
+BRANCH_CONTRACT_ID = MODEL_FAMILY_V8
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +171,24 @@ class V8PolicySpec:
         return load_policy_v8(self.manifest, equity_trials=self.equity_trials)
 
 
+@dataclass(frozen=True)
+class V9PolicySpec:
+    """A format-4 (v9 composed-value) policy — the same duck interface.
+
+    The v9 gauntlet: same batteries, seeds, session mode, floors and duel
+    as the frozen instrument; the candidate is served through
+    ``load_policy_v9`` (composed sizing, the fitted P3 belief provider,
+    hyper off) at the instrument's equity trials.
+    """
+
+    label: str
+    manifest: str
+    equity_trials: int
+
+    def build(self) -> object:
+        return load_policy_v9(self.manifest, equity_trials=self.equity_trials)
+
+
 # ---------------------------------------------------------------------------
 # Trivial baselines
 # ---------------------------------------------------------------------------
@@ -142,6 +207,10 @@ class TrivialAgent:
     family uniformly with a seeded, snapshot-keyed RNG (deterministic per
     seed, like ``ScriptedAgent``) and sizes aggress uniformly in the stated
     legal range.
+
+    The four v9 modes pin one branch of the v9 contract each
+    (:data:`V9_TRIVIAL_MODES`); their masked-state fallbacks and pinned
+    sizing reads are documented there.
     """
 
     mode: str
@@ -151,7 +220,7 @@ class TrivialAgent:
     reads_cards = False
 
     def __post_init__(self) -> None:
-        if self.mode not in TRIVIAL_MODES:
+        if self.mode not in TRIVIAL_MODES and self.mode not in V9_TRIVIAL_MODES:
             raise ValueError(f"unknown trivial mode {self.mode!r}")
         self.policy_version = f"trivial-{self.mode}"
 
@@ -194,9 +263,111 @@ class TrivialAgent:
             return {"action": "call", "message": "trivial"}
         return {"action": "fold", "message": "trivial"}
 
+    def _v9_bet_payload(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any], available: set[str]
+    ) -> dict | None:
+        """The active lane's unprovoked wager, sized by g at the pinned read.
+
+        ``to_call == 0`` by contract; the wager is g's ``active_bet_wager``
+        at :data:`V9_FLOOR_REFERENCE_BOLDNESS`, legalized into the stated
+        range exactly like the v8 aggress floors (the engine's big-blind
+        floor and rounding live in ``_sized_action``; the floor speaks the
+        Arena dialect directly and clamps itself).
+        """
+
+        pot = int(table.get("potChips") or 0)
+        hero = next(
+            seat
+            for seat in table["seats"]
+            if seat["seatNumber"] == table["selfSeatNumber"]
+        )
+        contribution = int(hero["currentBetChips"])
+        wager = active_bet_wager(pot, V9_FLOOR_REFERENCE_BOLDNESS)
+        for action, range_name in (("bet", "betRange"), ("raise", "raiseRange")):
+            amount_range = allowed.get(range_name)
+            if action in available and amount_range is not None:
+                low, high = int(amount_range["min"]), int(amount_range["max"])
+                to_amount = min(high, max(low, int(round(contribution + wager))))
+                return {"action": action, "amount": to_amount, "message": "trivial"}
+        if "all-in" in available:
+            return {
+                "action": "all-in",
+                "amount": int(allowed["allInToAmount"]),
+                "message": "trivial",
+            }
+        return None
+
+    def _v9_raise_payload(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any], available: set[str]
+    ) -> dict | None:
+        """The aggressive lane's escalation, sized by g at the pinned read.
+
+        ``to_call > 0`` by contract; the target is g's ``aggressive_target``
+        at :data:`V9_FLOOR_REFERENCE_BOLDNESS`, legalized into the stated
+        raise range, falling through all-in exactly like the v8 aggress
+        floors.
+        """
+
+        pot = int(table.get("potChips") or 0)
+        to_call = int(allowed.get("callChips") or 0)
+        hero = next(
+            seat
+            for seat in table["seats"]
+            if seat["seatNumber"] == table["selfSeatNumber"]
+        )
+        contribution = int(hero["currentBetChips"])
+        target = aggressive_target(
+            pot=pot,
+            to_call=to_call,
+            effective_stack=effective_stack_chips(table),
+            boldness=V9_FLOOR_REFERENCE_BOLDNESS,
+        )
+        amount_range = allowed.get("raiseRange")
+        if "raise" in available and amount_range is not None:
+            low, high = int(amount_range["min"]), int(amount_range["max"])
+            to_amount = min(high, max(low, int(round(contribution + target))))
+            return {"action": "raise", "amount": to_amount, "message": "trivial"}
+        if "all-in" in available:
+            return {
+                "action": "all-in",
+                "amount": int(allowed["allInToAmount"]),
+                "message": "trivial",
+            }
+        return None
+
+    def _decide_v9(
+        self, table: Mapping[str, Any], allowed: Mapping[str, Any], available: set[str]
+    ) -> dict:
+        to_call = int(allowed.get("callChips") or 0)
+        if self.mode == "always_fatal":
+            if to_call > 0 and "fold" in available:
+                return {"action": "fold", "message": "trivial"}
+            # Masked (a free check) or a dialect that offers no fold:
+            # the passive ladder — the floor must never submit an action
+            # the snapshot does not offer (the simulator raises on it).
+            return self._passive_payload(available)
+        if self.mode == "always_passive":
+            return self._passive_payload(available)
+        if self.mode == "always_active":
+            if to_call > 0:
+                if "call" in available:
+                    return {"action": "call", "message": "trivial"}
+                return {"action": "fold", "message": "trivial"}
+            payload = self._v9_bet_payload(table, allowed, available)
+            return payload if payload is not None else self._passive_payload(available)
+        # always_aggressive: escalation-only. At a free spot the contract
+        # masks the lane, and the engine's own fallback for an unexecutable
+        # escalation is the passive ladder (the L5 demotion doctrine).
+        if to_call <= 0:
+            return self._passive_payload(available)
+        payload = self._v9_raise_payload(table, allowed, available)
+        return payload if payload is not None else self._passive_payload(available)
+
     def decide(self, table: Mapping[str, Any]) -> dict:
         allowed = table["allowedActions"]
         available = set(allowed["availableActions"])
+        if self.mode in V9_TRIVIAL_MODES:
+            return self._decide_v9(table, allowed, available)
         if self.mode == "always_fold":
             if "check" in available:
                 return {"action": "check", "message": "trivial"}
@@ -541,21 +712,27 @@ def channel_battery_plan(
 
 
 class StrengthRecorder:
-    """Wrap a DecisionEngine policy; record (street, family, strength) per decision.
+    """Wrap a DecisionEngine policy; record (street, family, strength, branch) per decision.
 
     The recorded family is the **submitted** action's family (post bluff
     conversion, post safety gates) — the action the table actually saw —
     and strength is the canonical ``strength_metric.strength_percentile``
-    of the hero's holding on the revealed board.
+    of the hero's holding on the revealed board. The fourth field is the
+    policy's proposed v9 branch label (``DecisionResult.proposed_branch``)
+    when it serves the composed contract — None for v7/v8 policies and
+    every non-v9 decision.
     """
 
-    def __init__(self, policy: Any, records: list[tuple[str, str, float]]) -> None:
+    def __init__(
+        self, policy: Any, records: list[tuple[str, str, float, str | None]]
+    ) -> None:
         self.policy = policy
         self.policy_version = getattr(policy, "policy_version", "policy")
         self.records = records
 
     def decide(self, table: Mapping[str, Any]) -> dict:
-        payload = self.policy.decide_with_diagnostics(table).to_payload()
+        decision = self.policy.decide_with_diagnostics(table)
+        payload = decision.to_payload()
         family = _family_of(str(payload.get("action")))
         hero = next(
             seat
@@ -567,7 +744,12 @@ class StrengthRecorder:
         if family is not None and len(hole) == 2:
             street = str(table.get("street") or "preflop").casefold()
             self.records.append(
-                (street, family, strength_percentile(hole, board))
+                (
+                    street,
+                    family,
+                    strength_percentile(hole, board),
+                    decision.proposed_branch,
+                )
             )
         return payload
 
@@ -583,8 +765,8 @@ class StrengthTask:
     opponent_seed: int
     stack: int
 
-    def run(self) -> list[tuple[str, str, float]]:
-        records: list[tuple[str, str, float]] = []
+    def run(self) -> list[tuple[str, str, float, str | None]]:
+        records: list[tuple[str, str, float, str | None]] = []
         if self.arena == "five-max-lineup":
             opponents = _lineup(self.opponent_seed)
         else:
@@ -608,12 +790,48 @@ class StrengthTask:
 _SEPARATION_STREETS = ("preflop", "flop", "turn", "river")
 
 
-def separation_report(records: Sequence[tuple[str, str, float]]) -> dict:
+def _separation_stat(aggress: list[float], folds: list[float]) -> dict | None:
+    """mean(strength | aggress) − mean(strength | fold), with se and ci95.
+
+    None when either side has fewer than two samples. The single
+    definition site for the statistic — the family-based key and the
+    v9 branch-based key must not drift apart.
+    """
+
+    if len(aggress) < 2 or len(folds) < 2:
+        return None
+    mean_a = sum(aggress) / len(aggress)
+    mean_f = sum(folds) / len(folds)
+    var_a = sum((v - mean_a) ** 2 for v in aggress) / (len(aggress) - 1)
+    var_f = sum((v - mean_f) ** 2 for v in folds) / (len(folds) - 1)
+    se = math.sqrt(var_a / len(aggress) + var_f / len(folds))
+    separation = mean_a - mean_f
+    return {
+        "separation": round(separation, 4),
+        "se": round(se, 4),
+        "ci95": [
+            round(separation - 1.96 * se, 4),
+            round(separation + 1.96 * se, 4),
+        ],
+    }
+
+
+def separation_report(
+    records: Sequence[
+        tuple[str, str, float] | tuple[str, str, float, str | None]
+    ],
+) -> dict:
     """Per-street and pooled strength separation: mean(aggress) − mean(fold).
 
     Alongside the separation: per-family counts and means, the standard
     error of the difference of means, and a 95% normal CI — the design's
     preflop acceptance asks specifically whether the CI excludes zero.
+
+    When records carry the fourth element (the policy's proposed v9
+    branch label), the v9-lane metric
+    ``separation_aggressive_minus_fatal`` is published BESIDE the
+    family-based key — the +0.386 field benchmark cites the old one, so
+    it is never replaced.
     """
 
     def _bucket(street: str | None) -> dict:
@@ -621,8 +839,13 @@ def separation_report(records: Sequence[tuple[str, str, float]]) -> dict:
             record for record in records if street is None or record[0] == street
         ]
         families: dict[str, list[float]] = {}
-        for _, family, strength in chosen:
+        branches: dict[str, list[float]] = {}
+        for record in chosen:
+            family = record[1]
+            strength = record[2]
             families.setdefault(family, []).append(strength)
+            if len(record) > 3 and record[3] is not None:
+                branches.setdefault(record[3], []).append(strength)
         entry: dict[str, Any] = {"decisions": len(chosen), "families": {}}
         for family, values in sorted(families.items()):
             mean = sum(values) / len(values)
@@ -630,23 +853,20 @@ def separation_report(records: Sequence[tuple[str, str, float]]) -> dict:
                 "count": len(values),
                 "mean_strength": round(mean, 4),
             }
-        aggress = families.get("aggress", [])
-        folds = families.get("fold", [])
-        if len(aggress) >= 2 and len(folds) >= 2:
-            mean_a = sum(aggress) / len(aggress)
-            mean_f = sum(folds) / len(folds)
-            var_a = sum((v - mean_a) ** 2 for v in aggress) / (len(aggress) - 1)
-            var_f = sum((v - mean_f) ** 2 for v in folds) / (len(folds) - 1)
-            se = math.sqrt(var_a / len(aggress) + var_f / len(folds))
-            separation = mean_a - mean_f
-            entry["separation_aggress_minus_fold"] = round(separation, 4)
-            entry["se"] = round(se, 4)
-            entry["ci95"] = [
-                round(separation - 1.96 * se, 4),
-                round(separation + 1.96 * se, 4),
-            ]
+        stat = _separation_stat(families.get("aggress", []), families.get("fold", []))
+        if stat is not None:
+            entry["separation_aggress_minus_fold"] = stat["separation"]
+            entry["se"] = stat["se"]
+            entry["ci95"] = stat["ci95"]
         else:
             entry["separation_aggress_minus_fold"] = None
+        branch_stat = _separation_stat(
+            branches.get("aggressive", []), branches.get("fatal", [])
+        )
+        if branch_stat is not None:
+            entry["separation_aggressive_minus_fatal"] = branch_stat["separation"]
+            entry["se_aggressive_minus_fatal"] = branch_stat["se"]
+            entry["ci95_aggressive_minus_fatal"] = branch_stat["ci95"]
         return entry
 
     report = {"all_streets": _bucket(None)}
@@ -686,11 +906,19 @@ def _assert_duel_zero_sum(
 # ---------------------------------------------------------------------------
 
 
-def stage_nullcheck(v8_spec: V8PolicySpec, args: argparse.Namespace) -> dict:
+def stage_nullcheck(
+    candidate_spec: V8PolicySpec | V9PolicySpec, args: argparse.Namespace
+) -> dict:
     """Self-duel the candidate; the paired diffs must be exactly zero."""
 
-    mirror_a = V8PolicySpec("v8-null-A", v8_spec.manifest, v8_spec.equity_trials)
-    mirror_b = V8PolicySpec("v8-null-B", v8_spec.manifest, v8_spec.equity_trials)
+    # The mirror specs use the candidate's OWN spec class, so a v9
+    # candidate self-duels through load_policy_v9, never the v8 loader.
+    mirror_a = type(candidate_spec)(
+        "v8-null-A", candidate_spec.manifest, candidate_spec.equity_trials
+    )
+    mirror_b = type(candidate_spec)(
+        "v8-null-B", candidate_spec.manifest, candidate_spec.equity_trials
+    )
     tasks = duel_tasks(
         mirror_a,
         mirror_b,
@@ -719,13 +947,20 @@ def stage_nullcheck(v8_spec: V8PolicySpec, args: argparse.Namespace) -> dict:
     }
 
 
+def floor_modes(args: argparse.Namespace) -> tuple[str, ...]:
+    """The trivial-floor set selected by ``--floors`` (see :data:`FLOOR_SETS`)."""
+
+    return FLOOR_SETS[args.floors]
+
+
 def stage_trivial(args: argparse.Namespace) -> dict:
     seeds = tuple(range(args.trivial_seeds))
+    modes = floor_modes(args)
     plans = {
         mode: trivial_battery_plan(
             mode, seeds=seeds, scale=args.scale, stack=args.starting_stack
         )
-        for mode in TRIVIAL_MODES
+        for mode in modes
     }
     all_tasks = [task for plan in plans.values() for _, _, task in plan]
     results = _run_tasks(all_tasks, _gauntlet_workers(args.workers, len(all_tasks)))
@@ -913,7 +1148,11 @@ def stage_p3(
     the same seeds and the same hands as the real arms.
     """
 
-    arms: list[Any] = [v8_spec, incumbent_spec, *(TrivialSpec(m) for m in TRIVIAL_MODES)]
+    arms: list[Any] = [
+        v8_spec,
+        incumbent_spec,
+        *(TrivialSpec(m) for m in floor_modes(args)),
+    ]
     # Seed count defaults to --battery-seeds (unchanged behaviour) but can be
     # raised on its own: the published vs-p3 MDE is derived at 16 seeds, and
     # scoring against it at 8 would compare an effect to the wrong threshold.
@@ -985,7 +1224,7 @@ def stage_duel(
     )
     verdict = "UNRESOLVED"
     if mean is not None and abs(mean) >= resolvable:
-        verdict = "v8 wins" if mean > 0 else "incumbent wins"
+        verdict = "candidate wins" if mean > 0 else "incumbent wins"
     return {
         "opponent": incumbent_spec.label,
         "seeds": count,
@@ -1024,7 +1263,7 @@ def stage_strength(
         ),
     ]
     outcomes = _run_tasks(tasks, _gauntlet_workers(min(args.workers, 4), len(tasks)))
-    by_policy: dict[str, list[tuple[str, str, float]]] = {}
+    by_policy: dict[str, list[tuple[str, str, float, str | None]]] = {}
     for task, records in zip(tasks, outcomes, strict=True):
         by_policy.setdefault(task.spec.label, []).extend(records)
     return {
@@ -1156,10 +1395,19 @@ def battery_comparisons(
     return {"seed_count": seed_count, "channels": comparisons}
 
 
-def _write_fragment(workdir: Path, stage: str, fragment: Mapping[str, Any]) -> None:
+def _write_fragment(
+    workdir: Path,
+    stage: str,
+    fragment: Mapping[str, Any],
+    contract_id: str = BRANCH_CONTRACT_ID,
+) -> None:
     workdir.mkdir(parents=True, exist_ok=True)
+    stamped = {
+        **fragment,
+        "branch_contract": contract_id,
+    }
     (workdir / f"{stage}.json").write_text(
-        json.dumps(fragment, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        json.dumps(stamped, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
         newline="\n",
     )
@@ -1180,11 +1428,27 @@ def assemble_report(
     incumbent_label: str,
     noise_floor: Mapping[str, Any] | None,
     config: Mapping[str, Any],
+    contract_id: str = BRANCH_CONTRACT_ID,
+    study: str = "candidate-v8-0001-gauntlet",
 ) -> dict:
     fragments = {stage: _read_fragment(workdir, stage) for stage in _STAGES}
+    stamps = {
+        str(fragment.get("branch_contract"))
+        for fragment in fragments.values()
+        if fragment and fragment.get("branch_contract")
+    }
+    foreign = {stamp for stamp in stamps if stamp != contract_id}
+    if foreign:
+        raise AssertionError(
+            "refusing to assemble a report from mixed-contract fragments: "
+            f"found {sorted(foreign)} (this tool writes {contract_id!r}); "
+            "copying stage fragments between workdirs is only valid within "
+            "one candidate family"
+        )
     training = candidate_manifest.get("training", {})
     report: dict[str, Any] = {
-        "study": "candidate-v8-0001-gauntlet",
+        "study": study,
+        "branch_contract": contract_id,
         "candidate": candidate_label,
         "incumbent": incumbent_label,
         "config": dict(config),
@@ -1225,6 +1489,13 @@ def assemble_report(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", default=DEFAULT_CANDIDATE)
+    parser.add_argument(
+        "--candidate-v9",
+        default=None,
+        help="a format-4 v9 composed-value manifest: switches the whole "
+        "gauntlet to the v9 contract (V9PolicySpec, --floors v9 default, "
+        "the v9 branch-contract fragment stamps, the v9 study name)",
+    )
     parser.add_argument("--incumbent", default=DEFAULT_INCUMBENT)
     parser.add_argument("--noise-floor", default=DEFAULT_NOISE_FLOOR)
     parser.add_argument(
@@ -1248,6 +1519,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--duel-seeds", type=int, default=16)
     parser.add_argument("--trivial-seeds", type=int, default=8)
+    parser.add_argument(
+        "--floors",
+        choices=tuple(FLOOR_SETS),
+        default=None,
+        help="trivial-floor set for the trivial and p3 stages: v8 (the "
+        "frozen five, unchanged), v9 (the four contract floors plus "
+        "uniform_random_legal), or both (default: the candidate's contract)",
+    )
     parser.add_argument("--null-seeds", type=int, default=2)
     parser.add_argument(
         "--null-scale",
@@ -1280,18 +1559,37 @@ def main(argv: list[str] | None = None) -> int:
     output = Path(args.output)
     workdir = Path(args.workdir) if args.workdir else output.with_suffix(".stages")
 
+    if args.floors is None:
+        args.floors = "v9" if args.candidate_v9 else "v8"
+    contract_id = MODEL_FAMILY_V9 if args.candidate_v9 else BRANCH_CONTRACT_ID
+    study = "candidate-v9-gauntlet" if args.candidate_v9 else "candidate-v8-0001-gauntlet"
+
     # Load both policies once, fail-loud, for labels and validation; the
     # workers rebuild from the manifests independently.
-    candidate_manifest = json.loads(
-        Path(args.candidate).read_text(encoding="utf-8")
-    )
-    v8_policy = load_policy_v8(args.candidate, equity_trials=args.equity_trials)
-    v8_spec = V8PolicySpec(
-        label=str(v8_policy.policy_version),
-        manifest=args.candidate,
-        equity_trials=args.equity_trials,
-    )
-    del v8_policy
+    if args.candidate_v9:
+        candidate_path = args.candidate_v9
+        candidate_manifest = json.loads(
+            Path(candidate_path).read_text(encoding="utf-8")
+        )
+        v9_policy = load_policy_v9(candidate_path, equity_trials=args.equity_trials)
+        candidate_spec: V8PolicySpec | V9PolicySpec = V9PolicySpec(
+            label=str(v9_policy.policy_version),
+            manifest=candidate_path,
+            equity_trials=args.equity_trials,
+        )
+        del v9_policy
+    else:
+        candidate_path = args.candidate
+        candidate_manifest = json.loads(
+            Path(candidate_path).read_text(encoding="utf-8")
+        )
+        v8_policy = load_policy_v8(candidate_path, equity_trials=args.equity_trials)
+        candidate_spec = V8PolicySpec(
+            label=str(v8_policy.policy_version),
+            manifest=candidate_path,
+            equity_trials=args.equity_trials,
+        )
+        del v8_policy
     from engine.learned_policy import load_policy
 
     incumbent_label = str(
@@ -1309,13 +1607,13 @@ def main(argv: list[str] | None = None) -> int:
         noise_floor = json.loads(noise_path.read_text(encoding="utf-8"))
 
     stage_runners = {
-        "nullcheck": lambda: stage_nullcheck(v8_spec, args),
+        "nullcheck": lambda: stage_nullcheck(candidate_spec, args),
         "trivial": lambda: stage_trivial(args),
-        "battery": lambda: stage_battery(v8_spec, args),
+        "battery": lambda: stage_battery(candidate_spec, args),
         "champion": lambda: stage_champion(incumbent_spec, args),
-        "p3": lambda: stage_p3(v8_spec, incumbent_spec, args),
-        "duel": lambda: stage_duel(v8_spec, incumbent_spec, args),
-        "strength": lambda: stage_strength(v8_spec, incumbent_spec, args),
+        "p3": lambda: stage_p3(candidate_spec, incumbent_spec, args),
+        "duel": lambda: stage_duel(candidate_spec, incumbent_spec, args),
+        "strength": lambda: stage_strength(candidate_spec, incumbent_spec, args),
     }
     timings: dict[str, float] = {}
     for stage in _STAGES:
@@ -1325,19 +1623,20 @@ def main(argv: list[str] | None = None) -> int:
         started = time.monotonic()
         fragment = stage_runners[stage]()
         timings[stage] = round(time.monotonic() - started, 1)
-        _write_fragment(workdir, stage, fragment)
+        _write_fragment(workdir, stage, fragment, contract_id)
         print(
             f"[evaluate_v8] stage {stage} done in {timings[stage]}s", flush=True
         )
 
     config = {
-        "candidate_manifest": args.candidate,
+        "candidate_manifest": candidate_path,
         "incumbent_manifest": args.incumbent,
         "p3_fit": args.p3_fit,
         "battery_seeds": args.battery_seeds,
         "p3_seeds": args.p3_seeds or args.battery_seeds,
         "duel_seeds": args.duel_seeds,
         "trivial_seeds": args.trivial_seeds,
+        "floors": args.floors,
         "scale": args.scale,
         "equity_trials": args.equity_trials,
         "starting_stack": args.starting_stack,
@@ -1349,10 +1648,12 @@ def main(argv: list[str] | None = None) -> int:
     report = assemble_report(
         workdir,
         candidate_manifest=candidate_manifest,
-        candidate_label=v8_spec.label,
+        candidate_label=candidate_spec.label,
         incumbent_label=incumbent_label,
         noise_floor=noise_floor,
         config=config,
+        contract_id=contract_id,
+        study=study,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(

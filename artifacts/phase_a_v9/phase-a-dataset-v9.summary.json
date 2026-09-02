@@ -1,0 +1,119 @@
+{
+  "schema_version": 4,
+  "input_size": 414,
+  "sizing": {
+    "identity": "g-v9-composed-1",
+    "parameters": {
+      "active_base": 0.5,
+      "active_span": 0.195,
+      "aggressive_base": 0.75,
+      "aggressive_span": 0.25,
+      "cap_base": 0.325,
+      "cap_span": 0.125,
+      "setpoint": 45.0,
+      "temperature_span": 35.0
+    },
+    "rules": {
+      "commitment": {
+        "enabled": false,
+        "spr_threshold": 1.0
+      },
+      "damper": {
+        "enabled": false,
+        "kappa_r": 8.0
+      },
+      "escalation": {
+        "enabled": false,
+        "steps": [
+          0.0,
+          0.0,
+          0.0799,
+          0.0978
+        ]
+      },
+      "geometric": {
+        "enabled": false
+      },
+      "snap": {
+        "band": 0.15,
+        "enabled": false
+      }
+    }
+  },
+  "generator": {
+    "tool": "tools.build_phase_a_dataset_v9",
+    "seed": 7,
+    "equity_trials": 500,
+    "potential_trials": 400,
+    "read_equity_trials": 200,
+    "belief_provider": "P3BeliefProvider",
+    "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+    "roots": [
+      "foreign play data\\20260812T082057Z_poker-playground_s13_top15",
+      "foreign play data\\20260815T210237Z_poker-playground_s14_top15"
+    ],
+    "limit": null
+  },
+  "counts": {
+    "files": 1196,
+    "tables_with_rows": 1195,
+    "rows": 9084,
+    "label_coverage": {
+      "rows": 9084,
+      "free_spot_rows": 1694,
+      "fold_through_active": 673,
+      "fold_through_aggressive": 1296,
+      "range_bucket": 8184,
+      "equity_called": 8184
+    }
+  },
+  "per_street": {
+    "preflop": {
+      "rows": 6591,
+      "free_spot_rows": 60,
+      "fold_through_active": 11,
+      "fold_through_aggressive": 1223,
+      "range_bucket": 6088,
+      "equity_called": 6088
+    },
+    "flop": {
+      "rows": 1431,
+      "free_spot_rows": 867,
+      "fold_through_active": 423,
+      "fold_through_aggressive": 35,
+      "range_bucket": 1155,
+      "equity_called": 1155
+    },
+    "turn": {
+      "rows": 633,
+      "free_spot_rows": 439,
+      "fold_through_active": 157,
+      "fold_through_aggressive": 24,
+      "range_bucket": 553,
+      "equity_called": 553
+    },
+    "river": {
+      "rows": 429,
+      "free_spot_rows": 328,
+      "fold_through_active": 82,
+      "fold_through_aggressive": 14,
+      "range_bucket": 388,
+      "equity_called": 388
+    }
+  },
+  "per_collection": {
+    "20260812T082057Z_poker-playground_s13_top15": {
+      "tables_with_rows": 587,
+      "board_corrected": 482,
+      "timeout_actions": 309
+    },
+    "20260815T210237Z_poker-playground_s14_top15": {
+      "tables_with_rows": 608,
+      "board_corrected": 480,
+      "timeout_actions": 447
+    }
+  },
+  "files": {
+    "dataset": "phase-a-dataset-v9.jsonl.gz"
+  }
+}

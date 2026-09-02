@@ -7,8 +7,8 @@ derived independently of the implementation (the standing rule): equity
 slots are asserted as hand-derived literal indices of the contract's
 pinned ``(passive, active, aggressive)`` order, and the version-guard
 tests prove the pinned property itself — a v8 file fails in the v9
-loader and a v9 file fails in the v8 loader, in BOTH directions, even
-though the two schemas share the 413-entry vector length.
+loader and a v9 file fails in the v8 loader, in BOTH directions,
+regardless of vector length.
 """
 
 from __future__ import annotations
@@ -204,7 +204,7 @@ class PhaseADatasetV9Tests(unittest.TestCase):
 
     def test_rejects_v8_key_names_with_guidance(self) -> None:
         """The renamed keys ARE the version guard (pinned): a v8 row must
-        fail loudly even though both schemas are 413 entries long."""
+        fail loudly regardless of vector length."""
 
         rng = random.Random(0)
         document = _row_document(rng, "t", 0, kind="call")
@@ -471,6 +471,15 @@ class V9TrainerTorchTests(unittest.TestCase):
             hashlib.sha256(weights_bytes.rstrip(b"\n")).hexdigest(),
             manifest["weights_sha256"],
         )
+        # Pre-harvest decision 5: the trainer's normalization block must
+        # carry the stamp, and the loader must accept exactly that block.
+        document = json.loads(weights_bytes.decode("utf-8"))
+        normalization = document["feature_normalization"]
+        self.assertEqual(
+            {key: normalization[key] for key in schema4.normalization_stamp()},
+            schema4.normalization_stamp(),
+        )
+        schema4.require_normalization_stamp(normalization)  # must not raise
         document = json.loads(weights_bytes)
         weights = document["weights"]
         self.assertEqual(

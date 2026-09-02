@@ -1,7 +1,12 @@
 {
-  "approved_at": "2026-08-14T17:41:50.515884Z",
-  "manifest_file": "candidates/candidate-v7-0001c.approved.manifest.json",
-  "model_version": "candidate-v7-0001c",
-  "previous": null,
-  "weights_sha256": "289f6e7edda5ec1e1bac41ca36b79d0f0f2036b85649d047de6ec700e1608ebc"
+  "approved_at": "2026-09-01T23:48:02.058773Z",
+  "manifest_file": "candidates/candidate-v9-0003b.approved.manifest.json",
+  "model_version": "candidate-v9-0003b",
+  "previous": {
+    "approved_at": "2026-08-14T17:41:50.515884Z",
+    "manifest_file": "candidates/candidate-v7-0001c.approved.manifest.json",
+    "model_version": "candidate-v7-0001c",
+    "weights_sha256": "289f6e7edda5ec1e1bac41ca36b79d0f0f2036b85649d047de6ec700e1608ebc"
+  },
+  "weights_sha256": "0c7b74474a5be28df905aadedf106886426f0fb2d7c522a013807ce931d2871c"
 }

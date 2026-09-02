@@ -59,9 +59,11 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import heapq
 import json
 import random
 import sys
+import tempfile
 import time
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -525,94 +527,187 @@ def build_dataset_v9(
     potential_trials: int = DEFAULT_POTENTIAL_TRIALS,
     workers: int = 1,
     limit: int | None = None,
+    dedupe_tables: bool = True,
+    chunk_rows: int = 50_000,
 ) -> dict[str, Any]:
     """Build the v9 dataset and sidecar; return the sidecar document.
 
     The build ends by loading the written dataset through the TRAINER's
     own ``load_phase_a_dataset_v9`` — a dataset this tool blesses is one
     the trainer provably accepts (the L3 LANDED rule).
+
+    The widened-roots run (2026-09-02 diagnosis, ~1.14M rows) cannot
+    hold every row in RAM, so rows stream through fixed-size sorted
+    chunks that are k-way merged into the final archive — the same
+    ``(table_id, sequence)`` order the in-memory sort produced, byte for
+    byte. ``dedupe_tables`` (on by default) drops rows whose table id
+    was already emitted: the widened archive contains 536 byte-identical
+    duplicate table files between collections (md5-verified in the
+    diagnosis), which would double-count training rows. The default
+    roots contain no duplicates, so a default rebuild is byte-identical
+    to the pre-streaming builder. Roots whose ``raw/tables`` is missing
+    or empty are skipped with a warning (the container directories and
+    two empty leaf collections in the archive).
     """
 
     files: list[tuple[str, Path]] = []
+    skipped_roots: list[tuple[str, str]] = []
     for root in roots:
         table_dir = Path(root) / "raw" / "tables"
         if not table_dir.is_dir():
-            raise FileNotFoundError(f"no raw tables directory under {root}")
+            skipped_roots.append((str(root), "no raw/tables directory"))
+            continue
         collection_files = sorted(table_dir.glob("*.json"))
         if not collection_files:
-            raise FileNotFoundError(f"no raw table replays under {table_dir}")
+            skipped_roots.append((str(root), "no raw table replays"))
+            continue
         files.extend((Path(root).name, path) for path in collection_files)
     if limit is not None:
         files = files[:limit]
+    if not files:
+        raise ValueError("no decision rows were produced (no readable roots)")
+    for root, reason in skipped_roots:
+        print(f"skipping root {root}: {reason}", flush=True)
 
     started = time.monotonic()
-    all_rows: list[dict[str, Any]] = []
     stats_by_collection: dict[str, Counter[str]] = {
         name: Counter() for name, _ in files
     }
     tables_with_rows: Counter[str] = Counter()
+    duplicate_rows_dropped = 0
+    seen_tables: set[str] = set()
     work = [
         (str(path), seed, equity_trials, potential_trials) for _, path in files
     ]
     collection_names = [name for name, _ in files]
 
+    output = Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary_dir = tempfile.TemporaryDirectory(
+        prefix="phase-a-v9-chunks-", dir=output.parent
+    )
+    chunk_files: list[Path] = []
+    chunk: list[dict[str, Any]] = []
+
+    def _flush_chunk() -> None:
+        if not chunk:
+            return
+        chunk.sort(key=lambda row: (row["table_id"], row["sequence"]))
+        chunk_path = Path(temporary_dir.name) / f"chunk-{len(chunk_files):05d}.jsonl"
+        with chunk_path.open("w", encoding="utf-8") as stream:
+            for row in chunk:
+                stream.write(json.dumps(row, separators=(",", ":")) + "\n")
+        chunk_files.append(chunk_path)
+        chunk.clear()
+
     def _consume(
         collection: str, result: tuple[str, list[dict[str, Any]], dict[str, int]]
     ) -> None:
+        nonlocal duplicate_rows_dropped
         _, rows, stats = result
-        all_rows.extend(rows)
         stats_by_collection[collection].update(stats)
-        if rows:
+        kept = rows
+        # Dedupe is per TABLE (one file = one table): the archive holds
+        # byte-identical duplicate table FILES, and a duplicate table's
+        # rows must drop wholesale — per-row dedupe would keep only the
+        # first row of every table.
+        if dedupe_tables and rows:
+            table_id = str(rows[0]["table_id"])
+            if table_id in seen_tables:
+                duplicate_rows_dropped += len(rows)
+                kept = []
+            else:
+                seen_tables.add(table_id)
+        if kept:
             tables_with_rows[collection] += 1
+        chunk.extend(kept)
+        if len(chunk) >= chunk_rows:
+            _flush_chunk()
 
+    total_rows = 0
     if workers > 1:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             for index, result in enumerate(
                 pool.map(_process_file_v9, work, chunksize=8)
             ):
                 _consume(collection_names[index], result)
+                total_rows += len(result[1])
                 if (index + 1) % 100 == 0 or index + 1 == len(work):
                     elapsed = time.monotonic() - started
                     print(
                         f"processed {index + 1}/{len(work)} files, "
-                        f"{len(all_rows)} rows, {elapsed:.0f}s",
+                        f"{total_rows} rows ({duplicate_rows_dropped} duplicate "
+                        f"rows dropped), {elapsed:.0f}s",
                         flush=True,
                     )
     else:
         for index, item in enumerate(work):
-            _consume(collection_names[index], _process_file_v9(item))
+            result = _process_file_v9(item)
+            _consume(collection_names[index], result)
+            total_rows += len(result[1])
             if (index + 1) % 100 == 0 or index + 1 == len(work):
                 elapsed = time.monotonic() - started
                 print(
                     f"processed {index + 1}/{len(work)} files, "
-                    f"{len(all_rows)} rows, {elapsed:.0f}s",
+                    f"{total_rows} rows ({duplicate_rows_dropped} duplicate "
+                    f"rows dropped), {elapsed:.0f}s",
                     flush=True,
                 )
+    _flush_chunk()
 
-    if not all_rows:
+    if not chunk_files:
         raise ValueError("no decision rows were produced")
 
-    # Deterministic order regardless of worker scheduling.
-    all_rows.sort(key=lambda row: (row["table_id"], row["sequence"]))
-
-    coverage = _coverage_v9(all_rows)
-    totals: dict[str, int] = {"rows": len(all_rows)}
-    for name in ("free_spot_rows", *_LABEL_NAMES_V9):
-        totals[name] = sum(coverage[street][name] for street in _STREETS)
-
+    # k-way merge in (table_id, sequence) order — the exact order the
+    # in-memory sort of the whole set would produce. heapq.merge is
+    # stable across equal keys, so rows from equal (table_id, sequence)
+    # keys keep file order, matching the old global sort byte for byte.
+    coverage: dict[str, dict[str, int]] = {
+        street: {
+            "rows": 0,
+            "free_spot_rows": 0,
+            **{name: 0 for name in _LABEL_NAMES_V9},
+        }
+        for street in _STREETS
+    }
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(output.suffix + ".tmp")
+    row_count = 0
+
+    def _chunk_rows(path: Path):
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                if line.strip():
+                    yield json.loads(line)
+
+    def _sort_key(row: Mapping[str, Any]) -> tuple[str, int]:
+        return (row["table_id"], row["sequence"])
+
     with open(temporary, "wb") as raw_stream:
         # mtime=0 so identical inputs give byte-identical archives.
         with gzip.GzipFile(
             fileobj=raw_stream, mode="wb", filename="", mtime=0
         ) as stream:
-            for row in all_rows:
+            for row in heapq.merge(
+                *(_chunk_rows(path) for path in chunk_files), key=_sort_key
+            ):
                 stream.write(
                     (json.dumps(row, separators=(",", ":")) + "\n").encode()
                 )
+                row_count += 1
+                entry = coverage[row["street"]]
+                entry["rows"] += 1
+                if row["to_call_zero"]:
+                    entry["free_spot_rows"] += 1
+                for name in _LABEL_NAMES_V9:
+                    entry[name] += row["masks"][name]
     temporary.replace(output)
+    temporary_dir.cleanup()
+
+    totals: dict[str, int] = {"rows": row_count}
+    for name in ("free_spot_rows", *_LABEL_NAMES_V9):
+        totals[name] = sum(coverage[street][name] for street in _STREETS)
 
     collection_stats = {
         name: dict(sorted(stats_by_collection[name].items()))
@@ -642,9 +737,12 @@ def build_dataset_v9(
         "counts": {
             "files": len(files),
             "tables_with_rows": sum(tables_with_rows.values()),
-            "rows": len(all_rows),
+            "rows": row_count,
+            "duplicate_table_rows_dropped": duplicate_rows_dropped,
             "label_coverage": totals,
         },
+        "dedupe_tables": dedupe_tables,
+        "skipped_roots": dict(skipped_roots),
         "per_street": coverage,
         "per_collection": {
             name: {
@@ -666,16 +764,18 @@ def build_dataset_v9(
     from engine.v9_trainer import load_phase_a_dataset_v9
 
     loaded = load_phase_a_dataset_v9(output)
-    if len(loaded) != len(all_rows):
+    if len(loaded) != row_count:
         raise PhaseAInvariantError(
             f"the trainer loaded {len(loaded)} rows from a dataset written "
-            f"with {len(all_rows)}"
+            f"with {row_count}"
         )
 
     _print_summary_v9(coverage, totals)
     elapsed = time.monotonic() - started
-    print(f"\nwrote {output} ({len(all_rows)} rows) in {elapsed:.0f}s")
+    print(f"\nwrote {output} ({row_count} rows) in {elapsed:.0f}s")
     print(f"trainer loader accepted the dataset ({len(loaded)} rows)")
+    if duplicate_rows_dropped:
+        print(f"dropped {duplicate_rows_dropped} duplicate table rows")
     print(f"wrote {sidecar}")
     return sidecar_document
 
@@ -702,6 +802,22 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit", type=int, default=None, help="only process the first N files"
     )
+    parser.add_argument(
+        "--dedupe",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "drop rows whose table id was already emitted (default: on; the "
+            "widened archive contains byte-identical duplicate table files "
+            "between collections)"
+        ),
+    )
+    parser.add_argument(
+        "--chunk-rows",
+        type=int,
+        default=50_000,
+        help="rows per in-memory sort chunk before the k-way merge",
+    )
     return parser
 
 
@@ -709,6 +825,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.workers < 1 or args.equity_trials < 1 or args.potential_trials < 1:
         raise SystemExit("workers, equity-trials, potential-trials must be >= 1")
+    if args.chunk_rows < 1:
+        raise SystemExit("--chunk-rows must be >= 1")
     build_dataset_v9(
         [Path(root) for root in args.roots],
         Path(args.output),
@@ -717,6 +835,8 @@ def main(argv: list[str] | None = None) -> int:
         potential_trials=args.potential_trials,
         workers=args.workers,
         limit=args.limit,
+        dedupe_tables=args.dedupe,
+        chunk_rows=args.chunk_rows,
     )
     return 0
 

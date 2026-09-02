@@ -1,0 +1,442 @@
+{
+  "generated_at": "2026-09-01T04:31:13",
+  "header": {
+    "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+    "big_blind": 100,
+    "branch_labels": [
+      "fatal",
+      "passive",
+      "active",
+      "aggressive"
+    ],
+    "corpus_schema_version": 2,
+    "equity_trials": 1000,
+    "feature_schema_version": 4,
+    "input_size": 414,
+    "kind": "phase-b-corpus",
+    "seeds": [
+      77,
+      117,
+      118,
+      119,
+      120,
+      121
+    ],
+    "selection": {
+      "mode": "postflop",
+      "street_targets": {
+        "flop": 15000,
+        "river": 6000,
+        "turn": 10000
+      }
+    },
+    "sizing": {
+      "identity": "g-v9-composed-1",
+      "parameters": {
+        "active_base": 0.5,
+        "active_span": 0.195,
+        "aggressive_base": 0.75,
+        "aggressive_span": 0.25,
+        "cap_base": 0.325,
+        "cap_span": 0.125,
+        "setpoint": 45.0,
+        "temperature_span": 35.0
+      },
+      "rules": {
+        "commitment": {
+          "enabled": false,
+          "spr_threshold": 1.0
+        },
+        "damper": {
+          "enabled": false,
+          "kappa_r": 8.0
+        },
+        "escalation": {
+          "enabled": false,
+          "steps": [
+            0.0,
+            0.0,
+            0.0799,
+            0.0978
+          ]
+        },
+        "geometric": {
+          "enabled": false
+        },
+        "snap": {
+          "band": 0.15,
+          "enabled": false
+        }
+      }
+    },
+    "starting_stack": 6000
+  },
+  "kind": "phase-b-corpus-v9-summary",
+  "legs": [
+    {
+      "belief_degrades": 0,
+      "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+      "branch_rows": 6265,
+      "decisions_emitted": 3048,
+      "decisions_selected": 3579,
+      "hands": 12160,
+      "hero_bb_per_100": 101.045,
+      "hero_decisions": 15396,
+      "name": "five-max-p3-a",
+      "opponents": [
+        "p3-median",
+        "p3-passive",
+        "p3-aggressive",
+        "median-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.04308505233208007,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 18834,
+        "fallbacks": 848,
+        "seats_resampled": 19682,
+        "swaps_applied": 11888,
+        "tries": 89129
+      },
+      "probe_action_mismatches": {
+        "aggressive->call": 5,
+        "aggressive->fold": 150
+      },
+      "probe_collisions": 0,
+      "probe_size_mismatches": {
+        "active->bet": 352,
+        "aggressive->all-in": 24
+      },
+      "purity_drop_rate": 0.14836546521374686,
+      "purity_dropped_decisions": 531,
+      "seed": 77,
+      "sessions": 72,
+      "single_branch_groups": 0,
+      "wall_seconds": 9219.8
+    },
+    {
+      "belief_degrades": 0,
+      "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+      "branch_rows": 5649,
+      "decisions_emitted": 2745,
+      "decisions_selected": 3256,
+      "hands": 12160,
+      "hero_bb_per_100": 64.623,
+      "hero_decisions": 13243,
+      "name": "five-max-p3-b",
+      "opponents": [
+        "p3-median",
+        "p3-passive",
+        "p3-aggressive",
+        "station-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.04274130519734271,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 19597,
+        "fallbacks": 875,
+        "seats_resampled": 20472,
+        "swaps_applied": 11182,
+        "tries": 91514
+      },
+      "probe_action_mismatches": {
+        "aggressive->call": 1,
+        "aggressive->fold": 126
+      },
+      "probe_collisions": 0,
+      "probe_size_mismatches": {
+        "active->bet": 362,
+        "aggressive->all-in": 22
+      },
+      "purity_drop_rate": 0.15694103194103193,
+      "purity_dropped_decisions": 511,
+      "seed": 117,
+      "sessions": 84,
+      "single_branch_groups": 0,
+      "wall_seconds": 8594.9
+    },
+    {
+      "belief_degrades": 0,
+      "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+      "branch_rows": 4560,
+      "decisions_emitted": 2224,
+      "decisions_selected": 2651,
+      "hands": 9120,
+      "hero_bb_per_100": 59.082,
+      "hero_decisions": 10941,
+      "name": "hu-p3-median",
+      "opponents": [
+        "p3-median"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.017105263157894738,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 8964,
+        "fallbacks": 156,
+        "seats_resampled": 9120,
+        "swaps_applied": 9120,
+        "tries": 38070
+      },
+      "probe_action_mismatches": {
+        "aggressive->call": 2,
+        "aggressive->fold": 101
+      },
+      "probe_collisions": 0,
+      "probe_size_mismatches": {
+        "active->bet": 319,
+        "aggressive->all-in": 5
+      },
+      "purity_drop_rate": 0.16107129385137683,
+      "purity_dropped_decisions": 427,
+      "seed": 118,
+      "sessions": 102,
+      "single_branch_groups": 0,
+      "wall_seconds": 6542.3
+    },
+    {
+      "belief_degrades": 0,
+      "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+      "branch_rows": 3446,
+      "decisions_emitted": 1648,
+      "decisions_selected": 2024,
+      "hands": 9120,
+      "hero_bb_per_100": 52.128,
+      "hero_decisions": 10735,
+      "name": "hu-p3-aggressive",
+      "opponents": [
+        "p3-aggressive"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.0240858966918166,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 6726,
+        "fallbacks": 166,
+        "seats_resampled": 6892,
+        "swaps_applied": 6892,
+        "tries": 29943
+      },
+      "probe_action_mismatches": {
+        "aggressive->call": 3,
+        "aggressive->fold": 117
+      },
+      "probe_collisions": 0,
+      "probe_size_mismatches": {
+        "active->bet": 241,
+        "aggressive->all-in": 15
+      },
+      "purity_drop_rate": 0.1857707509881423,
+      "purity_dropped_decisions": 376,
+      "seed": 119,
+      "sessions": 109,
+      "single_branch_groups": 0,
+      "wall_seconds": 5427.3
+    },
+    {
+      "belief_degrades": 0,
+      "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+      "branch_rows": 6999,
+      "decisions_emitted": 3399,
+      "decisions_selected": 4050,
+      "hands": 10640,
+      "hero_bb_per_100": 103.668,
+      "hero_decisions": 14465,
+      "name": "mixed-p3-texture",
+      "opponents": [
+        "p3-median",
+        "textured-bot",
+        "station-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.028103877623621487,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 10928,
+        "fallbacks": 316,
+        "seats_resampled": 11244,
+        "swaps_applied": 11244,
+        "tries": 45319
+      },
+      "probe_action_mismatches": {
+        "aggressive->call": 7,
+        "aggressive->fold": 142
+      },
+      "probe_collisions": 0,
+      "probe_size_mismatches": {
+        "active->bet": 482,
+        "aggressive->all-in": 20
+      },
+      "purity_drop_rate": 0.16074074074074074,
+      "purity_dropped_decisions": 651,
+      "seed": 120,
+      "sessions": 106,
+      "single_branch_groups": 0,
+      "wall_seconds": 9907.5
+    },
+    {
+      "belief_degrades": 0,
+      "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+      "branch_rows": 6041,
+      "decisions_emitted": 2967,
+      "decisions_selected": 3518,
+      "hands": 10640,
+      "hero_bb_per_100": 101.405,
+      "hero_decisions": 13744,
+      "name": "mixed-p3-wild",
+      "opponents": [
+        "p3-passive",
+        "wild-bot",
+        "tight-bot"
+      ],
+      "p3_agent_fallbacks": 0,
+      "p3_fallback_rate": 0.03453098106712565,
+      "p3_record_failures": 0,
+      "p3_resample": {
+        "accepted": 8975,
+        "fallbacks": 321,
+        "seats_resampled": 9296,
+        "swaps_applied": 9296,
+        "tries": 41348
+      },
+      "probe_action_mismatches": {
+        "aggressive->call": 4,
+        "aggressive->fold": 86
+      },
+      "probe_collisions": 0,
+      "probe_size_mismatches": {
+        "active->bet": 443,
+        "aggressive->all-in": 18
+      },
+      "purity_drop_rate": 0.156623081296191,
+      "purity_dropped_decisions": 551,
+      "seed": 121,
+      "sessions": 84,
+      "single_branch_groups": 0,
+      "wall_seconds": 8670.4
+    }
+  ],
+  "plan": {
+    "candidate": "artifacts/candidates/candidate-v9-0001a.manifest.json",
+    "corpus": "C:\\Users\\user\\Fold-ver-4 (multiway)\\artifacts\\phase_b_v9\\candidate-v9-phase-b-postflop.phase-b.jsonl.gz",
+    "counterfactual_rollouts": 2,
+    "equity_trials": 1000,
+    "legs": [
+      {
+        "hands": 12160,
+        "name": "five-max-p3-a",
+        "opponents": [
+          "p3-median",
+          "p3-passive",
+          "p3-aggressive",
+          "median-bot"
+        ]
+      },
+      {
+        "hands": 12160,
+        "name": "five-max-p3-b",
+        "opponents": [
+          "p3-median",
+          "p3-passive",
+          "p3-aggressive",
+          "station-bot"
+        ]
+      },
+      {
+        "hands": 9120,
+        "name": "hu-p3-median",
+        "opponents": [
+          "p3-median"
+        ]
+      },
+      {
+        "hands": 9120,
+        "name": "hu-p3-aggressive",
+        "opponents": [
+          "p3-aggressive"
+        ]
+      },
+      {
+        "hands": 10640,
+        "name": "mixed-p3-texture",
+        "opponents": [
+          "p3-median",
+          "textured-bot",
+          "station-bot"
+        ]
+      },
+      {
+        "hands": 10640,
+        "name": "mixed-p3-wild",
+        "opponents": [
+          "p3-passive",
+          "wild-bot",
+          "tight-bot"
+        ]
+      }
+    ],
+    "p3_accept_threshold": 0.35,
+    "p3_resample_tries": 40,
+    "seed": 77,
+    "selection": {
+      "mode": "postflop",
+      "street_targets": {
+        "flop": 15000,
+        "river": 6000,
+        "turn": 10000
+      }
+    },
+    "summary": "C:\\Users\\user\\Fold-ver-4 (multiway)\\artifacts\\phase_b_v9\\candidate-v9-phase-b-postflop.phase-b.summary.json",
+    "total_hands": 63840
+  },
+  "purity_drops": {
+    "action_mismatches": {
+      "aggressive->call": 22,
+      "aggressive->fold": 722
+    },
+    "belief_degrades": 0,
+    "collisions": 0,
+    "size_mismatches": {
+      "active->bet": 2199,
+      "aggressive->all-in": 104
+    },
+    "total": 3047
+  },
+  "validation": {
+    "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+    "branch_label_counts": {
+      "active": 16031,
+      "aggressive": 898,
+      "fatal": 898,
+      "passive": 15133
+    },
+    "branch_rows": 32960,
+    "decisions": 16031,
+    "decisions_per_street": {
+      "flop": 11426,
+      "river": 1548,
+      "turn": 3057
+    },
+    "emitted_branch_sizes": {
+      "2": 15133,
+      "3": 898
+    },
+    "equity_trials": 1000,
+    "free_spot_decisions": 15133,
+    "instrument": {
+      "big_blind": 100,
+      "seeds": [
+        77,
+        117,
+        118,
+        119,
+        120,
+        121
+      ],
+      "starting_stack": 6000
+    }
+  },
+  "wall_seconds": 9916.7
+}

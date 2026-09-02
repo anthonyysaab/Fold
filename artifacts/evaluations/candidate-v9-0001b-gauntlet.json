@@ -1,0 +1,1163 @@
+{
+  "batteries": {
+    "branch_contract": "v9-composed-value",
+    "channels": {
+      "five-max-lineup": {
+        "bb_per_100": 166.65,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 167.71,
+          "bust_rate_per_session": 0.4561,
+          "busts": 52,
+          "busts_per_100_hands": 0.7667,
+          "mean_session_hands": 59.5,
+          "sessions": 114
+        },
+        "seeds": [
+          94.95,
+          75.18,
+          288.05,
+          91.02,
+          167.78,
+          195.15,
+          155.06,
+          265.98
+        ]
+      },
+      "vs-median": {
+        "bb_per_100": 105.93,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 105.93,
+          "bust_rate_per_session": 0.0602,
+          "busts": 10,
+          "busts_per_100_hands": 0.125,
+          "mean_session_hands": 48.2,
+          "sessions": 166
+        },
+        "seeds": [
+          107.6,
+          81.51,
+          113.81,
+          125.45,
+          101.45,
+          113.6,
+          113.6,
+          90.42
+        ]
+      },
+      "vs-nit": {
+        "bb_per_100": 68.84,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 68.84,
+          "bust_rate_per_session": 0.0,
+          "busts": 0,
+          "busts_per_100_hands": 0.0,
+          "mean_session_hands": 85.1,
+          "sessions": 94
+        },
+        "seeds": [
+          65.88,
+          71.92,
+          71.86,
+          70.75,
+          74.75,
+          72.88,
+          62.78,
+          59.88
+        ]
+      },
+      "vs-shover": {
+        "bb_per_100": 32.76,
+        "hands_per_seed": 1500,
+        "ruin": {
+          "bb_per_100": 32.76,
+          "bust_rate_per_session": 0.4633,
+          "busts": 467,
+          "busts_per_100_hands": 3.8917,
+          "mean_session_hands": 11.9,
+          "sessions": 1008
+        },
+        "seeds": [
+          11.53,
+          45.04,
+          39.76,
+          33.01,
+          47.34,
+          51.27,
+          -20.17,
+          54.28
+        ]
+      },
+      "vs-station": {
+        "bb_per_100": 117.06,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 117.06,
+          "bust_rate_per_session": 0.3785,
+          "busts": 257,
+          "busts_per_100_hands": 3.2125,
+          "mean_session_hands": 11.8,
+          "sessions": 679
+        },
+        "seeds": [
+          131.53,
+          125.0,
+          185.95,
+          84.66,
+          41.29,
+          77.62,
+          132.07,
+          158.37
+        ]
+      },
+      "vs-textured": {
+        "bb_per_100": 117.06,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 117.06,
+          "bust_rate_per_session": 0.0347,
+          "busts": 6,
+          "busts_per_100_hands": 0.075,
+          "mean_session_hands": 46.2,
+          "sessions": 173
+        },
+        "seeds": [
+          142.72,
+          102.47,
+          113.26,
+          124.51,
+          107.18,
+          126.31,
+          115.49,
+          104.56
+        ]
+      }
+    },
+    "seed_count": 8
+  },
+  "battery_comparisons": {
+    "channels": {
+      "five-max-lineup": {
+        "bb_per_100": 166.65,
+        "champion_mean_bb_per_100": 214.93,
+        "paired_vs_champion": {
+          "diffs": [
+            -81.04,
+            -116.6,
+            43.08,
+            -71.39,
+            -44.4,
+            -93.16,
+            -34.05,
+            78.32
+          ],
+          "mean": -39.91,
+          "sd": 67.95,
+          "se": 24.02,
+          "t": -1.66
+        },
+        "published_mde_bb_per_100": 40.67
+      },
+      "vs-median": {
+        "bb_per_100": 105.93,
+        "champion_mean_bb_per_100": 149.72,
+        "paired_vs_champion": {
+          "diffs": [
+            -42.74,
+            -52.79,
+            -54.27,
+            -49.84,
+            -30.22,
+            8.0,
+            -66.4,
+            -39.11
+          ],
+          "mean": -40.92,
+          "sd": 22.56,
+          "se": 7.98,
+          "t": -5.13
+        },
+        "published_mde_bb_per_100": 17.06
+      },
+      "vs-nit": {
+        "bb_per_100": 68.84,
+        "champion_mean_bb_per_100": 79.72,
+        "paired_vs_champion": {
+          "diffs": [
+            -10.26,
+            -3.92,
+            -13.53,
+            -7.5,
+            -2.89,
+            -12.58,
+            -19.55,
+            -18.78
+          ],
+          "mean": -11.13,
+          "sd": 6.22,
+          "se": 2.2,
+          "t": -5.06
+        },
+        "published_mde_bb_per_100": 3.22
+      },
+      "vs-shover": {
+        "bb_per_100": 32.76,
+        "champion_mean_bb_per_100": 158.29,
+        "paired_vs_champion": {
+          "diffs": [
+            -99.78,
+            -94.67,
+            -127.5,
+            -70.79,
+            -100.39,
+            -204.52,
+            -230.85,
+            -97.72
+          ],
+          "mean": -128.28,
+          "sd": 57.68,
+          "se": 20.39,
+          "t": -6.29
+        },
+        "published_mde_bb_per_100": 46.58
+      },
+      "vs-station": {
+        "bb_per_100": 117.06,
+        "champion_mean_bb_per_100": 311.54,
+        "paired_vs_champion": {
+          "diffs": [
+            -203.67,
+            -193.0,
+            -89.54,
+            -239.34,
+            -245.87,
+            -209.43,
+            -156.49,
+            -218.17
+          ],
+          "mean": -194.44,
+          "sd": 50.68,
+          "se": 17.92,
+          "t": -10.85
+        },
+        "published_mde_bb_per_100": 42.13
+      },
+      "vs-textured": {
+        "bb_per_100": 117.06,
+        "champion_mean_bb_per_100": 165.61,
+        "paired_vs_champion": {
+          "diffs": [
+            -13.15,
+            -76.68,
+            -46.33,
+            -49.45,
+            -20.05,
+            -68.77,
+            -61.43,
+            -71.38
+          ],
+          "mean": -50.91,
+          "sd": 23.65,
+          "se": 8.36,
+          "t": -6.09
+        },
+        "published_mde_bb_per_100": 17.13
+      }
+    },
+    "seed_count": 8
+  },
+  "branch_contract": "v9-composed-value",
+  "candidate": "candidate-v9-0001b",
+  "champion_batteries": null,
+  "config": {
+    "battery_seeds": 8,
+    "candidate_manifest": "artifacts\\candidates\\candidate-v9-0001b.manifest.json",
+    "duel_seeds": 16,
+    "equity_trials": 80,
+    "floors": "v9",
+    "incumbent_manifest": "artifacts/candidates/candidate-v7-0001c.approved.manifest.json",
+    "p3_fit": "artifacts\\p3\\p3-fit.json",
+    "p3_seeds": 8,
+    "scale": 1.0,
+    "stacks": "carry-over-sessions",
+    "stage_elapsed_seconds": {
+      "battery": 1348.1,
+      "duel": 2367.3,
+      "nullcheck": 48.3,
+      "p3": 188.4,
+      "strength": 174.4
+    },
+    "stages_run": [
+      "nullcheck",
+      "battery",
+      "p3",
+      "duel",
+      "strength"
+    ],
+    "starting_stack": 6000,
+    "trivial_seeds": 8,
+    "workers": 6
+  },
+  "duel": {
+    "branch_contract": "v9-composed-value",
+    "empirical_mde_bb_per_100": 6.82,
+    "known_seed_spread_bb_per_100": 16.78,
+    "opponent": "candidate-v7-0001c",
+    "report": {
+      "candidate-v9-0001b_bb_per_100": -28.31,
+      "hands_per_seed": 2000,
+      "orientations": {
+        "a_first": [
+          -5.72,
+          9.05,
+          -28.66,
+          -54.24,
+          -11.39,
+          -42.54,
+          -37.03,
+          -26.87,
+          -6.5,
+          -26.17,
+          -0.81,
+          -74.48,
+          -7.14,
+          8.2,
+          -15.36,
+          -57.17
+        ],
+        "b_first": [
+          -30.75,
+          -32.38,
+          -48.72,
+          -12.92,
+          -32.04,
+          8.88,
+          -60.74,
+          -34.3,
+          -40.88,
+          -74.58,
+          -56.45,
+          -19.83,
+          -7.18,
+          -42.27,
+          -21.95,
+          -23.04
+        ]
+      },
+      "paired": {
+        "diffs": [
+          -18.24,
+          -11.66,
+          -38.69,
+          -33.58,
+          -21.72,
+          -16.83,
+          -48.89,
+          -30.59,
+          -23.69,
+          -50.37,
+          -28.63,
+          -47.16,
+          -7.16,
+          -17.03,
+          -18.65,
+          -40.1
+        ],
+        "mean": -28.31,
+        "sd": 13.63,
+        "se": 3.41,
+        "t": -8.31
+      },
+      "ruin": {
+        "candidate-v7-0001c": {
+          "bb_per_100": 28.31,
+          "bust_rate_per_session": 0.4023,
+          "busts": 692,
+          "busts_per_100_hands": 1.0813,
+          "mean_session_hands": 37.2,
+          "sessions": 1720
+        },
+        "candidate-v9-0001b": {
+          "bb_per_100": -28.31,
+          "bust_rate_per_session": 0.5791,
+          "busts": 996,
+          "busts_per_100_hands": 1.5562,
+          "mean_session_hands": 37.2,
+          "sessions": 1720
+        }
+      },
+      "seeds": [
+        -18.24,
+        -11.66,
+        -38.69,
+        -33.58,
+        -21.72,
+        -16.83,
+        -48.89,
+        -30.59,
+        -23.69,
+        -50.37,
+        -28.63,
+        -47.16,
+        -7.16,
+        -17.03,
+        -18.65,
+        -40.1
+      ]
+    },
+    "resolvable_spread_bb_per_100": 16.78,
+    "seeds": 16,
+    "verdict": "incumbent wins",
+    "verdict_rule": "a margin below the resolvable spread (max of the known 16.78 BB/100 seed spread and 2\u00b7sd/\u221an) is UNRESOLVED, never a win/loss"
+  },
+  "incumbent": "candidate-v7-0001c",
+  "nullcheck": {
+    "branch_contract": "v9-composed-value",
+    "detail": "candidate self-duel paired diffs identically zero",
+    "hands_per_seed": 100,
+    "mirror_exact": true,
+    "report": {
+      "hands_per_seed": 100,
+      "orientations": {
+        "a_first": [
+          -118.03,
+          -116.44
+        ],
+        "b_first": [
+          118.03,
+          116.44
+        ]
+      },
+      "paired": {
+        "diffs": [
+          0.0,
+          0.0
+        ],
+        "mean": 0.0,
+        "sd": 0.0,
+        "se": 0.0,
+        "t": null
+      },
+      "ruin": {
+        "v8-null-A": {
+          "bb_per_100": 0.0,
+          "bust_rate_per_session": 0.3889,
+          "busts": 7,
+          "busts_per_100_hands": 1.75,
+          "mean_session_hands": 22.2,
+          "sessions": 18
+        },
+        "v8-null-B": {
+          "bb_per_100": 0.0,
+          "bust_rate_per_session": 0.3889,
+          "busts": 7,
+          "busts_per_100_hands": 1.75,
+          "mean_session_hands": 22.2,
+          "sessions": 18
+        }
+      },
+      "seeds": [
+        0.0,
+        0.0
+      ],
+      "v8-null-A_bb_per_100": 0.0
+    },
+    "seeds": 2
+  },
+  "p3_channel": {
+    "arms": {
+      "candidate-v7-0001c": {
+        "bb_per_100": 65.81,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 65.81,
+          "bust_rate_per_session": 0.1008,
+          "busts": 12,
+          "busts_per_100_hands": 0.15,
+          "mean_session_hands": 67.2,
+          "sessions": 119
+        },
+        "seeds": [
+          62.65,
+          36.35,
+          77.8,
+          43.91,
+          81.87,
+          44.51,
+          104.05,
+          75.32
+        ]
+      },
+      "candidate-v9-0001b": {
+        "bb_per_100": 56.39,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 56.39,
+          "bust_rate_per_session": 0.1226,
+          "busts": 13,
+          "busts_per_100_hands": 0.1625,
+          "mean_session_hands": 75.5,
+          "sessions": 106
+        },
+        "seeds": [
+          57.05,
+          36.62,
+          65.43,
+          54.88,
+          47.55,
+          31.05,
+          80.58,
+          78.0
+        ]
+      },
+      "trivial-always_active": {
+        "bb_per_100": 149.15,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 149.15,
+          "bust_rate_per_session": 0.2765,
+          "busts": 125,
+          "busts_per_100_hands": 1.5625,
+          "mean_session_hands": 17.7,
+          "sessions": 452
+        },
+        "seeds": [
+          144.1,
+          140.62,
+          221.93,
+          152.86,
+          101.7,
+          111.34,
+          166.79,
+          153.84
+        ]
+      },
+      "trivial-always_aggressive": {
+        "bb_per_100": 83.95,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": 83.95,
+          "bust_rate_per_session": 0.3294,
+          "busts": 113,
+          "busts_per_100_hands": 1.4125,
+          "mean_session_hands": 23.3,
+          "sessions": 343
+        },
+        "seeds": [
+          59.59,
+          157.22,
+          104.6,
+          53.98,
+          104.03,
+          65.55,
+          66.1,
+          60.55
+        ]
+      },
+      "trivial-always_fatal": {
+        "bb_per_100": -25.88,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": -25.88,
+          "bust_rate_per_session": 0.8,
+          "busts": 32,
+          "busts_per_100_hands": 0.4,
+          "mean_session_hands": 200.0,
+          "sessions": 40
+        },
+        "seeds": [
+          -24.85,
+          -24.7,
+          -24.8,
+          -24.85,
+          -27.45,
+          -27.75,
+          -25.35,
+          -27.3
+        ]
+      },
+      "trivial-always_passive": {
+        "bb_per_100": -15.57,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": -15.57,
+          "bust_rate_per_session": 0.529,
+          "busts": 146,
+          "busts_per_100_hands": 1.825,
+          "mean_session_hands": 29.0,
+          "sessions": 276
+        },
+        "seeds": [
+          -21.88,
+          26.16,
+          56.8,
+          40.37,
+          -69.01,
+          -54.23,
+          -59.67,
+          -43.09
+        ]
+      },
+      "trivial-uniform_random_legal": {
+        "bb_per_100": -132.33,
+        "hands_per_seed": 1000,
+        "ruin": {
+          "bb_per_100": -132.33,
+          "bust_rate_per_session": 0.8381,
+          "busts": 207,
+          "busts_per_100_hands": 2.5875,
+          "mean_session_hands": 32.4,
+          "sessions": 247
+        },
+        "seeds": [
+          -81.67,
+          -119.85,
+          -120.0,
+          -117.31,
+          -182.17,
+          -168.0,
+          -95.79,
+          -173.88
+        ]
+      }
+    },
+    "branch_contract": "v9-composed-value",
+    "channel": "vs-p3",
+    "fit": "artifacts\\p3\\p3-fit.json",
+    "paired_vs_candidate": {
+      "candidate-v7-0001c": {
+        "diffs": [
+          5.6,
+          -0.27,
+          12.37,
+          -10.97,
+          34.32,
+          13.46,
+          23.47,
+          -2.68
+        ],
+        "mean": 9.41,
+        "sd": 14.7,
+        "se": 5.2,
+        "t": 1.81
+      },
+      "trivial-always_active": {
+        "diffs": [
+          87.05,
+          104.0,
+          156.5,
+          97.98,
+          54.15,
+          80.29,
+          86.21,
+          75.84
+        ],
+        "mean": 92.75,
+        "sd": 29.82,
+        "se": 10.54,
+        "t": 8.8
+      },
+      "trivial-always_aggressive": {
+        "diffs": [
+          2.54,
+          120.6,
+          39.17,
+          -0.9,
+          56.48,
+          34.5,
+          -14.48,
+          -17.45
+        ],
+        "mean": 27.56,
+        "sd": 46.14,
+        "se": 16.31,
+        "t": 1.69
+      },
+      "trivial-always_fatal": {
+        "diffs": [
+          -81.9,
+          -61.32,
+          -90.23,
+          -79.73,
+          -75.0,
+          -58.8,
+          -105.93,
+          -105.3
+        ],
+        "mean": -82.28,
+        "sd": 17.74,
+        "se": 6.27,
+        "t": -13.12
+      },
+      "trivial-always_passive": {
+        "diffs": [
+          -78.93,
+          -10.46,
+          -8.63,
+          -14.51,
+          -116.56,
+          -85.28,
+          -140.25,
+          -121.09
+        ],
+        "mean": -71.96,
+        "sd": 53.97,
+        "se": 19.08,
+        "t": -3.77
+      },
+      "trivial-uniform_random_legal": {
+        "diffs": [
+          -138.72,
+          -156.47,
+          -185.43,
+          -172.19,
+          -229.72,
+          -199.05,
+          -176.37,
+          -251.88
+        ],
+        "mean": -188.73,
+        "sd": 37.33,
+        "se": 13.2,
+        "t": -14.3
+      }
+    },
+    "seed_count": 8
+  },
+  "phase_a_calibration": {
+    "equity_called": {
+      "count": 726,
+      "mae": 0.152142,
+      "supervised_slot_counts": {
+        "active": 592,
+        "aggressive": 56,
+        "passive": 78
+      }
+    },
+    "fold_through_deciles": {
+      "count": 162,
+      "deciles": [
+        {
+          "count": 16,
+          "decile": 0,
+          "mean_predicted": 0.173191,
+          "observed_rate": 0.1875
+        },
+        {
+          "count": 16,
+          "decile": 1,
+          "mean_predicted": 0.292098,
+          "observed_rate": 0.5
+        },
+        {
+          "count": 16,
+          "decile": 2,
+          "mean_predicted": 0.341576,
+          "observed_rate": 0.5
+        },
+        {
+          "count": 16,
+          "decile": 3,
+          "mean_predicted": 0.402408,
+          "observed_rate": 0.5
+        },
+        {
+          "count": 17,
+          "decile": 4,
+          "mean_predicted": 0.452521,
+          "observed_rate": 0.529412
+        },
+        {
+          "count": 16,
+          "decile": 5,
+          "mean_predicted": 0.50206,
+          "observed_rate": 0.3125
+        },
+        {
+          "count": 16,
+          "decile": 6,
+          "mean_predicted": 0.564563,
+          "observed_rate": 0.5
+        },
+        {
+          "count": 16,
+          "decile": 7,
+          "mean_predicted": 0.611848,
+          "observed_rate": 0.6875
+        },
+        {
+          "count": 16,
+          "decile": 8,
+          "mean_predicted": 0.65306,
+          "observed_rate": 0.6875
+        },
+        {
+          "count": 17,
+          "decile": 9,
+          "mean_predicted": 0.715251,
+          "observed_rate": 0.647059
+        }
+      ],
+      "mean_predicted": 0.472253,
+      "observed_rate": 0.506173
+    },
+    "range_buckets": {
+      "buckets": [
+        {
+          "bucket": 0,
+          "empirical": 0.006887,
+          "mean_predicted": 0.026751
+        },
+        {
+          "bucket": 1,
+          "empirical": 0.017906,
+          "mean_predicted": 0.040178
+        },
+        {
+          "bucket": 2,
+          "empirical": 0.045455,
+          "mean_predicted": 0.047756
+        },
+        {
+          "bucket": 3,
+          "empirical": 0.090909,
+          "mean_predicted": 0.058579
+        },
+        {
+          "bucket": 4,
+          "empirical": 0.100551,
+          "mean_predicted": 0.103216
+        },
+        {
+          "bucket": 5,
+          "empirical": 0.118457,
+          "mean_predicted": 0.120206
+        },
+        {
+          "bucket": 6,
+          "empirical": 0.15978,
+          "mean_predicted": 0.189642
+        },
+        {
+          "bucket": 7,
+          "empirical": 0.460055,
+          "mean_predicted": 0.413672
+        }
+      ],
+      "count": 726
+    }
+  },
+  "published_reproduction": {},
+  "strength_separation": {
+    "arenas": {
+      "five-max-lineup": {
+        "hands": 1200,
+        "opponent_seed": 43,
+        "seed": 500
+      },
+      "vs-median-hu": {
+        "hands": 2000,
+        "opponent_seed": 41,
+        "seed": 400
+      }
+    },
+    "branch_contract": "v9-composed-value",
+    "caveat": "every battery opponent is card-blind (DECISIONS \u00a75): separation measured here says what the policy does, not what a real field would let it get away with. The field benchmark on THIS metric is +0.386 (artifacts/evaluations/field-separation-canonical-2026-08-16.json, 8,986 field decisions). The older +0.150 was a different scale and is superseded -- do not compare canonical numbers to it",
+    "metric": "strength_metric.strength_percentile (canonical percentile scale)",
+    "policies": {
+      "candidate-v7-0001c": {
+        "all_streets": {
+          "ci95": [
+            0.1492,
+            0.1899
+          ],
+          "decisions": 4523,
+          "families": {
+            "aggress": {
+              "count": 2921,
+              "mean_strength": 0.5663
+            },
+            "check_call": {
+              "count": 762,
+              "mean_strength": 0.3827
+            },
+            "fold": {
+              "count": 840,
+              "mean_strength": 0.3968
+            }
+          },
+          "se": 0.0104,
+          "separation_aggress_minus_fold": 0.1695
+        },
+        "flop": {
+          "ci95": [
+            0.1193,
+            0.198
+          ],
+          "decisions": 1127,
+          "families": {
+            "aggress": {
+              "count": 726,
+              "mean_strength": 0.5707
+            },
+            "check_call": {
+              "count": 194,
+              "mean_strength": 0.4062
+            },
+            "fold": {
+              "count": 207,
+              "mean_strength": 0.4121
+            }
+          },
+          "se": 0.0201,
+          "separation_aggress_minus_fold": 0.1586
+        },
+        "preflop": {
+          "ci95": [
+            0.126,
+            0.1791
+          ],
+          "decisions": 2554,
+          "families": {
+            "aggress": {
+              "count": 1733,
+              "mean_strength": 0.5463
+            },
+            "check_call": {
+              "count": 288,
+              "mean_strength": 0.4268
+            },
+            "fold": {
+              "count": 533,
+              "mean_strength": 0.3938
+            }
+          },
+          "se": 0.0136,
+          "separation_aggress_minus_fold": 0.1526
+        },
+        "river": {
+          "ci95": [
+            0.231,
+            0.3766
+          ],
+          "decisions": 327,
+          "families": {
+            "aggress": {
+              "count": 171,
+              "mean_strength": 0.6567
+            },
+            "check_call": {
+              "count": 118,
+              "mean_strength": 0.2847
+            },
+            "fold": {
+              "count": 38,
+              "mean_strength": 0.3529
+            }
+          },
+          "se": 0.0372,
+          "separation_aggress_minus_fold": 0.3038
+        },
+        "turn": {
+          "ci95": [
+            0.154,
+            0.2912
+          ],
+          "decisions": 515,
+          "families": {
+            "aggress": {
+              "count": 291,
+              "mean_strength": 0.6212
+            },
+            "check_call": {
+              "count": 162,
+              "mean_strength": 0.3476
+            },
+            "fold": {
+              "count": 62,
+              "mean_strength": 0.3986
+            }
+          },
+          "se": 0.035,
+          "separation_aggress_minus_fold": 0.2226
+        }
+      },
+      "candidate-v9-0001b": {
+        "all_streets": {
+          "ci95": [
+            0.1008,
+            0.1473
+          ],
+          "ci95_aggressive_minus_fatal": [
+            0.1332,
+            0.2192
+          ],
+          "decisions": 3858,
+          "families": {
+            "aggress": {
+              "count": 2803,
+              "mean_strength": 0.5391
+            },
+            "check_call": {
+              "count": 467,
+              "mean_strength": 0.4118
+            },
+            "fold": {
+              "count": 588,
+              "mean_strength": 0.415
+            }
+          },
+          "se": 0.0118,
+          "se_aggressive_minus_fatal": 0.0219,
+          "separation_aggress_minus_fold": 0.1241,
+          "separation_aggressive_minus_fatal": 0.1762
+        },
+        "flop": {
+          "ci95": [
+            0.0883,
+            0.1871
+          ],
+          "ci95_aggressive_minus_fatal": [
+            0.0136,
+            0.2963
+          ],
+          "decisions": 887,
+          "families": {
+            "aggress": {
+              "count": 628,
+              "mean_strength": 0.5446
+            },
+            "check_call": {
+              "count": 131,
+              "mean_strength": 0.4216
+            },
+            "fold": {
+              "count": 128,
+              "mean_strength": 0.4069
+            }
+          },
+          "se": 0.0252,
+          "se_aggressive_minus_fatal": 0.0721,
+          "separation_aggress_minus_fold": 0.1377,
+          "separation_aggressive_minus_fatal": 0.1549
+        },
+        "preflop": {
+          "ci95": [
+            0.0672,
+            0.1274
+          ],
+          "ci95_aggressive_minus_fatal": [
+            0.1229,
+            0.217
+          ],
+          "decisions": 2331,
+          "families": {
+            "aggress": {
+              "count": 1818,
+              "mean_strength": 0.5185
+            },
+            "check_call": {
+              "count": 155,
+              "mean_strength": 0.5064
+            },
+            "fold": {
+              "count": 358,
+              "mean_strength": 0.4212
+            }
+          },
+          "se": 0.0154,
+          "se_aggressive_minus_fatal": 0.024,
+          "separation_aggress_minus_fold": 0.0973,
+          "separation_aggressive_minus_fatal": 0.1699
+        },
+        "river": {
+          "ci95": [
+            0.1639,
+            0.3487
+          ],
+          "ci95_aggressive_minus_fatal": [
+            0.3239,
+            0.4914
+          ],
+          "decisions": 227,
+          "families": {
+            "aggress": {
+              "count": 124,
+              "mean_strength": 0.6803
+            },
+            "check_call": {
+              "count": 73,
+              "mean_strength": 0.265
+            },
+            "fold": {
+              "count": 30,
+              "mean_strength": 0.424
+            }
+          },
+          "se": 0.0471,
+          "se_aggressive_minus_fatal": 0.0427,
+          "separation_aggress_minus_fold": 0.2563,
+          "separation_aggressive_minus_fatal": 0.4076
+        },
+        "turn": {
+          "ci95": [
+            0.1487,
+            0.2807
+          ],
+          "ci95_aggressive_minus_fatal": [
+            -0.0393,
+            0.4778
+          ],
+          "decisions": 413,
+          "families": {
+            "aggress": {
+              "count": 233,
+              "mean_strength": 0.6095
+            },
+            "check_call": {
+              "count": 108,
+              "mean_strength": 0.3632
+            },
+            "fold": {
+              "count": 72,
+              "mean_strength": 0.3948
+            }
+          },
+          "se": 0.0337,
+          "se_aggressive_minus_fatal": 0.1319,
+          "separation_aggress_minus_fold": 0.2147,
+          "separation_aggressive_minus_fatal": 0.2192
+        }
+      }
+    }
+  },
+  "study": "candidate-v9-gauntlet",
+  "trainer_context": {
+    "init_seed_exported": 12,
+    "init_seeds_evaluated": [
+      {
+        "best_epoch": 6,
+        "epochs_run": 16,
+        "init_seed": 12,
+        "optimizer_steps": 528,
+        "train_losses": {
+          "equity_called": 0.042624,
+          "fold_through": 0.585075,
+          "range": 1.50671,
+          "total": 2.134409
+        },
+        "validation_losses": {
+          "equity_called": 0.040737,
+          "fold_through": 0.671015,
+          "range": 1.574901,
+          "total": 2.286653
+        }
+      }
+    ],
+    "note": "only the exported init seed has an artifact; the sibling seeds were not persisted, so this gauntlet covers one of the three trained seeds (V8_DESIGN \u00a76.1 asks for all three)",
+    "seed_selection": "minimum total validation loss; validation loss is a gate, never a selector (V8_DESIGN \u00a76) \u2014 the seat-swapped duel remains the selector at evaluation time"
+  },
+  "trivial_floors": null
+}

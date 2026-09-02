@@ -21,8 +21,8 @@ from engine.aggression_sizing import (
 from engine.branch_contract_v9 import BRANCH_LABELS_V9, legal_branches
 from engine.feature_extract_v8 import _EQUITY_TRIALS, extract_features_v8
 from engine.feature_extract_v9 import extract_features_v9
-from engine.game_state import effective_stack_chips
-from engine.hand_strength import estimate_equity
+from engine.game_state import contested_stack_chips, effective_stack_chips
+from engine.hand_strength import estimate_equity, estimate_equity_vs_posterior
 
 
 def _snapshot(
@@ -205,10 +205,28 @@ class DeltaDefinitionTests(unittest.TestCase):
     def test_priced_cost_conventions(self) -> None:
         table = _snapshot()
         values = dict(zip(schema4.FEATURE_NAMES_V9, extract_features_v9(table)))
-        eff = max(1, effective_stack_chips(table))
-        self.assertEqual(values["cost_active_eff"], min(1.0, 200 / eff))
+        # The lane costs divide by the CONTESTED stack (pre-harvest
+        # decision 4), not the chips-behind count: here that is
+        # min(700, 600 + 200) = 700, not 600.
+        contested = max(1, contested_stack_chips(table))
+        self.assertEqual(values["cost_active_eff"], min(1.0, 200 / contested))
         self.assertEqual(values["legal_aggressive"], 1.0)
         self.assertIn(values["branch_aggressive_executable"], (0.0, 1.0))
+
+    def test_collapsed_behind_stack_does_not_peg_the_lane_cost(self) -> None:
+        # Every opponent all-in: the chips-behind count collapses to 0 and
+        # the old denominator read cost_active_eff = 1.0 for ANY price.
+        # The contested denominator keeps the real ratio: hero has 100 in,
+        # the all-in opponent has 400 (to_call 300), hero behind 700 ->
+        # contested = min(700, 400) = 400 -> 300/400 = 0.75.
+        table = _snapshot(to_call=300, opp_stack=0)
+        table["currentBet"] = 400
+        table["seats"][0]["currentBetChips"] = 100
+        table["seats"][1]["currentBetChips"] = 400
+        table["allowedActions"]["callToAmount"] = 400
+        values = dict(zip(schema4.FEATURE_NAMES_V9, extract_features_v9(table)))
+        self.assertEqual(max(1, effective_stack_chips(table)), 1)
+        self.assertEqual(values["cost_active_eff"], 0.75)
 
     def test_free_spot_masks_the_aggressive_lane(self) -> None:
         values = dict(
@@ -248,14 +266,14 @@ class DeltaDefinitionTests(unittest.TestCase):
         self.assertEqual(values["legal_active"], 1.0)
         self.assertEqual(values["legal_aggressive"], 0.0)  # still escalation-only
 
-        eff = max(1, effective_stack_chips(table))
+        contested = max(1, contested_stack_chips(table))
         raw = active_bet_wager(
             table["potChips"],
             table_boldness(table, table["allowedActions"], _read_equity(table, 7)),
         )
         self.assertLess(raw, 500)                       # the clamp must bind
-        self.assertEqual(values["cost_active_eff"], min(1.0, 500 / eff))
-        self.assertNotEqual(values["cost_active_eff"], min(1.0, raw / eff))
+        self.assertEqual(values["cost_active_eff"], min(1.0, 500 / contested))
+        self.assertNotEqual(values["cost_active_eff"], min(1.0, raw / contested))
 
     def test_equity_multiway_is_the_read_equity(self) -> None:
         """Owner queue item 1: the multiway strength input IS g's read
@@ -297,6 +315,53 @@ class DeltaDefinitionTests(unittest.TestCase):
         many = dict(zip(schema4.FEATURE_NAMES_V9, extract_features_v9(crowd, seed=11)))
         self.assertLess(many["equity_multiway"], one["equity_multiway"])
 
+    def test_equity_vs_posterior_is_verbatim_read_without_evidence(self) -> None:
+        """No priced continues yet: the posterior is bit-identical to the
+        uniform prior, so the column IS the unconditioned read."""
+
+        table = _snapshot()
+        values = dict(zip(schema4.FEATURE_NAMES_V9, extract_features_v9(table, seed=11)))
+        self.assertEqual(values["equity_vs_posterior"], values["equity_multiway"])
+
+    def test_equity_vs_posterior_moves_with_the_posterior(self) -> None:
+        """A strong-posterior (top-octile) opponent must read LOWER hero
+        equity than a weak-posterior (bottom-octile) one — the direction
+        the correction exists to encode. A marginal hero is used on
+        purpose: near-nuts hero boards satisfy the inequality whichever
+        way the slices are ordered, which is exactly how the first
+        (inverted) implementation passed. Deterministic per seed."""
+
+        strong = tuple(1.0 if index == 7 else 0.0 for index in range(8))
+        weak = tuple(1.0 if index == 0 else 0.0 for index in range(8))
+        for hole, board in (
+            (("9h", "8h"), ("Qs", "Jh", "2d")),  # marginal postflop
+            (("Ah", "Kh"), ()),  # preflop
+        ):
+            with self.subTest(hole=hole, board=board):
+                strong_equity = estimate_equity_vs_posterior(
+                    hole, board, 1, strong, trials=1_000, seed=7
+                )
+                weak_equity = estimate_equity_vs_posterior(
+                    hole, board, 1, weak, trials=1_000, seed=7
+                )
+                self.assertLess(strong_equity, weak_equity)
+                self.assertEqual(
+                    estimate_equity_vs_posterior(
+                        hole, board, 1, strong, trials=1_000, seed=7
+                    ),
+                    strong_equity,
+                )
+
+    def test_equity_vs_posterior_validates_weights(self) -> None:
+        with self.assertRaises(ValueError):
+            estimate_equity_vs_posterior(
+                ("Qh", "Qd"), ("Qs", "7d", "2c"), 1, (0.125,) * 7, trials=10, seed=1
+            )
+        with self.assertRaises(ValueError):
+            estimate_equity_vs_posterior(
+                ("Qh", "Qd"), ("Qs", "7d", "2c"), 1, (0.0,) * 8, trials=10, seed=1
+            )
+
     def test_dials_off_aggressive_cost_is_bare_g(self) -> None:
         """The composed cost with every dial off equals g recomputed here."""
 
@@ -306,6 +371,7 @@ class DeltaDefinitionTests(unittest.TestCase):
             zip(schema4.FEATURE_NAMES_V9, extract_features_v9(table, seed=seed))
         )
         eff = max(1, effective_stack_chips(table))
+        contested = max(1, contested_stack_chips(table))
         equity_read = estimate_equity(
             ("Qh", "Qd"),
             ("Qs", "7d", "2c", "3h"),
@@ -318,7 +384,7 @@ class DeltaDefinitionTests(unittest.TestCase):
             pot=500, to_call=200, effective_stack=eff, boldness=boldness
         )
         to_amount = min(700, max(400, 0 + target))
-        self.assertEqual(values["cost_aggressive_eff"], min(1.0, to_amount / eff))
+        self.assertEqual(values["cost_aggressive_eff"], min(1.0, to_amount / contested))
 
 
 if __name__ == "__main__":

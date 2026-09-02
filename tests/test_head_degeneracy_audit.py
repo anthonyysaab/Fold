@@ -20,6 +20,7 @@ from tools.head_degeneracy_audit import (
     _forced_live_tower,
     _zeroed_out_w,
     constancy,
+    default_head,
     head_outputs,
     load_artifact,
     load_rows,
@@ -93,6 +94,25 @@ class InstrumentGateTests(unittest.TestCase):
             architecture, _zeroed_out_w(weights, HEAD), rows, means, stds, HEAD
         )
         self.assertEqual(constancy(outputs, wrong_bias)["constant_pct"], 0.0)
+
+
+class DefaultHeadTests(unittest.TestCase):
+    def test_action_value_wins_when_present(self) -> None:
+        _, weights, _, _, _ = _fixture(limit=1)
+        self.assertEqual(default_head(weights), "action_value")
+
+    def test_foreign_architectures_fall_back_to_the_widest_head(self) -> None:
+        # No action_value head (the v9 shape): the widest head is the
+        # closest analogue of a value head.
+        weights = {
+            "heads": {
+                "fold_through": {"out_b": [0.0, 0.0]},
+                "range": {"out_b": [0.0] * 8},
+                "equity_called": {"out_b": [0.0, 0.0, 0.0]},
+                "residual": {"out_b": [0.0, 0.0, 0.0, 0.0]},
+            }
+        }
+        self.assertEqual(default_head(weights), "range")
 
 
 if __name__ == "__main__":

@@ -206,6 +206,29 @@ class AggressionTracker:
         while len(self._hands) > _MAX_TRACKED_TABLES:
             self._hands.popitem(last=False)
 
+    def clone(self) -> "AggressionTracker":
+        """A copy that shares nothing mutable with ``self``.
+
+        The counterfactual replay deep-copies seat lists, and each seat
+        carries its agent, so a generic copy walks every tracker too.
+        ``observe`` mutates the per-opponent stats lists and the per-hand
+        bookkeeping sets IN PLACE, so both containers are copied; the
+        frozen ``settings`` dataclass is shared. A clone and its original
+        then record evidence independently, exactly as a ``deepcopy``
+        would have.
+        """
+
+        clone = AggressionTracker.__new__(AggressionTracker)
+        clone.settings = self.settings
+        clone._stats = {
+            key: list(values) for key, values in self._stats.items()
+        }
+        clone._hands = OrderedDict(
+            (table_id, (marker, set(counted)))
+            for table_id, (marker, counted) in self._hands.items()
+        )
+        return clone
+
     def opportunities(self, key: str) -> float:
         return self._stats.get(key, (0.0, 0.0, 0.0))[0]
 

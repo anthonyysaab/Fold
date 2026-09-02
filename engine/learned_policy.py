@@ -40,7 +40,10 @@ from engine.learning_contract import (
     BRANCH_FAMILIES,
     BRANCH_POT_FRACTIONS,
     LEARNING_INPUT_SIZE,
+    MODEL_FORMAT_VERSION,
     MODEL_FORMAT_VERSION_V7,
+    MODEL_FORMAT_VERSION_V9,
+    LearningContractError,
     validate_artifact_manifest,
 )
 from engine.offline_trainer import _forward, _forward_v2
@@ -688,9 +691,65 @@ def approved_fingerprint(artifacts_dir: str | Path) -> str | None:
     return hashlib.sha256(raw).hexdigest()
 
 
+def _load_by_format(
+    manifest_file: Path, *, equity_trials: int | None
+) -> DecisionEngine:
+    """Route an approved manifest to the loader its format requires.
+
+    Each promotable format has its own loader, its own input schema and
+    its own branch meanings. A format-4 artifact read by the format-1/2
+    loader would meet 414 schema-4 inputs against the 142-input
+    contract, so the declared version is dispatched on rather than
+    assumed. A version with no loader is refused outright -- falling
+    back to the v7 loader is how an artifact of one shape gets served
+    under another shape's meanings.
+    """
+
+    try:
+        manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise LearnedPolicyError(
+            f"cannot read approved manifest {manifest_file}: {error}"
+        ) from error
+    if not isinstance(manifest, Mapping):
+        raise LearnedPolicyError("approved manifest must be an object")
+    version = manifest.get("format_version")
+    if version == MODEL_FORMAT_VERSION_V9:
+        # ``load_policy`` runs the contract itself on the format-1/2 path,
+        # but ``load_policy_v9`` checks only the v9 loader's own
+        # invariants -- it has no view of ``serve.deployable``. Run the
+        # contract here so the v9 path gets the same serve-time refusal:
+        # otherwise a hand-edited pointer naming a Phase-A artifact, whose
+        # own trainer stamps it undeployable, would load and play.
+        #
+        # Re-raised as LearnedPolicyError on purpose: LearningContractError
+        # is a sibling of it, not a subclass, and run_agent's between-hands
+        # refresh catches only LearnedPolicyError -- an uncaught contract
+        # error there would take the live session down instead of keeping
+        # the current policy.
+        try:
+            validate_artifact_manifest(manifest)
+        except LearningContractError as error:
+            raise LearnedPolicyError(
+                f"approved artifact fails the learning contract: {error}"
+            ) from error
+        # Deferred: the v9 loader pulls in the P3 belief fit, which a
+        # format-1/2 serve has no reason to touch, and importing it at
+        # module scope would tie this module to the whole v9 stack.
+        from engine.learned_policy_v9 import load_policy_v9
+
+        return load_policy_v9(manifest_file, equity_trials=equity_trials)
+    if version in {MODEL_FORMAT_VERSION, MODEL_FORMAT_VERSION_V7}:
+        return load_policy(manifest_file, equity_trials=equity_trials)
+    raise LearnedPolicyError(
+        f"approved artifact declares format_version {version!r}, which has "
+        "no serve path"
+    )
+
+
 def load_approved(
     artifacts_dir: str | Path, *, equity_trials: int | None = None
-) -> LearnedPokerPolicy:
+) -> DecisionEngine:
     """Follow the approved pointer to a verified playing policy."""
 
     root = Path(artifacts_dir).expanduser()
@@ -706,7 +765,7 @@ def load_approved(
     # a pointer promoted on one platform loads on the other.
     relative = str(pointer.get("manifest_file") or "").replace("\\", "/")
     manifest_file = root.joinpath(*[part for part in relative.split("/") if part])
-    policy = load_policy(manifest_file, equity_trials=equity_trials)
+    policy = _load_by_format(manifest_file, equity_trials=equity_trials)
     expected = pointer.get("weights_sha256")
     _require(
         expected is None

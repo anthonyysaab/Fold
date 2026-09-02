@@ -1194,6 +1194,25 @@ def validate_phase_b_rows(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 #: (kind, aggression, fold_vs_bet, shove_rate). ``p3`` seats take the
 #: audited scripted knobs of ``strength_aware_lineup``; only the folding is
 #: fitted. Card-blind seats reuse the calibrated archetypes.
+#:
+#: NO LEARNED SEAT BELONGS HERE, and one was tried and reverted on
+#: 2026-09-02. The 2026-09-02 diagnosis (section 4) is right that the
+#: roster carries no v6/v7/v8/v9 policy and that this makes the batteries
+#: in-distribution — but the fix does not live in the harvest. Phase B's
+#: counterfactual replay resamples every card-reading opponent's holes
+#: CONDITIONAL on the prefix of decisions that opponent already made;
+#: ``P3SeatWrapper`` exists to record that prefix, and
+#: ``_p3_opponent_ids`` refuses any other card-reading seat rather than
+#: reintroduce the frozen-holes defect. A learned policy would need a
+#: conditional hole sampler of its own — i.e. inverting the network —
+#: which is a research problem, not a seat entry. The reverted attempt
+#: justified skipping the wrapper with "an engine policy reads its own
+#: hole cards so the chance salt leaves it alone anyway"; the salt
+#: leaving it alone is precisely the defect the guard names.
+#:
+#: Measuring against the real incumbent belongs in EVALUATION, where the
+#: gauntlet already duels ``candidate-v7-0001c`` and no hole resampling
+#: is involved.
 _OPPONENT_KINDS: dict[str, tuple[str, float, float, float]] = {
     "p3-median": ("p3", 0.226, 0.5, 0.0),
     "p3-passive": ("p3", 0.10, 0.5, 0.0),
@@ -1225,6 +1244,11 @@ class LegSpec:
     starting_stack: int = 6_000
     small_blind: int = 50
     big_blind: int = 100
+    # v9-only (pre-harvest supplemental harvests): the postflop selection
+    # mode and its per-leg street quotas. The v8 harvester never reads
+    # these; defaults preserve its bytes.
+    postflop_selection: bool = False
+    street_quotas: dict[str, int] | None = None
 
 
 def default_leg_specs(args: argparse.Namespace) -> list[LegSpec]:
