@@ -16,6 +16,23 @@ the Phase-A ``equity_called`` label. The gate is enforced by default;
 ``--ols-gate skip`` is an explicit owner override for a documented
 reason, and ``warn`` prints the verdict without refusing.
 
+Defect 26 -- a gate review that ran as a promotion and rewrote the
+approved manifest; the rollback afterwards restored only the pointer,
+leaving the two files stamped by different promotions. Two repairs,
+both here, and each states exactly what it changed:
+
+* ``--dry-run`` gives the review its own verb. Checking the gate no
+  longer means running the promotion that writes.
+* The pointer payload is built BEFORE either file is written. Reading
+  the previous pointer can fail (a corrupt file, permissions), and
+  writing the manifest first made every such failure a half-stamped
+  promotion: a manifest claiming an approval the pointer never
+  recorded -- the defect's own signature, one step away at all times.
+
+Both files carrying ONE timestamp was already true before the defect
+was filed; it is now pinned by a test against an injected clock rather
+than left to hold by accident.
+
 Examples (module mode puts the repository root on the import path):
     python -m tools.promote_candidate artifacts/candidates/<v>.manifest.json \
         --reason "beat heuristic v5 by +9 bb/100 over 6k simulated hands"
@@ -108,6 +125,34 @@ def _ols_gate(manifest: Mapping[str, Any], mode: str) -> None:
         )
 
 
+def _promotion_checks(
+    manifest: Mapping[str, Any], manifest_path: Path, ols_gate: str
+) -> None:
+    """Every check a promotion performs before it may write; writes nothing.
+
+    One body, two callers: :func:`promote` and :func:`dry_run`. That is
+    the point of the extraction — a review verb that ran a *different*
+    set of checks from the promotion would send the reviewer back to the
+    promotion to be sure, which is how defect 26 happened. Nothing here
+    opens a file for writing, so a dry run cannot reach a write; the
+    ordering that keeps a *failing* promotion from half-writing lives in
+    :func:`promote`.
+    """
+
+    validate_artifact_manifest(manifest)
+    if manifest.get("state") != "candidate":
+        raise SystemExit("only candidate manifests can be promoted")
+    weights_file = manifest_path.parent / str(manifest["weights_file"])
+    digest = hashlib.sha256(weights_file.read_bytes().rstrip(b"\n")).hexdigest()
+    if digest != manifest["weights_sha256"]:
+        raise SystemExit("weights checksum mismatch; refusing to promote")
+    if manifest.get("format_version") == MODEL_FORMAT_VERSION_V9:
+        if ols_gate not in {"enforce", "warn", "skip"}:
+            raise SystemExit("--ols-gate must be enforce, warn, or skip")
+        if ols_gate != "skip":
+            _ols_gate(manifest, ols_gate)
+
+
 def _write_atomic(path: Path, payload: dict) -> None:
     text = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
     temp = path.with_suffix(".tmp")
@@ -127,21 +172,12 @@ def promote(
     ols_gate: str = "enforce",
 ) -> Path:
     manifest = _load_json(manifest_path)
-    validate_artifact_manifest(manifest)
-    if manifest.get("state") != "candidate":
-        raise SystemExit("only candidate manifests can be promoted")
-    weights_file = manifest_path.parent / str(manifest["weights_file"])
-    digest = hashlib.sha256(weights_file.read_bytes().rstrip(b"\n")).hexdigest()
-    if digest != manifest["weights_sha256"]:
-        raise SystemExit("weights checksum mismatch; refusing to promote")
-    if manifest.get("format_version") == MODEL_FORMAT_VERSION_V9:
-        if ols_gate not in {"enforce", "warn", "skip"}:
-            raise SystemExit("--ols-gate must be enforce, warn, or skip")
-        if ols_gate != "skip":
-            _ols_gate(manifest, ols_gate)
+    _promotion_checks(manifest, manifest_path, ols_gate)
 
     approved = dict(manifest)
     approved["state"] = "approved"
+    # ONE timestamp for both stamps: the approved manifest and the
+    # pointer must describe the same promotion (defect 26).
     approved["promotion"] = {
         "approved_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "reason": reason,
@@ -157,27 +193,45 @@ def promote(
         ".manifest.json", ".approved.manifest.json"
     )
     approved_path = manifest_path.parent / approved_name
-    _write_atomic(approved_path, approved)
 
+    # Build the pointer payload BEFORE any write: reading the previous
+    # pointer can fail (a corrupt file, permissions), and a failure
+    # after the manifest write is exactly how the manifest and the
+    # pointer end up stamped by different promotions. With both
+    # payloads in hand the only remaining steps are the two atomic
+    # writes.
     pointer_path = artifacts_dir / APPROVED_POINTER
     previous = None
     if pointer_path.exists():
         previous = _load_json(pointer_path)
         previous.pop("previous", None)  # keep one generation of history
-    _write_atomic(
-        pointer_path,
-        {
-            "model_version": approved["model_version"],
-            # POSIX separators always: the pointer is promoted on Windows but
-            # read by the Linux host that serves live play, where a backslash
-            # is an ordinary filename character rather than a separator.
-            "manifest_file": approved_path.relative_to(artifacts_dir).as_posix(),
-            "weights_sha256": approved["weights_sha256"],
-            "approved_at": approved["promotion"]["approved_at"],
-            "previous": previous,
-        },
-    )
+    pointer_payload = {
+        "model_version": approved["model_version"],
+        # POSIX separators always: the pointer is promoted on Windows but
+        # read by the Linux host that serves live play, where a backslash
+        # is an ordinary filename character rather than a separator.
+        "manifest_file": approved_path.relative_to(artifacts_dir).as_posix(),
+        "weights_sha256": approved["weights_sha256"],
+        "approved_at": approved["promotion"]["approved_at"],
+        "previous": previous,
+    }
+    _write_atomic(approved_path, approved)
+    _write_atomic(pointer_path, pointer_payload)
     return pointer_path
+
+
+def dry_run(manifest_path: Path, ols_gate: str = "enforce") -> None:
+    """Run every promotion check and report the verdict; writes nothing.
+
+    Defect 26's repair on the operator side: the reviewer's gate check
+    is its own verb now. A dry run performs exactly the checks a
+    promotion performs — manifest contract, state, weights checksum,
+    and the OLS gate — and stops before any file can change.
+    """
+
+    manifest = _load_json(manifest_path)
+    _promotion_checks(manifest, manifest_path, ols_gate)
+    print("dry run: every promotion check passed; no files were written")
 
 
 def rollback(artifacts_dir: Path) -> Path:
@@ -222,8 +276,26 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="restore the previously approved version",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "run every promotion check (manifest, weights, the OLS gate) "
+            "and report the verdict without writing anything (defect 26: "
+            "a gate check must never rewrite the approved manifest or "
+            "the pointer)"
+        ),
+    )
     args = parser.parse_args(argv)
     artifacts_dir = Path(args.artifacts_dir).expanduser().resolve()
+
+    if args.dry_run:
+        if args.rollback:
+            parser.error("--dry-run takes no --rollback")
+        if not args.manifest:
+            parser.error("--dry-run needs a manifest")
+        dry_run(Path(args.manifest).expanduser().resolve(), ols_gate=args.ols_gate)
+        return 0
 
     if args.rollback:
         if args.manifest:

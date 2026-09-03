@@ -55,8 +55,14 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _TRAINED_MANIFEST = (
     _REPO_ROOT / "artifacts" / "candidates" / "candidate-v8-0001.manifest.json"
 )
-_CUDA_VENV_PYTHON = Path(
-    "C:/Users/user/poker-nn-training/.venv/Scripts/python.exe"
+#: The training interpreter moved on 2026-09-03 and now lives INSIDE the
+#: repo (owner decision, `.handoff/DECISIONS.md` section 6), so this is
+#: repo-relative rather than absolute. It was
+#: ``C:/Users/user/poker-nn-training/.venv/...`` until then, a path that no
+#: longer exists -- which meant the two tests guarded on it skipped even
+#: when run on the CUDA interpreter, silently and forever.
+_CUDA_VENV_PYTHON = (
+    _REPO_ROOT / "neural network training" / ".venv" / "Scripts" / "python.exe"
 )
 
 _LN_EPS = 1e-5

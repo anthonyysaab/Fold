@@ -38,3 +38,10 @@ phh-dataset/
 # Phase-A datasets built from PHH run to 100+ MB; their .summary.json
 # sidecars stay tracked as the record.
 artifacts/phase_a_v9/*pluribus*.jsonl.gz
+
+# Training environment (2026-09-03): a clone of
+# github.com/anthonyysaab/NN-Poker-training with its own .git and its own
+# .venv (torch 2.13.0+cu130), restored into this working tree. It is a
+# separate repository and must never enter this one -- CONTEXT.md section 1
+# names it as the CUDA interpreter.
+neural network training/

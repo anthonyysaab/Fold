@@ -9,13 +9,26 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import live_session
+
+#: How long the faked discovery call is held open in StopIntentTests.
+#: ``live_session.main`` installs the console handler BEFORE it discovers a
+#: competition, so this keeps that window wide on every machine: without it
+#: the console test only exercises the seated path when the box happens to be
+#: slow, which is how it flaked once in a full suite on 2026-09-03. Measured
+#: there: 0.3 s reliably breaks a wait that watches the handler instead of the
+#: seat.
+_DISCOVERY_HOLD_S = 0.3
 
 # Verbatim shapes returned by /api/arena/competition/list-active on
 # 2026-08-13, so the guards are tested against real Arena copy.
@@ -587,6 +600,10 @@ class RunArchiveTests(unittest.TestCase):
             self.assertEqual(run["sessions"], 2)
             self.assertEqual(run["stop_reason"], "stopped by you")
             self.assertEqual(run["session_seconds"], 21600)
+            # Defect-22 evidence: the seated competition is recorded in
+            # run.json before the runner joins, so a kill mid-session still
+            # says where the seat may be.
+            self.assertEqual(run["competition_id"], PLAYGROUND["id"])
 
     def test_console_still_receives_teed_output(self) -> None:
         console = io.StringIO()
@@ -696,6 +713,876 @@ class ExplicitCompetitionGuardTests(unittest.TestCase):
             )
         self.assertFalse(ok)
         self.assertIn("cannot verify", reason)
+
+
+REPO_ROOT = Path(live_session.__file__).resolve().parent
+
+# A faithful minimal supervisor stand-in: the real main() with a scripted
+# fake Arena, run as a subprocess so the parent can kill it the way the
+# 2026-09-01/02 stops killed the real one (TerminateProcess on Windows).
+_KILLED_SUPERVISOR_SCRIPT = r'''
+import json
+import sys
+import time
+from pathlib import Path
+
+import live_session
+
+archive_root = Path(sys.argv[1])
+calls_path = Path(sys.argv[2])
+live_session.ARCHIVE_ROOT = archive_root
+
+def fake_request(_key, method, path, body=None):
+    with calls_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps([method, path]) + "\n")
+        handle.flush()
+    if "list-active" in path:
+        return 200, [{
+            "id": "kill-test-comp",
+            "name": "[Poker] Playground S17",
+            "description": "No-Limit Texas Hold'em poker playground.",
+            "seasonNumber": 17,
+            "gameType": "TexasHoldem",
+        }]
+    if "pending-actions" in path:
+        return 200, {"participant": {"chipState": "available", "totalChips": 966}}
+    return 200, {}
+
+def fake_runner(argv):
+    live_session.run_agent.request_arena(
+        "k", "POST", "/api/arena/texas/join", {"competitionId": argv[0]}
+    )
+    while True:
+        time.sleep(1)
+
+live_session.run_agent.load_credentials = lambda: ("k", "a")
+live_session.run_agent.request_arena = fake_request
+live_session.run_agent.main = fake_runner
+live_session.main(["--standard"])
+'''
+
+
+def _wait_for_text(path: Path, needle: str, timeout: float) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if needle in path.read_text(encoding="utf-8"):
+                return True
+        except OSError:
+            pass
+        time.sleep(0.1)
+    return False
+
+
+def _recorded_calls(path: Path) -> list[list[str]]:
+    calls = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            calls.append(json.loads(line))
+        except ValueError:
+            continue
+    return calls
+
+
+class HardKillReproductionTests(unittest.TestCase):
+    """Defect 22: a SIGKILL-class kill runs no in-process code at all.
+
+    TerminateProcess on Windows is the exact kill the 2026-09-01/02 runs
+    suffered: no handler fires, ``run.json`` keeps ``stop_reason: null``, no
+    session manifest is written, and no leave is ever sent. That is
+    uncatchable in-process, so this test pins the defect's observable
+    signature; the compensating layers are the stop-intent write
+    (``StopIntentTests``) and the next-start reconciliation
+    (``SeatReconciliationTests``).
+    """
+
+    @unittest.skipUnless(sys.platform.startswith("win"), "TerminateProcess semantics")
+    def test_hard_kill_leaves_no_stop_reason_no_session_and_no_leave(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            archive = root / "runs"
+            archive.mkdir()
+            calls = root / "calls.jsonl"
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-c",
+                    _KILLED_SUPERVISOR_SCRIPT,
+                    str(archive),
+                    str(calls),
+                ],
+                cwd=REPO_ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                self.assertTrue(
+                    _wait_for_text(calls, "/texas/join", timeout=60),
+                    "the supervisor subprocess never reached a join",
+                )
+                process.terminate()  # TerminateProcess; nothing in-process runs
+                process.wait(timeout=30)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=10)
+
+            run_dirs = [child for child in archive.iterdir() if child.is_dir()]
+            self.assertEqual(len(run_dirs), 1, "the launch wrote one run folder")
+            run_dir = run_dirs[0]
+            run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+            # The defect signature, pinned: a hard kill leaves no clean stop.
+            self.assertIsNone(run["stop_reason"])
+            self.assertEqual(run["sessions"], 0)
+            self.assertFalse(list(run_dir.glob("session-*.json")), "no session record")
+            # The evidence layer: the seated competition survives the kill,
+            # which is what the startup reconciliation reads.
+            self.assertEqual(run["competition_id"], "kill-test-comp")
+            recorded = _recorded_calls(calls)
+            self.assertTrue(
+                any("join" in path for _, path in recorded), "the seat was taken"
+            )
+            self.assertFalse(
+                any("leave" in path for _, path in recorded),
+                "no leave was sent; the seat was left held",
+            )
+
+
+class StopIntentTests(unittest.TestCase):
+    """Defect 22 layer (a): the stop intent is written before the network leave.
+
+    The leave can outlive a second Ctrl+C or the console handler's grace
+    window, and a kill during it must still leave ``run.json`` evidence.
+
+    The console test waits for the SEAT, not for the handler. ``main``
+    installs the handler before discovery, so an installed handler does not
+    mean a seated supervisor; firing the console event in that window makes
+    ``console_stop`` a no-op and the leave then carries the supervisor's own
+    stop reason. That is a test-synchronisation defect, not an engine one --
+    measured 2026-09-03 by holding discovery open for 0.3 s and running the
+    old body against the new one: the old wait reported
+    ``stop_reason_at_leave == "stopped by you"``, the new wait reported the
+    console reason, and ``len(leaves) == 1`` in every arm, so there is no
+    double-leave race. ``_DISCOVERY_HOLD_S`` keeps that window open on every
+    run, so a regression fails here deterministically instead of flaking once
+    in a loaded full suite.
+    """
+
+    def test_stop_reason_is_written_before_the_leave_request(self) -> None:
+        seen: dict[str, object] = {}
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+
+            def fake_request(_key, method, path, body=None):
+                if method == "POST" and path.endswith("/texas/leave"):
+                    run_files = list(root.glob("*/run.json"))
+                    seen["stop_reason_at_leave"] = (
+                        json.loads(run_files[0].read_text(encoding="utf-8")).get(
+                            "stop_reason"
+                        )
+                        if run_files
+                        else "no-run.json"
+                    )
+                if "list-active" in path:
+                    return 200, [PLAYGROUND]
+                if "pending-actions" in path:
+                    return 200, {
+                        "participant": {"chipState": "available", "totalChips": 966}
+                    }
+                return 200, {}
+
+            with (
+                patch.object(live_session, "ARCHIVE_ROOT", root),
+                patch.object(
+                    live_session.run_agent, "load_credentials", return_value=("k", "a")
+                ),
+                patch.object(
+                    live_session.run_agent, "request_arena", side_effect=fake_request
+                ),
+                patch.object(
+                    live_session.run_agent, "main", side_effect=KeyboardInterrupt()
+                ),
+            ):
+                code = live_session.main(["--standard"])
+
+        self.assertEqual(code, live_session.EXIT_OK)
+        self.assertEqual(seen["stop_reason_at_leave"], "stopped by you")
+
+    def test_console_close_writes_the_stop_intent_before_its_leave(self) -> None:
+        captured: list = []
+        fake_wintypes = SimpleNamespace(BOOL="BOOL", DWORD="DWORD")
+        fake_kernel32 = SimpleNamespace(
+            SetConsoleCtrlHandler=lambda callback, add: captured.append(callback)
+            or True
+        )
+        fake_ctypes = SimpleNamespace(
+            wintypes=fake_wintypes,
+            WINFUNCTYPE=lambda *args: (lambda fn: fn),
+            windll=SimpleNamespace(kernel32=fake_kernel32),
+        )
+        seen: dict[str, object] = {}
+        leaves: list[str] = []
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+
+            def fake_request(_key, method, path, body=None):
+                if method == "POST" and path.endswith("/texas/leave"):
+                    leaves.append(path)
+                    run_files = list(root.glob("*/run.json"))
+                    seen["stop_reason_at_leave"] = (
+                        json.loads(run_files[0].read_text(encoding="utf-8")).get(
+                            "stop_reason"
+                        )
+                        if run_files
+                        else "no-run.json"
+                    )
+                if "list-active" in path:
+                    # Hold discovery open. `main` installs the console handler
+                    # BEFORE it is seated, and this delay makes that window
+                    # wide on every machine, so the wait below is a real
+                    # barrier rather than something only a loaded CI hits.
+                    time.sleep(_DISCOVERY_HOLD_S)
+                    return 200, [PLAYGROUND]
+                if "pending-actions" in path:
+                    return 200, {
+                        "participant": {"chipState": "available", "totalChips": 966}
+                    }
+                return 200, {}
+
+            release = threading.Event()
+
+            def blocking_runner(_argv):
+                release.wait(timeout=30)
+                raise KeyboardInterrupt
+
+            results: list[int] = []
+
+            def run():
+                results.append(live_session.main(["--standard"]))
+
+            thread = threading.Thread(target=run, daemon=True)
+            with (
+                patch.object(live_session, "ARCHIVE_ROOT", root),
+                patch.object(live_session.sys, "platform", "win32"),
+                patch.dict("sys.modules", {"ctypes": fake_ctypes}),
+                patch.object(
+                    live_session.run_agent, "load_credentials", return_value=("k", "a")
+                ),
+                patch.object(
+                    live_session.run_agent, "request_arena", side_effect=fake_request
+                ),
+                patch.object(live_session.run_agent, "main", side_effect=blocking_runner),
+            ):
+                thread.start()
+                deadline = time.time() + 10
+                while not captured and time.time() < deadline:
+                    time.sleep(0.05)
+                self.assertTrue(captured, "console handler was never installed")
+
+                # `main` installs the console handler before it discovers a
+                # competition, so an installed handler does NOT mean the
+                # supervisor is seated: `archive_cell["archive"]` and
+                # `seat["competition"]` are set later. Fire the event in that
+                # window and `console_stop` is a no-op -- no `finish()`, no
+                # leave -- and the supervisor's own `finally` then writes
+                # "stopped by you" instead. Wait for the seat itself:
+                # `mark_seated` puts `competition_id` in run.json immediately
+                # after `seat["competition"]`, so a non-null id means both are
+                # set.
+                def seated() -> bool:
+                    files = list(root.glob("*/run.json"))
+                    if not files:
+                        return False
+                    try:
+                        doc = json.loads(files[0].read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        return False
+                    return doc.get("competition_id") is not None
+
+                deadline = time.time() + 10
+                while not seated() and time.time() < deadline:
+                    time.sleep(0.05)
+                self.assertTrue(seated(), "the supervisor never recorded a seat")
+
+                captured[0](live_session.CTRL_CLOSE_EVENT)  # the console event
+                release.set()
+                thread.join(timeout=30)
+            self.assertFalse(thread.is_alive(), "the supervisor did not stop")
+
+        self.assertEqual(seen["stop_reason_at_leave"], "console closed, logged off, or shutting down")
+        # The console handler and the finally must not both send it.
+        self.assertEqual(len(leaves), 1)
+        self.assertEqual(results, [live_session.EXIT_OK])
+
+
+class SeatReconciliationTests(unittest.TestCase):
+    """Defect 22 layer (b): the next start releases the seat before any join.
+
+    The default-OFF ``--reconcile-abandoned-seat`` dial (DECISIONS §2): when
+    the previous run.json shows no clean stop, the seat is verified through
+    the read-only peek and released before any join. Releasing is allowed,
+    joining is not, and nothing rebuys.
+    """
+
+    PREV_SEATED = {
+        "participant": {"chipState": "available", "totalChips": 500},
+        "runner": {"canStopSafely": True},
+        "lobby": {"position": 2, "total": 4},
+        "tables": [{"tableId": "t1"}],
+        "activeTables": [],
+    }
+    PREV_EMPTY = {
+        "participant": {"chipState": "available", "totalChips": 500},
+        "runner": {"canStopSafely": True},
+        "lobby": None,
+        "tables": [],
+        "activeTables": [],
+    }
+    PREV_COMPETITION = "prev-comp"
+
+    @classmethod
+    def _previous_run(cls, root: Path, *, stop_reason=None, competition=None) -> Path:
+        run_dir = root / "2026-09-01T235328Z"
+        run_dir.mkdir(parents=True)
+        run = {
+            "launched_at": "2026-09-01T235328Z",
+            "sessions": 1,
+            "stop_reason": stop_reason,
+            "competition_id": competition,
+        }
+        (run_dir / "run.json").write_text(json.dumps(run, indent=2), encoding="utf-8")
+        return run_dir
+
+    def _read_previous(self, run_dir: Path) -> dict:
+        return json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+
+    def _run(self, root, *, prev_peeks, leave_answer, argv):
+        calls: list[tuple[str, str]] = []
+        peeks = list(prev_peeks)
+
+        def fake_request(_key, method, path, body=None):
+            calls.append((method, path))
+            if "list-active" in path:
+                return 200, [PLAYGROUND]
+            if "pending-actions" in path:
+                if self.PREV_COMPETITION in path:
+                    return peeks.pop(0) if len(peeks) > 1 else peeks[0]
+                return 200, {
+                    "participant": {"chipState": "available", "totalChips": 966}
+                }
+            if path.endswith("/texas/leave"):
+                return leave_answer
+            if path.endswith("/texas/join"):
+                return 200, {"participant": {"totalChips": 966}}
+            return 200, {}
+
+        def fake_runner(argv):
+            live_session.run_agent.request_arena(
+                "k", "POST", "/api/arena/texas/join", {"competitionId": argv[0]}
+            )
+            raise KeyboardInterrupt
+
+        out = io.StringIO()
+        with (
+            patch.object(live_session, "ARCHIVE_ROOT", root),
+            patch.object(
+                live_session.run_agent, "load_credentials", return_value=("k", "a")
+            ),
+            patch.object(
+                live_session.run_agent, "request_arena", side_effect=fake_request
+            ),
+            patch.object(live_session.run_agent, "main", side_effect=fake_runner),
+            contextlib.redirect_stdout(out),
+        ):
+            code = live_session.main(list(argv))
+        return code, out.getvalue(), calls
+
+    def _index(self, calls, needle):
+        for index, (method, path) in enumerate(calls):
+            if needle in path:
+                return index
+        return None
+
+    def test_the_dial_flag_defaults_off(self) -> None:
+        self.assertFalse(live_session.parse_args([]).reconcile_abandoned_seat)
+        self.assertTrue(
+            live_session.parse_args(["--reconcile-abandoned-seat"]).reconcile_abandoned_seat
+        )
+
+    def test_a_dirty_previous_run_releases_the_seat_before_any_join(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, competition=self.PREV_COMPETITION
+            )
+            code, out, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_SEATED), (200, self.PREV_EMPTY)],
+                leave_answer=(200, {"left": True}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            first_leave = self._index(calls, "/texas/leave")
+            first_join = self._index(calls, "/texas/join")
+            self.assertIsNotNone(first_leave)
+            self.assertIsNotNone(first_join)
+            self.assertLess(first_leave, first_join, "release precedes any join")
+            self.assertIn("reconciliation", out)
+            run = self._read_previous(run_dir)
+            self.assertIn("released", run["stop_reason"])
+            self.assertIn("reconciliation", run["reconciled_by"])
+
+    def test_the_dial_is_off_without_the_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, competition=self.PREV_COMPETITION
+            )
+            code, _, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_SEATED)],
+                leave_answer=(200, {"left": True}),
+                argv=("--standard",),
+            )
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            # The dirty previous run is never peeked or left, and the only
+            # leave is the shutdown leave after the join.
+            self.assertFalse(
+                any(self.PREV_COMPETITION in path for _, path in calls),
+                "the previous run must not be touched while the dial is off",
+            )
+            first_leave = self._index(calls, "/texas/leave")
+            first_join = self._index(calls, "/texas/join")
+            self.assertIsNotNone(first_join)
+            self.assertGreater(first_leave, first_join)
+            self.assertIsNone(self._read_previous(run_dir)["stop_reason"])
+
+    def test_a_clean_previous_run_is_left_alone(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, stop_reason="stopped by you", competition=self.PREV_COMPETITION
+            )
+            code, _, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_SEATED)],
+                leave_answer=(200, {"left": True}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            self.assertFalse(
+                any(self.PREV_COMPETITION in path for _, path in calls),
+                "a clean stop needs no reconciliation",
+            )
+            self.assertEqual(
+                self._read_previous(run_dir)["stop_reason"], "stopped by you"
+            )
+
+    def test_a_verified_empty_seat_stamps_the_run_and_plays_on(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, competition=self.PREV_COMPETITION
+            )
+            code, _, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_EMPTY)],
+                leave_answer=(200, {"left": True}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            first_leave = self._index(calls, "/texas/leave")
+            first_join = self._index(calls, "/texas/join")
+            self.assertGreater(first_leave, first_join, "no seat, no release leave")
+            run = self._read_previous(run_dir)
+            self.assertIn("not seated", run["stop_reason"])
+
+    def test_an_unreleased_seat_refuses_to_join(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, competition=self.PREV_COMPETITION
+            )
+            code, out, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_SEATED)],
+                leave_answer=(503, {"error": "unavailable"}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_RECONCILIATION_FAILED)
+            self.assertIsNone(self._index(calls, "/texas/join"), "never joins")
+            self.assertIn("SUPERVISOR REFUSED TO JOIN", out)
+            self.assertIn("python -m tools.leave", out)
+            # Unstamped: every restart re-attempts the release.
+            self.assertIsNone(self._read_previous(run_dir)["stop_reason"])
+
+    def test_an_unverifiable_seat_refuses_to_join(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, competition=self.PREV_COMPETITION
+            )
+            code, _, calls = self._run(
+                root,
+                prev_peeks=[(500, {"error": "bad gateway"})],
+                leave_answer=(200, {"left": True}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_RECONCILIATION_FAILED)
+            self.assertIsNone(self._index(calls, "/texas/join"))
+            self.assertIsNone(self._read_previous(run_dir)["stop_reason"])
+
+    def test_a_seat_still_occupied_after_the_leave_refuses_to_join(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = self._previous_run(
+                root, competition=self.PREV_COMPETITION
+            )
+            code, _, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_SEATED), (200, self.PREV_SEATED)],
+                leave_answer=(200, {"left": True}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_RECONCILIATION_FAILED)
+            self.assertIsNone(self._index(calls, "/texas/join"))
+            self.assertIsNone(self._read_previous(run_dir)["stop_reason"])
+
+    def test_a_clean_stop_whose_leave_was_unconfirmed_is_still_reconciled(
+        self,
+    ) -> None:
+        """A clean ``stop_reason`` is not evidence that the seat was released.
+
+        ``finish`` writes the stop reason before the network leave, so only
+        ``seat_release_confirmed`` can report that the leave failed.
+        Reconciliation must pick that run up, release the seat, clear both
+        selection signatures so no later start repeats the leave, and keep the
+        original stop reason as the record of how the run ended.
+        """
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = root / "2026-09-01T235328Z"
+            run_dir.mkdir(parents=True)
+            (run_dir / "run.json").write_text(
+                json.dumps(
+                    {
+                        "launched_at": "2026-09-01T235328Z",
+                        "sessions": 1,
+                        "stop_reason": "stopped by you",
+                        "competition_id": self.PREV_COMPETITION,
+                        "seat_release_confirmed": False,
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            code, _, calls = self._run(
+                root,
+                prev_peeks=[(200, self.PREV_SEATED), (200, self.PREV_EMPTY)],
+                leave_answer=(200, {"left": True}),
+                argv=("--reconcile-abandoned-seat", "--standard"),
+            )
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            first_leave = self._index(calls, "/texas/leave")
+            first_join = self._index(calls, "/texas/join")
+            self.assertIsNotNone(first_join)
+            self.assertLess(first_leave, first_join, "release precedes any join")
+            run = self._read_previous(run_dir)
+            self.assertEqual(run["stop_reason"], "stopped by you")
+            self.assertIs(run["seat_release_confirmed"], True)
+            self.assertIn("released", run["reconciled_by"])
+            # Both signatures cleared: no start repeats this leave.
+            self.assertIsNone(live_session.previous_unclean_run(root))
+
+    def test_an_unverifiable_post_leave_peek_refuses_to_join(self) -> None:
+        """The leave was sent but the release could not be read back.
+
+        ``is_seated_snapshot(None)`` is False, so an unread answer used to
+        fall through to a join *and* stamp the dead run -- which stopped every
+        later start from re-attempting the release. Both peeks must mean the
+        same thing by an unverifiable answer: refuse, and stay unstamped.
+        """
+
+        for label, second_peek in (
+            ("http-500", (500, {"error": "bad gateway"})),
+            ("unusable-200", (200, {"tables": {"t1": {}}})),
+        ):
+            with (
+                self.subTest(second_peek=label),
+                tempfile.TemporaryDirectory() as raw,
+            ):
+                root = Path(raw)
+                run_dir = self._previous_run(
+                    root, competition=self.PREV_COMPETITION
+                )
+                code, out, calls = self._run(
+                    root,
+                    prev_peeks=[(200, self.PREV_SEATED), second_peek],
+                    leave_answer=(200, {"left": True}),
+                    argv=("--reconcile-abandoned-seat", "--standard"),
+                )
+
+                self.assertEqual(code, live_session.EXIT_RECONCILIATION_FAILED)
+                self.assertIsNone(self._index(calls, "/texas/join"), "never joins")
+                self.assertIn("SUPERVISOR REFUSED TO JOIN", out)
+                self.assertIn("python -m tools.leave", out)
+                # The leave WAS sent; only its effect is unverified.
+                self.assertIsNotNone(self._index(calls, "/texas/leave"))
+                run = self._read_previous(run_dir)
+                self.assertIsNone(
+                    run["stop_reason"],
+                    "an unverified release must stay unstamped so the next "
+                    "start re-attempts it",
+                )
+                self.assertNotIn("reconciled_by", run)
+
+    def test_previous_unclean_run_finds_only_unclean_runs_and_the_newest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            stamped = root / "2026-09-01T120000Z"
+            stamped.mkdir()
+            (stamped / "run.json").write_text(
+                json.dumps({"stop_reason": "stopped by you"}), encoding="utf-8"
+            )
+            older = root / "2026-09-01T235328Z"
+            older.mkdir()
+            (older / "run.json").write_text(
+                json.dumps({"stop_reason": None}), encoding="utf-8"
+            )
+            newer = root / "2026-09-02T023838Z"
+            newer.mkdir()
+            (newer / "run.json").write_text(
+                json.dumps({"stop_reason": None}), encoding="utf-8"
+            )
+            (root / "unrelated").mkdir()
+
+            found = live_session.previous_unclean_run(root)
+
+            self.assertEqual(found, newer)
+
+    def test_competition_of_unclean_run_reads_run_json_then_manifests(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            run_dir = root / "run"
+            run_dir.mkdir()
+            (run_dir / "run.json").write_text(
+                json.dumps({"stop_reason": None, "competition_id": "from-run"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                live_session.competition_of_unclean_run(run_dir), "from-run"
+            )
+
+            (run_dir / "run.json").write_text(
+                json.dumps({"stop_reason": None}), encoding="utf-8"
+            )
+            (run_dir / "session-002.json").write_text(
+                json.dumps({"competition_id": "from-manifest"}), encoding="utf-8"
+            )
+            (run_dir / "session-001.json").write_text(
+                json.dumps({"competition_id": "older"}), encoding="utf-8"
+            )
+            self.assertEqual(
+                live_session.competition_of_unclean_run(run_dir), "from-manifest"
+            )
+
+            (run_dir / "session-002.json").unlink()
+            (run_dir / "session-001.json").write_text(
+                json.dumps({"competition_id": "older"}), encoding="utf-8"
+            )
+            self.assertEqual(
+                live_session.competition_of_unclean_run(run_dir), "older"
+            )
+            (run_dir / "session-001.json").write_text("{broken", encoding="utf-8")
+            self.assertIsNone(live_session.competition_of_unclean_run(run_dir))
+
+    def test_is_seated_snapshot_mirrors_the_runners_seat_check(self) -> None:
+        self.assertFalse(live_session.is_seated_snapshot(None))
+        self.assertFalse(live_session.is_seated_snapshot({}))
+        self.assertFalse(live_session.is_seated_snapshot({"runner": {"x": 1}}))
+        self.assertTrue(
+            live_session.is_seated_snapshot({"lobby": {"position": 1}})
+        )
+        self.assertTrue(live_session.is_seated_snapshot({"tables": [{}]}))
+        self.assertTrue(
+            live_session.is_seated_snapshot({"activeTables": [{"tableId": "t"}]})
+        )
+
+
+class SeatReleaseReportingTests(unittest.TestCase):
+    """LIMITS 6: an unconfirmed release is never reported as a released seat.
+
+    The shutdown leave used to print ``left <comp> cleanly`` for every answer,
+    HTTP 503 included, while ``finish`` had already written a clean
+    ``stop_reason``. That is the same fail-open shape the post-leave peek had
+    and it has the same consequence: a held seat looks like a clean stop, so
+    the next start's reconciliation never re-examines it.
+    """
+
+    def _leave(self, answer):
+        out = io.StringIO()
+        with (
+            patch.object(
+                live_session.run_agent, "request_arena", return_value=answer
+            ),
+            contextlib.redirect_stdout(out),
+        ):
+            confirmed = live_session.leave_quietly("k", "prev-comp")
+        return confirmed, out.getvalue()
+
+    def _supervisor_with_leave(self, root: Path, leave_answer, on_leave=None):
+        def fake_request(_key, method, path, body=None):
+            if path.endswith("/texas/leave"):
+                if on_leave is not None:
+                    on_leave()
+                return leave_answer
+            if "list-active" in path:
+                return 200, [PLAYGROUND]
+            if "pending-actions" in path:
+                return 200, {
+                    "participant": {"chipState": "available", "totalChips": 966}
+                }
+            return 200, {}
+
+        out = io.StringIO()
+        with (
+            patch.object(live_session, "ARCHIVE_ROOT", root),
+            patch.object(
+                live_session.run_agent, "load_credentials", return_value=("k", "a")
+            ),
+            patch.object(
+                live_session.run_agent, "request_arena", side_effect=fake_request
+            ),
+            patch.object(live_session.time, "sleep"),
+            patch.object(
+                live_session.run_agent, "main", side_effect=KeyboardInterrupt()
+            ),
+            contextlib.redirect_stdout(out),
+        ):
+            code = live_session.main(["--standard"])
+        run_dirs = [child for child in root.iterdir() if child.is_dir()]
+        self.assertEqual(len(run_dirs), 1)
+        run = json.loads((run_dirs[0] / "run.json").read_text(encoding="utf-8"))
+        return code, out.getvalue(), run_dirs[0], run
+
+    def test_a_confirmed_leave_reports_cleanly(self) -> None:
+        confirmed, out = self._leave((200, {"left": True}))
+
+        self.assertTrue(confirmed)
+        self.assertIn("left prev-comp cleanly", out)
+
+    def test_an_unconfirmed_leave_is_never_reported_as_clean(self) -> None:
+        confirmed, out = self._leave((503, {"error": "unavailable"}))
+
+        self.assertFalse(confirmed)
+        self.assertNotIn("cleanly", out)
+        self.assertIn("python -m tools.leave prev-comp", out)
+
+    def test_a_malformed_leave_body_is_not_a_confirmed_release(self) -> None:
+        confirmed, out = self._leave(
+            (200, live_session.run_agent.MalformedResponse("<html>"))
+        )
+
+        self.assertFalse(confirmed)
+        self.assertNotIn("cleanly", out)
+
+    def test_a_raising_transport_never_escapes_the_shutdown_path(self) -> None:
+        out = io.StringIO()
+        with (
+            patch.object(
+                live_session.run_agent,
+                "request_arena",
+                side_effect=RuntimeError("socket gone"),
+            ),
+            contextlib.redirect_stdout(out),
+        ):
+            self.assertFalse(live_session.leave_quietly("k", "prev-comp"))
+
+        self.assertIn("could not confirm leave", out.getvalue())
+
+    def test_a_clean_stop_with_an_unconfirmed_leave_is_reconciled_next_start(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+
+            code, out, run_dir, run = self._supervisor_with_leave(
+                root, (503, {"error": "unavailable"})
+            )
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            self.assertEqual(run["stop_reason"], "stopped by you")
+            self.assertIs(run["seat_release_confirmed"], False)
+            self.assertIn("python -m tools.leave", out)
+            # The stop looked clean; the seat was not verifiably free, so the
+            # next start must still re-examine this run.
+            self.assertEqual(live_session.previous_unclean_run(root), run_dir)
+
+    def test_the_unreleased_marker_is_written_before_the_leave_request(self) -> None:
+        """Same order defect 22 forced on the stop reason: disk, then network.
+
+        A kill inside the leave -- a second Ctrl+C, the console handler's
+        grace window expiring -- must leave "unreleased" on disk for the next
+        start to reconcile, never a clean-looking record over a held seat.
+        """
+
+        seen: dict[str, object] = {}
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+
+            def observe() -> None:
+                run_files = list(root.glob("*/run.json"))
+                seen["release_at_leave"] = (
+                    json.loads(run_files[0].read_text(encoding="utf-8")).get(
+                        "seat_release_confirmed"
+                    )
+                    if run_files
+                    else "no-run.json"
+                )
+
+            code, _, _, run = self._supervisor_with_leave(
+                root, (200, {"left": True}), on_leave=observe
+            )
+
+        self.assertEqual(code, live_session.EXIT_OK)
+        self.assertIs(seen["release_at_leave"], False)
+        # ...and flipped to True only once Arena confirmed it.
+        self.assertIs(run["seat_release_confirmed"], True)
+
+    def test_a_confirmed_release_leaves_the_run_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+
+            code, _, _, run = self._supervisor_with_leave(root, (200, {"left": True}))
+
+            self.assertEqual(code, live_session.EXIT_OK)
+            self.assertIs(run["seat_release_confirmed"], True)
+            self.assertIsNone(live_session.previous_unclean_run(root))
+
+    def test_a_run_predating_the_release_field_is_still_clean(self) -> None:
+        # Backward compatibility: an absent field is not a failed release.
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            old = root / "2026-09-01T235328Z"
+            old.mkdir()
+            (old / "run.json").write_text(
+                json.dumps({"stop_reason": "stopped by you"}), encoding="utf-8"
+            )
+
+            self.assertIsNone(live_session.previous_unclean_run(root))
 
 
 if __name__ == "__main__":

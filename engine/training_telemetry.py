@@ -1,4 +1,17 @@
-"""Append-only decision and settled-hand telemetry for offline learning."""
+"""Append-only decision and settled-hand telemetry for offline learning.
+
+Writer side: one JSONL journal per process, two event types (``decision``,
+``hand_result``) joined on the Arena table ID; append is the only write mode,
+a malformed snapshot entry never loses the decision, and settlement records
+now carry whatever showdown information the replay receipt carries (schema 4).
+
+Reader side: skip-and-count, never refuse. A malformed line is counted,
+warned and skipped -- one bad line must never block a deployment -- and a
+duplicate hand result keeps the FIRST reward and counts the duplicate, so
+the production journal (104 duplicates in 2,458 rows) stays readable. The
+counts ride on :class:`TrainingLoadSummary`; the legacy tuple-returning
+``load_training_examples`` remains for the offline trainer.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +22,7 @@ import os
 import sys
 import time
 import uuid
+import warnings
 from array import array
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -18,6 +32,7 @@ from urllib.parse import quote
 
 from engine.decision_engine import DecisionResult
 from engine.game_state import (
+    ArenaSnapshotError,
     active_opponent_count,
     _cards,
     _hero_and_seats,
@@ -33,17 +48,22 @@ from engine.learning_contract import (
 from engine.schema4 import INPUT_SIZE_V9, SCHEMA_VERSION_V9
 from engine.policy_features import FEATURE_NAMES, LABELS
 
-TELEMETRY_SCHEMA_VERSION = 3
+TELEMETRY_SCHEMA_VERSION = 4
 # Versions this process can still READ. Bumping the writer must never orphan a
 # journal: the live archive is the only record of how the deployed policy has
 # actually played, and a reader that accepts one exact version turns a schema
 # bump into silent data loss. Schema 2 adds `state.recent_actions`; schema 3
 # adds `rule_verdicts` — the engine/rules attributions that FIRED on the
 # decision (engine/rules/README.md, Phase 5), null on every decision while
-# the dials ship off. Every field the older schemas carried is still
-# written, so old records stay loadable and consumers must treat the new
-# fields as optional.
-READABLE_TELEMETRY_SCHEMA_VERSIONS = frozenset({1, 2, 3})
+# the dials ship off; schema 4 adds the raise-to total `to_amount` on
+# `state.recent_actions` entries (aggressive events state their price in the
+# Arena's `toAmount`, not `amount` — defect 23) and the showdown block on
+# `hand_result` rows (`board_cards`, `hero_hole_cards`,
+# `revealed_opponent_holes`, null when the replay receipt carried none —
+# defect 20). Every field the older schemas carried is still written, so
+# old records stay loadable and consumers must treat the new fields as
+# optional.
+READABLE_TELEMETRY_SCHEMA_VERSIONS = frozenset({1, 2, 3, 4})
 CORPUS_SCHEMA_VERSION = 1
 MAX_REPLAY_RECEIPTS = 50
 
@@ -52,12 +72,30 @@ class TelemetryError(ValueError):
     """Raised when telemetry or replay data violates its local contract."""
 
 
+class TelemetryWarning(UserWarning):
+    """Non-fatal journal degradation: a line was skipped, counted, and kept.
+
+    Skip-and-count is the reader's contract: a malformed line or a duplicate
+    settlement must never block a deployment and must never be silently
+    dropped. Consumers that need the exact counts read them from
+    :class:`TelemetryLog.malformed_lines` /
+    :class:`TrainingLoadSummary` instead of scraping stderr.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class ReplayReceipt:
     hand_id: str
     table_id: str
     settled_at_ms: int
     chip_delta: int
+    # Additive (journal schema 4): the showdown information the replay
+    # receipt carried, when it carried any. Defaulted to None so the
+    # legacy 4-field construction and every existing consumer keep
+    # working; a receipt without them settles exactly as before.
+    board_cards: tuple[str, ...] | None = None
+    hero_hole_cards: tuple[str, ...] | None = None
+    revealed_opponent_holes: tuple[tuple[int, tuple[str, str]], ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +186,66 @@ def replay_path(agent_id: str, competition_id: str) -> str:
     return f"/api/arena/agent/{agent}/replays?competitionId={competition}&limit=50"
 
 
+def _optional_cards(
+    value: object, name: str, *, expected: int | None = None
+) -> tuple[str, ...] | None:
+    """Validated card tuple, or None when the field is absent or malformed.
+
+    The receipt's four identity fields are the contract; the showdown block
+    is optional enrichment. A present-but-malformed card list is skipped
+    (None) instead of failing the receipt -- losing the enrichment must
+    never lose the settlement.
+    """
+
+    if value is None:
+        return None
+    try:
+        return _cards(value, name, expected=expected)
+    except ArenaSnapshotError:
+        return None
+
+
+def _revealed_opponent_holes(
+    value: Mapping[str, Any], index: int
+) -> tuple[tuple[int, tuple[str, str]], ...] | None:
+    """Per-seat revealed hole cards from a receipt's seats block, or None.
+
+    The receipt is agent-scoped, so any seat-level cards beyond hero's own
+    seat are revealed opponents'. Hero's seat is excluded by
+    ``selfSeatNumber``; without it the seats block is not trusted at all --
+    a receipt that cannot say which seat is hero cannot say which cards are
+    opponents', and misattributing hero's cards as an opponent's would
+    poison every downstream label.
+    """
+
+    self_seat = value.get("selfSeatNumber")
+    if isinstance(self_seat, bool) or not isinstance(self_seat, int):
+        return None
+    seats = value.get("seats")
+    if not isinstance(seats, list):
+        return None
+    revealed: list[tuple[int, tuple[str, str]]] = []
+    for seat_index, seat in enumerate(seats):
+        if not isinstance(seat, Mapping):
+            continue
+        seat_number = seat.get("seatNumber")
+        if (
+            isinstance(seat_number, bool)
+            or not isinstance(seat_number, int)
+            or seat_number == self_seat
+        ):
+            continue
+        cards = _optional_cards(
+            seat.get("holeCards"),
+            f"replay[{index}].seats[{seat_index}].holeCards",
+            expected=2,
+        )
+        if cards is None:
+            continue
+        revealed.append((seat_number, cards))
+    return tuple(revealed) if revealed else None
+
+
 def parse_replay_receipts(document: object) -> tuple[ReplayReceipt, ...]:
     """Validate and chronologically sort Arena's bounded replay receipts."""
 
@@ -183,7 +281,23 @@ def parse_replay_receipts(document: object) -> tuple[ReplayReceipt, ...]:
             raise TelemetryError("replay response contains duplicate identities")
         hand_ids.add(hand_id)
         table_ids.add(table_id)
-        receipts.append(ReplayReceipt(hand_id, table_id, settled_at, chip_delta))
+        receipts.append(
+            ReplayReceipt(
+                hand_id,
+                table_id,
+                settled_at,
+                chip_delta,
+                _optional_cards(
+                    value.get("boardCards"), f"replay[{index}].boardCards"
+                ),
+                _optional_cards(
+                    value.get("holeCards"),
+                    f"replay[{index}].holeCards",
+                    expected=2,
+                ),
+                _revealed_opponent_holes(value, index),
+            )
+        )
     return tuple(sorted(receipts, key=lambda item: (item.settled_at_ms, item.hand_id)))
 
 
@@ -198,6 +312,14 @@ def _recent_actions(table: Mapping[str, Any]) -> list[dict[str, object]]:
     entry here is skipped instead of failing the record -- losing one event
     from the log must never lose the decision. Bounded so a hostile or
     bloated snapshot cannot balloon the journal.
+
+    ``amount`` (schema 2) and ``to_amount`` (schema 4) are copied verbatim
+    when the event carries them as integers. Aggressive events state their
+    price in the Arena's raise-to ``toAmount`` with ``amount`` null, so
+    ``to_amount`` is what makes a stored aggressive action sized; calls
+    state theirs in ``amount``. Both ride alongside so a consumer can apply
+    the family-preferred read (``feature_extract_v8._wager_amount``)
+    offline exactly as the live path does.
     """
 
     events = table.get("recentEvents") or []
@@ -222,6 +344,9 @@ def _recent_actions(table: Mapping[str, Any]) -> list[dict[str, object]]:
         amount = summary.get("amount")
         if isinstance(amount, int) and not isinstance(amount, bool):
             entry["amount"] = amount
+        to_amount = summary.get("toAmount")
+        if isinstance(to_amount, int) and not isinstance(to_amount, bool):
+            entry["to_amount"] = to_amount
         trimmed.append(entry)
     return trimmed
 
@@ -444,15 +569,28 @@ def make_decision_record(
 
 
 class TelemetryLog:
-    """Single-writer JSONL journal joined to settlements by Arena table ID."""
+    """Single-writer JSONL journal joined to settlements by Arena table ID.
+
+    Construction indexes the journal but never refuses it: a malformed
+    line is warned, counted on :attr:`malformed_lines` and skipped, so a
+    torn append cannot block a deployment at startup (defect J). The
+    journal is never rewritten -- the skipped line stays on disk.
+    """
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path).expanduser().resolve()
         self._tables: dict[str, tuple[str, int]] = {}
         self._settled: set[str] = set()
+        self._malformed_lines = 0
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.touch(exist_ok=True)
         self._load_index()
+
+    @property
+    def malformed_lines(self) -> int:
+        """Malformed journal lines skipped while indexing (counted, never fatal)."""
+
+        return self._malformed_lines
 
     def _load_index(self) -> None:
         with self.path.open(encoding="utf-8") as handle:
@@ -461,10 +599,15 @@ class TelemetryLog:
                     continue
                 try:
                     record = json.loads(line)
-                except json.JSONDecodeError as exc:
-                    raise TelemetryError(
-                        f"invalid telemetry JSON on line {line_number}"
-                    ) from exc
+                except json.JSONDecodeError:
+                    self._malformed_lines += 1
+                    warnings.warn(
+                        f"telemetry journal line {line_number} is not valid "
+                        "JSON; skipped (counted, never fatal)",
+                        TelemetryWarning,
+                        stacklevel=2,
+                    )
+                    continue
                 if (
                     record.get("telemetry_schema_version")
                     not in READABLE_TELEMETRY_SCHEMA_VERSIONS
@@ -535,23 +678,62 @@ class TelemetryLog:
                     "chip_delta_chips": receipt.chip_delta,
                     "big_blind_chips": big_blind,
                     "reward_bb": round(receipt.chip_delta / big_blind, 6),
+                    # Schema 4: the showdown information the replay receipt
+                    # carried, null when it carried none (defect 20).
+                    # Additive -- schema-3 and earlier hand_result rows lack
+                    # these keys and every reader must treat them as
+                    # optional. `revealed_opponent_holes` is a list of
+                    # [seat_number, [card, card]] pairs, hero's own seat
+                    # excluded by parse_replay_receipts.
+                    "board_cards": (
+                        list(receipt.board_cards) if receipt.board_cards else None
+                    ),
+                    "hero_hole_cards": (
+                        list(receipt.hero_hole_cards)
+                        if receipt.hero_hole_cards
+                        else None
+                    ),
+                    "revealed_opponent_holes": (
+                        [
+                            [seat_number, list(cards)]
+                            for seat_number, cards in receipt.revealed_opponent_holes
+                        ]
+                        if receipt.revealed_opponent_holes is not None
+                        else None
+                    ),
                 }
             )
             added += 1
         return added
 
 
-def _records(path: str | Path):
+def _records(path: str | Path) -> tuple[list[tuple[int, Mapping[str, Any]]], int]:
+    """Read one journal in a single pass; skip-and-count malformed lines.
+
+    Returns every readable record as ``(line_number, record)`` and the
+    malformed-line count. A line that is not valid JSON is warned, counted
+    and skipped -- never fatal, and the file is never rewritten; an
+    unreadable schema version still raises loudly, because that is a
+    compatibility decision, not journal damage.
+    """
+
+    records: list[tuple[int, Mapping[str, Any]]] = []
+    malformed_lines = 0
     with Path(path).expanduser().resolve().open(encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, 1):
             if not line.strip():
                 continue
             try:
                 record = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise TelemetryError(
-                    f"invalid telemetry JSON on line {line_number}"
-                ) from exc
+            except json.JSONDecodeError:
+                malformed_lines += 1
+                warnings.warn(
+                    f"telemetry journal line {line_number} is not valid "
+                    "JSON; skipped (counted, never fatal)",
+                    TelemetryWarning,
+                    stacklevel=2,
+                )
+                continue
             if (
                 not isinstance(record, Mapping)
                 or record.get("telemetry_schema_version")
@@ -560,14 +742,39 @@ def _records(path: str | Path):
                 raise TelemetryError(
                     f"unsupported telemetry schema on line {line_number}"
                 )
-            yield line_number, record
+            records.append((line_number, record))
+    return records, malformed_lines
 
 
-def load_training_examples(path: str | Path) -> tuple[TrainingExample, ...]:
-    """Join eligible decisions to terminal rewards from one telemetry journal."""
+@dataclass(frozen=True, slots=True)
+class TrainingLoadSummary:
+    """One journal read: the examples plus what the reader skipped and why.
 
+    ``examples`` is exactly what :func:`load_training_examples` returns.
+    The counters are the reader's skip-and-count posture -- a malformed
+    line (defect J) or a duplicate settlement (defect 25) must never block
+    a deployment and must never be silently dropped.
+    """
+
+    examples: tuple[TrainingExample, ...]
+    malformed_lines: int
+    duplicate_hand_results: int
+
+
+def load_training_examples_with_summary(
+    path: str | Path,
+) -> TrainingLoadSummary:
+    """Join eligible decisions to terminal rewards, with skip counts.
+
+    A malformed line is warned, counted and skipped; a duplicate
+    ``hand_result`` for one table is warned, counted, and the FIRST reward
+    is kept (the production journal carries 104 duplicates in 2,458 rows).
+    """
+
+    records, malformed_lines = _records(path)
     rewards: dict[str, tuple[str, float]] = {}
-    for line_number, record in _records(path):
+    duplicate_hand_results = 0
+    for line_number, record in records:
         if record.get("event") != "hand_result":
             continue
         table_id = _identifier(record.get("table_id"), f"line {line_number} table_id")
@@ -581,11 +788,19 @@ def load_training_examples(path: str | Path) -> tuple[TrainingExample, ...]:
         if not math.isfinite(reward):
             raise TelemetryError(f"line {line_number} reward_bb must be finite")
         if table_id in rewards:
-            raise TelemetryError(f"duplicate hand result for table {table_id}")
+            duplicate_hand_results += 1
+            warnings.warn(
+                f"telemetry journal line {line_number}: duplicate hand result "
+                f"for table {table_id}; keeping the first and counting the "
+                "duplicate",
+                TelemetryWarning,
+                stacklevel=2,
+            )
+            continue
         rewards[table_id] = (competition_id, reward)
 
     examples: list[TrainingExample] = []
-    for line_number, record in _records(path):
+    for line_number, record in records:
         if (
             record.get("event") != "decision"
             or record.get("training_eligible") is not True
@@ -641,7 +856,27 @@ def load_training_examples(path: str | Path) -> tuple[TrainingExample, ...]:
         if not isinstance(state, Mapping):
             raise TelemetryError(f"line {line_number} state must be an object")
         purse_chips = state.get("hero_purse_chips")
-        big_blind = record.get("big_blind_chips")
+        if purse_chips is None:
+            # Schema-1 rows predate `hero_purse_chips` (added with schema 2)
+            # and recorded only the stack plus this street's contribution;
+            # the chips committed on earlier streets are not recoverable,
+            # so the reconstruction understates the true purse by that
+            # amount -- bounded, known, and far better than refusing 11 of
+            # the journal's 3,665 eligible rows (defect 25: the loader must
+            # read the production journal).
+            stack = state.get("hero_stack_chips")
+            contribution = state.get("hero_contribution_chips")
+            if (
+                isinstance(stack, bool)
+                or isinstance(contribution, bool)
+                or not isinstance(stack, (int, float))
+                or not isinstance(contribution, (int, float))
+            ):
+                raise TelemetryError(
+                    f"line {line_number} hero purse must be reconstructable "
+                    "from hero_stack_chips and hero_contribution_chips"
+                )
+            purse_chips = stack + contribution
         if (
             isinstance(purse_chips, bool)
             or not isinstance(purse_chips, (int, float))
@@ -649,6 +884,7 @@ def load_training_examples(path: str | Path) -> tuple[TrainingExample, ...]:
             or float(purse_chips) <= 0.0
         ):
             raise TelemetryError(f"line {line_number} hero purse must be positive")
+        big_blind = record.get("big_blind_chips")
         if (
             isinstance(big_blind, bool)
             or not isinstance(big_blind, (int, float))
@@ -673,7 +909,20 @@ def load_training_examples(path: str | Path) -> tuple[TrainingExample, ...]:
                 ),
             )
         )
-    return tuple(examples)
+    return TrainingLoadSummary(
+        tuple(examples), malformed_lines, duplicate_hand_results
+    )
+
+
+def load_training_examples(path: str | Path) -> tuple[TrainingExample, ...]:
+    """Join eligible decisions to terminal rewards from one telemetry journal.
+
+    Legacy thin wrapper over :func:`load_training_examples_with_summary`;
+    the skip counts are dropped here, so a consumer that must see them
+    (any load of the production journal) reads the summary instead.
+    """
+
+    return load_training_examples_with_summary(path).examples
 
 
 def _finite_number(value: object, name: str) -> float:
@@ -886,6 +1135,7 @@ __all__ = [
     "CORPUS_SCHEMA_VERSION",
     "load_training_corpus",
     "load_training_examples",
+    "load_training_examples_with_summary",
     "make_decision_record",
     "MAX_REPLAY_RECEIPTS",
     "parse_replay_receipts",
@@ -895,5 +1145,7 @@ __all__ = [
     "TELEMETRY_SCHEMA_VERSION",
     "TelemetryError",
     "TelemetryLog",
+    "TelemetryWarning",
     "TrainingExample",
+    "TrainingLoadSummary",
 ]

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+import warnings
 from array import array
 from dataclasses import replace
 from pathlib import Path
@@ -17,13 +18,17 @@ from engine.training_telemetry import (
     action_response_matches,
     load_training_corpus,
     load_training_examples,
+    load_training_examples_with_summary,
     make_decision_record,
     parse_replay_receipts,
     ReplayReceipt,
     save_training_corpus,
+    TELEMETRY_SCHEMA_VERSION,
     TelemetryError,
     TelemetryLog,
+    TelemetryWarning,
     TrainingExample,
+    TrainingLoadSummary,
 )
 
 
@@ -251,16 +256,27 @@ class TrainingTelemetryTests(unittest.TestCase):
 
         Without them no live hand can be attributed: "ran into the top of
         their range" and "was outplayed" read identically, which is where
-        the 2026-08-15 drawdown forensics had to stop.
+        the 2026-08-15 drawdown forensics had to stop. Schema 4 additionally
+        persists `to_amount` from the Arena's raise-to `toAmount` -- the
+        price aggressive events actually carry (their `amount` is null),
+        which was defect 23: every stored aggressive action was sizeless.
         """
 
         table = _table()
         table["recentEvents"] = [
             {
                 "street": "Preflop",
-                "summary": {"seatNumber": 2, "action": "raise", "amount": 300},
+                "summary": {
+                    "seatNumber": 2,
+                    "action": "raise",
+                    "amount": None,
+                    "toAmount": 300,
+                },
             },
-            {"street": "Preflop", "summary": {"seatNumber": 1, "action": "call"}},
+            {
+                "street": "Preflop",
+                "summary": {"seatNumber": 1, "action": "call", "amount": 100},
+            },
             {
                 "street": "flop",
                 "summary": {"seatNumber": 2, "action": "check", "amount": None},
@@ -269,7 +285,12 @@ class TrainingTelemetryTests(unittest.TestCase):
             {"street": "flop", "summary": None},
             {
                 "street": "flop",
-                "summary": {"seatNumber": None, "action": "bet", "amount": 150},
+                "summary": {
+                    "seatNumber": None,
+                    "action": "bet",
+                    "amount": 150,
+                    "toAmount": 150,
+                },
             },
         ]
         decision = _decision()
@@ -285,7 +306,7 @@ class TrainingTelemetryTests(unittest.TestCase):
             identity_verified=True,
             recorded_at_ms=1,
         )
-        self.assertEqual(record["telemetry_schema_version"], 3)
+        self.assertEqual(record["telemetry_schema_version"], 4)
         self.assertEqual(
             record["state"]["recent_actions"],
             [
@@ -293,11 +314,17 @@ class TrainingTelemetryTests(unittest.TestCase):
                     "street": "preflop",
                     "seat_number": 2,
                     "action": "raise",
-                    "amount": 300,
+                    "to_amount": 300,
                 },
-                {"street": "preflop", "seat_number": 1, "action": "call"},
+                {"street": "preflop", "seat_number": 1, "action": "call", "amount": 100},
                 {"street": "flop", "seat_number": 2, "action": "check"},
-                {"street": "flop", "seat_number": None, "action": "bet", "amount": 150},
+                {
+                    "street": "flop",
+                    "seat_number": None,
+                    "action": "bet",
+                    "amount": 150,
+                    "to_amount": 150,
+                },
             ],
         )
 
@@ -383,13 +410,13 @@ class TrainingTelemetryTests(unittest.TestCase):
         self.assertEqual(examples[0].submitted_risk_fraction, 0.3)
 
         # An actually unknown version must still be rejected loudly.
-        # (3 became a readable version with the rule_verdicts field, so the
-        # unknown-version case moves to 4.)
+        # (4 became a readable version with the to_amount / showdown fields,
+        # so the unknown-version case moves to 5.)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "training.jsonl"
             with path.open("w", encoding="utf-8") as handle:
                 handle.write(
-                    json.dumps(dict(legacy, telemetry_schema_version=4)) + "\n"
+                    json.dumps(dict(legacy, telemetry_schema_version=5)) + "\n"
                 )
             with self.assertRaises(TelemetryError):
                 load_training_examples(path)
@@ -481,6 +508,183 @@ class TrainingTelemetryTests(unittest.TestCase):
         )
 
 
+class JournalReaderResilienceTests(unittest.TestCase):
+    """Skip-and-count reading: defects J and 25.
+
+    One malformed line must not block startup or loading (defect J), one
+    duplicate settlement must not refuse the production journal (defect 25:
+    104 duplicates in 2,458 rows). Skips are counted, warned and the
+    journal is never rewritten.
+    """
+
+    @staticmethod
+    def _decision_record() -> dict:
+        decision = _decision()
+        return make_decision_record(
+            competition_id="comp-1",
+            policy_version="heuristic-test-v1",
+            table=_table(),
+            payload=decision.to_payload(),
+            decision=decision,
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+            recorded_at_ms=1,
+        )
+
+    @staticmethod
+    def _hand_result(table_id="table-1", reward=1.0, schema=None) -> dict:
+        return {
+            "telemetry_schema_version": (
+                schema if schema is not None else TELEMETRY_SCHEMA_VERSION
+            ),
+            "event": "hand_result",
+            "competition_id": "comp-1",
+            "table_id": table_id,
+            "reward_bb": reward,
+        }
+
+    @staticmethod
+    def _warning_texts(caught) -> list[str]:
+        return [
+            str(item.message)
+            for item in caught
+            if issubclass(item.category, TelemetryWarning)
+        ]
+
+    def test_a_malformed_line_is_skipped_counted_and_warned(self) -> None:
+        record = self._decision_record()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(record) + "\n")
+                handle.write("{this is not valid json\n")
+                handle.write(json.dumps(self._hand_result()) + "\n")
+            original = path.read_bytes()
+
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                telemetry = TelemetryLog(path)
+            self.assertEqual(telemetry.malformed_lines, 1)
+            self.assertTrue(any("line 2" in text for text in self._warning_texts(caught)))
+
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                summary = load_training_examples_with_summary(path)
+            self.assertIsInstance(summary, TrainingLoadSummary)
+            self.assertEqual(summary.malformed_lines, 1)
+            self.assertEqual(summary.duplicate_hand_results, 0)
+            self.assertEqual(len(summary.examples), 1)
+            self.assertTrue(any("line 2" in text for text in self._warning_texts(caught)))
+            # The legacy wrapper still returns the bare tuple.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self.assertEqual(len(load_training_examples(path)), 1)
+            # The reader never rewrites the journal.
+            self.assertEqual(path.read_bytes(), original)
+
+    def test_a_duplicate_hand_result_keeps_the_first_and_counts(self) -> None:
+        record = self._decision_record()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(record) + "\n")
+                handle.write(json.dumps(self._hand_result(reward=1.25)) + "\n")
+                handle.write(json.dumps(self._hand_result(reward=-9.0)) + "\n")
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                summary = load_training_examples_with_summary(path)
+        self.assertEqual(summary.duplicate_hand_results, 1)
+        self.assertEqual(summary.malformed_lines, 0)
+        self.assertEqual(len(summary.examples), 1)
+        self.assertEqual(summary.examples[0].reward_bb, 1.25)
+        self.assertTrue(
+            any(
+                "duplicate hand result" in text
+                for text in self._warning_texts(caught)
+            )
+        )
+
+    def test_a_duplicate_hand_result_does_not_block_the_index(self) -> None:
+        record = self._decision_record()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(record) + "\n")
+                handle.write(json.dumps(self._hand_result(reward=1.0)) + "\n")
+                handle.write(json.dumps(self._hand_result(reward=2.0)) + "\n")
+            telemetry = TelemetryLog(path)
+        self.assertEqual(telemetry.malformed_lines, 0)
+
+    def test_a_mixed_schema_three_and_four_journal_loads(self) -> None:
+        """Schema-4 rows ride alongside schema-3 rows; the reader takes both."""
+
+        legacy = dict(self._decision_record(), telemetry_schema_version=3)
+        legacy["state"] = {
+            key: value
+            for key, value in legacy["state"].items()
+            if key != "recent_actions"
+        }
+        legacy["table_id"] = "table-old"
+        current = dict(self._decision_record())
+        current["table_id"] = "table-new"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(legacy) + "\n")
+                handle.write(
+                    json.dumps(self._hand_result("table-old", 0.5, schema=3)) + "\n"
+                )
+                handle.write(json.dumps(current) + "\n")
+                handle.write(json.dumps(self._hand_result("table-new", -0.25)) + "\n")
+            summary = load_training_examples_with_summary(path)
+        self.assertEqual(len(summary.examples), 2)
+        self.assertEqual(summary.malformed_lines, 0)
+        self.assertEqual(summary.duplicate_hand_results, 0)
+        self.assertEqual(
+            {example.table_id: example.reward_bb for example in summary.examples},
+            {"table-old": 0.5, "table-new": -0.25},
+        )
+
+    def test_a_schema_one_row_without_the_purse_key_loads(self) -> None:
+        """Schema-1 rows predate `hero_purse_chips`; the reader reconstructs
+        the writer's own purse formula (stack + chips committed) instead of
+        refusing them -- 11 such rows exist in the production journal."""
+
+        legacy = dict(self._decision_record(), telemetry_schema_version=1)
+        state = legacy["state"]
+        del state["hero_purse_chips"]
+        del state["recent_actions"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(legacy) + "\n")
+                handle.write(json.dumps(self._hand_result(schema=1)) + "\n")
+            summary = load_training_examples_with_summary(path)
+        self.assertEqual(len(summary.examples), 1)
+        expected_purse = state["hero_stack_chips"] + state["hero_contribution_chips"]
+        self.assertEqual(summary.examples[0].purse_bb, expected_purse / 100.0)
+
+    def test_a_row_without_any_purse_fields_is_still_rejected(self) -> None:
+        """Reconstruction needs recorded chips; their absence is a contract
+        violation and must stay loud instead of inventing a purse."""
+
+        legacy = dict(self._decision_record(), telemetry_schema_version=1)
+        state = legacy["state"]
+        del state["hero_purse_chips"]
+        del state["hero_stack_chips"]
+        del state["hero_contribution_chips"]
+        del state["recent_actions"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            with path.open("w", encoding="utf-8") as handle:
+                handle.write(json.dumps(legacy) + "\n")
+                handle.write(json.dumps(self._hand_result(schema=1)) + "\n")
+            with self.assertRaises(TelemetryError):
+                load_training_examples_with_summary(path)
+
+
 class Schema4RecordTests(unittest.TestCase):
     """The additive schema-4 columns, and their contract.
 
@@ -545,6 +749,162 @@ class Schema4RecordTests(unittest.TestCase):
         decision = replace(_decision(), learning_features_v9=tuple(vector))
         with self.assertRaises(TelemetryError):
             self._record(decision)
+
+
+class Schema4WriterTests(unittest.TestCase):
+    """The additive journal schema-4 writer fields (defects 23 and 20).
+
+    Aggressive `recent_actions` entries carry the Arena's raise-to total in
+    `to_amount` (their `amount` is null, so schema-3 rows are sizeless), and
+    `hand_result` rows carry whatever showdown information the replay
+    receipt carried, null when it carried none. Nothing on the decision
+    path changes.
+    """
+
+    @staticmethod
+    def _record(decision) -> dict:
+        return make_decision_record(
+            competition_id="comp-1",
+            policy_version="heuristic-test-v1",
+            table=_table(),
+            payload=decision.to_payload(),
+            decision=decision,
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+            recorded_at_ms=1,
+        )
+
+    def test_aggressive_events_persist_the_raise_to_total(self) -> None:
+        table = _table()
+        table["recentEvents"] = [
+            {
+                "street": "Preflop",
+                "summary": {
+                    "seatNumber": 2,
+                    "action": "raise",
+                    "amount": None,
+                    "toAmount": 300,
+                },
+            },
+            {
+                "street": "Preflop",
+                "summary": {
+                    "seatNumber": 2,
+                    "action": "raise",
+                    "amount": "junk",
+                    "toAmount": "junk",
+                },
+            },
+        ]
+        record = make_decision_record(
+            competition_id="comp-1",
+            policy_version="heuristic-test-v1",
+            table=table,
+            payload=_decision().to_payload(),
+            decision=_decision(),
+            deadline_budget_s=5.0,
+            fallback_reason=None,
+            action_status=200,
+            identity_verified=True,
+            recorded_at_ms=1,
+        )
+        self.assertEqual(record["telemetry_schema_version"], 4)
+        first, second = record["state"]["recent_actions"]
+        self.assertNotIn("amount", first)
+        self.assertEqual(first["to_amount"], 300)
+        self.assertNotIn("amount", second)
+        self.assertNotIn("to_amount", second)
+
+    def test_hand_result_rows_carry_the_receipts_showdown_data(self) -> None:
+        record = self._record(_decision())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            telemetry = TelemetryLog(path)
+            telemetry.append(record)
+            receipt = ReplayReceipt(
+                "hand-1",
+                "table-1",
+                2,
+                -50,
+                board_cards=("2c", "7d", "9h", "3s", "Kd"),
+                hero_hole_cards=("Ah", "Ad"),
+                revealed_opponent_holes=((2, ("Qc", "Jh")),),
+            )
+            self.assertEqual(telemetry.append_settlements("comp-1", (receipt,)), 1)
+            lines = [json.loads(line) for line in path.read_text().splitlines()]
+        result = lines[1]
+        self.assertEqual(result["event"], "hand_result")
+        self.assertEqual(result["telemetry_schema_version"], 4)
+        self.assertEqual(result["board_cards"], ["2c", "7d", "9h", "3s", "Kd"])
+        self.assertEqual(result["hero_hole_cards"], ["Ah", "Ad"])
+        self.assertEqual(result["revealed_opponent_holes"], [[2, ["Qc", "Jh"]]])
+
+    def test_a_bare_receipt_writes_the_null_showdown_vocabulary(self) -> None:
+        record = self._record(_decision())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "training.jsonl"
+            telemetry = TelemetryLog(path)
+            telemetry.append(record)
+            receipt = ReplayReceipt("hand-1", "table-1", 2, -50)
+            self.assertEqual(telemetry.append_settlements("comp-1", (receipt,)), 1)
+            lines = [json.loads(line) for line in path.read_text().splitlines()]
+        result = lines[1]
+        self.assertIsNone(result["board_cards"])
+        self.assertIsNone(result["hero_hole_cards"])
+        self.assertIsNone(result["revealed_opponent_holes"])
+
+    def test_parse_replay_receipts_carries_showdown_fields_defensively(self) -> None:
+        receipts = parse_replay_receipts(
+            [
+                {
+                    "handId": "hand-1",
+                    "tableId": "table-1",
+                    "settledAt": 10,
+                    "chipDelta": -5,
+                    "boardCards": ["2c", "7d", "9h"],
+                    "holeCards": ["Ah", "Ad"],
+                    "selfSeatNumber": 1,
+                    "seats": [
+                        {"seatNumber": 1, "holeCards": ["Ah", "Ad"]},
+                        {"seatNumber": 2, "holeCards": ["Qc", "Jh"]},
+                        {"seatNumber": 3, "holeCards": None},
+                        {"seatNumber": 4, "holeCards": ["not-a-card"]},
+                    ],
+                },
+                {
+                    "handId": "hand-2",
+                    "tableId": "table-2",
+                    "settledAt": 11,
+                    "chipDelta": 0,
+                    "boardCards": "garbage",
+                    "holeCards": ["As"],
+                    "seats": "garbage",
+                },
+            ]
+        )
+        first, second = receipts
+        self.assertEqual(first.board_cards, ("2c", "7d", "9h"))
+        self.assertEqual(first.hero_hole_cards, ("Ah", "Ad"))
+        self.assertEqual(first.revealed_opponent_holes, ((2, ("Qc", "Jh")),))
+        self.assertIsNone(second.board_cards)
+        self.assertIsNone(second.hero_hole_cards)
+        self.assertIsNone(second.revealed_opponent_holes)
+
+    def test_seats_without_a_self_seat_are_not_attributed(self) -> None:
+        receipts = parse_replay_receipts(
+            [
+                {
+                    "handId": "hand-1",
+                    "tableId": "table-1",
+                    "settledAt": 10,
+                    "chipDelta": 0,
+                    "seats": [{"seatNumber": 2, "holeCards": ["Qc", "Jh"]}],
+                }
+            ]
+        )
+        self.assertIsNone(receipts[0].revealed_opponent_holes)
 
 
 if __name__ == "__main__":

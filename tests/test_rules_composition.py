@@ -635,7 +635,7 @@ class VerdictTelemetryTests(unittest.TestCase):
             )
 
         record = record_for(decision)
-        self.assertEqual(record["telemetry_schema_version"], 3)
+        self.assertEqual(record["telemetry_schema_version"], 4)
         self.assertIsInstance(record["rule_verdicts"], list)
         self.assertEqual(record["rule_verdicts"], list(decision.rule_verdicts))
         off = self._engine("check_call").decide_with_diagnostics(table)

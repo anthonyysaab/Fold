@@ -201,6 +201,32 @@ class RunnerStopSafetyTests(unittest.TestCase):
         self.assertIn("python -m tools.leave comp", out)
         self.assertEqual(arena.count("/leave"), 2)
 
+    def test_an_unreadable_seat_never_upgrades_an_unconfirmed_leave(self) -> None:
+        """The release verdict comes from ``confirm_leave``, never from a peek.
+
+        The supervisor's reconciliation had the mirror-image defect: an
+        unreadable post-leave peek was treated as a free seat. Here the
+        settle-wait peeks are unusable from the leave onwards and the exit
+        must still be 6 with the recovery command -- fail-closed.
+        """
+
+        arena = ScriptedArena(
+            join=(200, {"participant": {"totalChips": 400}}),
+            pending=[
+                # The bust reading plus its confirmations, then nothing
+                # readable for the settle-wait loop or the final poll.
+                *([(200, self.BUSTED)] * (1 + run_agent.BUST_CONFIRMATION_POLLS)),
+                (200, MalformedResponse("<html>maintenance</html>")),
+            ],
+            leave=(503, {"error": "unavailable"}),
+        )
+
+        code, out = self._run_main(arena, ["comp", "--seconds", "60"])
+
+        self.assertEqual(code, 6)
+        self.assertIn("python -m tools.leave comp", out)
+        self.assertEqual(arena.count("/leave"), run_agent.LEAVE_ATTEMPTS)
+
     def test_confirmed_leave_keeps_exit_zero_without_retry(self) -> None:
         arena = ScriptedArena(
             join=(200, {"participant": {"totalChips": 400}}),
