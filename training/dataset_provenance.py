@@ -8,8 +8,8 @@ Why it exists. On 2026-09-03 the project retired the Arena replay
 archive and switched to PHH/Pluribus (``.handoff/DECISIONS.md`` section
 6). The Arena-built dataset ``phase-a-dataset-v9.jsonl.gz`` stayed on
 disk as the builder's hash oracle and a possible ablation arm -- and it
-was the *default* for ``engine.v9_trainer --dataset`` and
-``engine.v9_trainer_phase_b --phase-a-dataset``. Running either trainer
+was the *default* for ``training.v9_trainer --dataset`` and
+``training.v9_trainer_phase_b --phase-a-dataset``. Running either trainer
 with no dataset flag therefore trained on the retired corpus, silently
 and successfully: the file exists, it loads, and nothing complains. The
 quarantine was a directory move and a documentation note; neither is a

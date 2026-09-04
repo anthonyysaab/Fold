@@ -7,7 +7,9 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from engine.hand_strength import prewarm
 from engine.poker_policy import (
     AggressivePokerPolicy,
     PokerPolicy,
@@ -19,9 +21,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RuntimeLayoutTests(unittest.TestCase):
-    def test_both_live_policy_modes_load_the_real_weights(self) -> None:
-        self.assertIsInstance(build_policy(), PokerPolicy)
-        self.assertIsInstance(build_policy(aggressive=True), AggressivePokerPolicy)
+    def test_neither_live_policy_reads_a_file_to_construct(self) -> None:
+        """FAILS ON THE UNFIXED CODE (`.handoff/DECISIONS.md` section 3.5).
+
+        Before P2 both policies opened `artifacts/tiny-policy-pure.json` in
+        their constructor, so a missing or corrupt artifact killed
+        ``run_agent.py --standard``/``--aggressive`` at start-up, before a
+        single hand -- a live-money path failing on a file that chose no
+        actions. On the pre-P2 code this raises from ``PokerPolicy.__init__``.
+
+        ``prewarm()`` is hoisted out of the patched window deliberately:
+        `build_policy` calls it, and it only builds in-memory evaluator and
+        deck tables, but patching ``open`` around it would be testing the
+        warm-up rather than the policy.
+        """
+        prewarm()
+        with patch("builtins.open", side_effect=AssertionError("policy read a file")):
+            self.assertIsInstance(build_policy(), PokerPolicy)
+            self.assertIsInstance(
+                build_policy(aggressive=True), AggressivePokerPolicy
+            )
 
     def test_runner_help_needs_no_credentials(self) -> None:
         environment = os.environ.copy()

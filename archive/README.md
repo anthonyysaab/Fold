@@ -20,6 +20,14 @@
 | `docs-superseded-2026-09-02/` | yes | the previous version of every repo document rewritten in the 2026-09-02 manual pass: `README.md`, `CLAUDE.md`, `engine/README.md`, `engine/rules/README.md` (with the full three-sweep defect ledger), `tools/README.md` (long form), `tests/README.md`, `artifacts/README.md`, `deploy/README.md`, `archive/README.md`, `artifacts/candidates/README-v8-seeds.md`, `artifacts/phase_b/README.md` |
 | `data/` | **no** — gitignored; since 2026-09-03 a junction to `D:\fold-archive\data`, ~777 MB plus the row below | `corpora/` (the three v7 harvest corpora), `deadhead/` (the 2026-08-27 retrain set), `eval-bundle-2026-08-14/` (`build/` + `bundle.zip`, pre-rename package name), `antislop-audit-2026-08-12/`, `arena-training.jsonl.backup-2026-08-26` |
 | `data/foreign-play-data-2026-09-03/` | **no** — inside the junction above, 16.8 GiB / 318,574 files | the Arena replay archive (formerly `foreign play data/`), quarantined 2026-09-03 when v9 moved to the PHH dataset; `.handoff/DATA.md` cites it for the Phase-A oracle `ecb4739df9d1b9ec` only |
+| `nn-poker-training-2026-09-04/` | yes (`tiny-policy.pt` needs `git add -f`, see below) | the superseded tiny-policy trainer, formerly the nested `NN-Poker-training` git repository at `.\neural network training\` (single commit `0e78f97`, pushed to `github.com/anthonyysaab/NN-Poker-training`; the retired `.git` is not kept here). Fold imported none of it — only its `.venv`, which survives as `training/.venv` and is all that directory now holds. `artifacts/tiny-policy.pt` (sha256 `8a42f7a8…c0107275c2`) is the checkpoint that the retired `artifacts/tiny-policy-pure.json` was exported from; the export's `source_sha256` names this file, and after P2 deleted the export this row is the only live record of that chain. Its `data.py` feature vocabulary was ported to `engine/policy_features.py` long before the move and is still live there |
+
+`nn-poker-training-2026-09-04/` carries the dead repo's own `.gitignore`, moved
+in with it as part of the record. It is still an active ignore file here, and its
+line 7 (`/artifacts/*.pt`) hides the checkpoint — so `tiny-policy.pt` was staged
+with `git add -f`. Do not edit that `.gitignore` to "fix" this (§3 below): it is
+archived content, and its other rules usefully keep `__pycache__/` and
+`*.egg-info/` out. Anything else added under that folder needs the same force-add.
 
 Not archives: `artifacts/evaluations/` (dated measurement records, never
 edited) and `.handoff/archive/` (the handoff-side archive, same instruction).

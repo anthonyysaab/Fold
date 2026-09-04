@@ -14,12 +14,11 @@ from engine.learning_contract import (
     LEARNING_INPUT_SIZE,
     validate_artifact_manifest,
 )
-from engine.offline_trainer import (
+from training.offline_trainer import (
     TRAINING_OBJECTIVE,
     TrainingConfig,
     _action_value_target,
     _action_value_weight,
-    _forward,
     _hybrid_calibration,
     _init_behavior_head,
     _init_weights,
@@ -30,6 +29,7 @@ from engine.offline_trainer import (
     _step,
     train_candidate,
 )
+from engine.forward_kernel import _forward
 from engine.training_telemetry import TrainingExample
 
 

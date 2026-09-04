@@ -30,7 +30,7 @@ from engine.branch_contract_v9 import BRANCH_LABELS_V9
 from engine.learned_policy_v9 import compose_branch_values_v9
 from engine.p3_belief_provider import P3BeliefProvider
 from engine.table_simulator import _CounterfactualPoint
-from engine.v9_trainer_phase_b import (
+from training.v9_trainer_phase_b import (
     compose_from_constants_v9,
     load_phase_b_corpus_v9,
 )

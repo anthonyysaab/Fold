@@ -20,6 +20,7 @@ from __future__ import annotations
 import unittest
 
 from engine.decision_engine import ArenaSnapshotError, DecisionEngine
+from engine.poker_policy import AggressivePokerPolicy, PokerPolicy
 
 
 def _snapshot(**overrides) -> dict:
@@ -119,9 +120,16 @@ class HardenedCatchAllTests(unittest.TestCase):
         # equity_trials=0 gives no equity read, so `_family` is live and
         # its return reaches the dispatch verbatim — the old code
         # silently FOLDED this.
+        #
+        # The zero is set AFTER construction because P2 gave the constructor a
+        # floor of 1 (`decision_engine.__init__`); the floor deliberately does
+        # not guard mutation, and this is one of the two tests that rely on
+        # that — `tests/test_learned_policy_v9.py` does the same, for the same
+        # reason. Reaching `_family` on purpose is the point of the test.
         bogus = type(
             "Bogus", (DecisionEngine,), {"_family": lambda self, features: "bogus"}
-        )(equity_trials=0, hyper_aggression_chance=0.0)
+        )(equity_trials=1, hyper_aggression_chance=0.0)
+        bogus.equity_trials = 0
         with self.assertRaises(ArenaSnapshotError):
             bogus.decide(_snapshot())
 
@@ -129,6 +137,46 @@ class HardenedCatchAllTests(unittest.TestCase):
         engine = _engine()
         with self.assertRaises(ArenaSnapshotError):
             engine.decide_forced(_snapshot(), family="aggressive")
+
+
+class EquityTrialsFloorTests(unittest.TestCase):
+    """The construction floor P2 added, and the negative check it subsumed."""
+
+    def test_zero_equity_trials_is_refused_at_construction(self) -> None:
+        """FAILS ON THE UNFIXED CODE (`.handoff/DECISIONS.md` section 3.5).
+
+        This is P2's evidence clause. Before the floor, ``equity_trials=0``
+        constructed happily and then made `_equity` return None, which routes
+        the dispatch to `_family` instead of `_equity_family`. For the
+        heuristic policies that used to mean "the retired 125-input network
+        decides"; with the network gone it would mean ``NotImplementedError``
+        raised in the middle of a hand. Six tool CLIs accept
+        ``--equity-trials`` as a bare int with no floor of their own, so this
+        constructor is the only place that can close it.
+        """
+        for factory in (DecisionEngine, PokerPolicy, AggressivePokerPolicy):
+            with self.subTest(factory=factory.__name__):
+                with self.assertRaises(ValueError) as caught:
+                    factory(equity_trials=0)
+                self.assertIn("at least 1", str(caught.exception))
+
+    def test_negative_equity_trials_is_still_refused(self) -> None:
+        """REGRESSION PIN: passes on the unfixed code too.
+
+        The floor replaced a `< 0` check that had no test of its own. Keeping
+        a negative case makes the replacement provably a widening, not a swap.
+        """
+        for factory in (DecisionEngine, PokerPolicy, AggressivePokerPolicy):
+            with self.subTest(factory=factory.__name__):
+                with self.assertRaises(ValueError):
+                    factory(equity_trials=-1)
+
+    def test_one_trial_still_constructs(self) -> None:
+        """The floor is a floor, not an off-by-one.
+
+        `live_session.py` constructs the identity probe at exactly 1.
+        """
+        self.assertEqual(DecisionEngine(equity_trials=1).equity_trials, 1)
 
 
 class DemotionLadderTests(unittest.TestCase):

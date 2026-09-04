@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 
 from engine import schema4
-from engine.supervised_loss_normalization_v9 import (
+from training.supervised_loss_normalization_v9 import (
     BASELINE_FLOOR,
     SUPERVISED_HEADS_V9,
     SupervisedLossConfigV9,
@@ -28,7 +28,7 @@ from engine.supervised_loss_normalization_v9 import (
     constant_predictor_baselines,
     supervised_head_scales,
 )
-from engine.v9_trainer import PhaseARowV9
+from training.v9_trainer import PhaseARowV9
 
 try:
     import torch
@@ -265,8 +265,8 @@ class PhaseBObjectiveTorchTests(unittest.TestCase):
         from test_v9_trainer import _synthetic_documents, _write_dataset
         from test_v9_trainer_phase_b import _synthetic_corpus, _write_corpus
 
-        from engine.v9_trainer import load_phase_a_dataset_v9
-        from engine.v9_trainer_phase_b import load_phase_b_corpus_v9
+        from training.v9_trainer import load_phase_a_dataset_v9
+        from training.v9_trainer_phase_b import load_phase_b_corpus_v9
 
         corpus_path = directory / "tiny.phase-b-v9.jsonl.gz"
         _write_corpus(corpus_path, _synthetic_corpus())
@@ -282,7 +282,7 @@ class PhaseBObjectiveTorchTests(unittest.TestCase):
     def test_raw_mode_is_the_shipped_objective_bit_for_bit(self) -> None:
         from test_v9_trainer_phase_b import _TINY_CONFIG
 
-        from engine.v9_trainer_phase_b import fit_phase_b_v9
+        from training.v9_trainer_phase_b import fit_phase_b_v9
 
         with tempfile.TemporaryDirectory() as raw:
             corpus, rows, _, _ = self._fixtures(Path(raw))
@@ -313,7 +313,7 @@ class PhaseBObjectiveTorchTests(unittest.TestCase):
     def test_constant_predictor_total_is_the_weighted_normalized_sum(self) -> None:
         from test_v9_trainer_phase_b import _TINY_CONFIG
 
-        from engine.v9_trainer_phase_b import fit_phase_b_v9
+        from training.v9_trainer_phase_b import fit_phase_b_v9
 
         with tempfile.TemporaryDirectory() as raw:
             corpus, rows, _, _ = self._fixtures(Path(raw))
@@ -348,10 +348,10 @@ class PhaseBObjectiveTorchTests(unittest.TestCase):
     def test_manifest_stamps_the_normalization(self) -> None:
         from test_v9_trainer_phase_b import _TINY_CONFIG
 
-        from engine.v8_trainer import V8TrainingConfig
-        from engine.v8_trainer_phase_b import PhaseBTrainingConfig
-        from engine.v9_trainer import validate_v9_manifest
-        from engine.v9_trainer_phase_b import train_phase_b_candidate_v9
+        from training.v8_trainer import V8TrainingConfig
+        from training.v8_trainer_phase_b import PhaseBTrainingConfig
+        from training.v9_trainer import validate_v9_manifest
+        from training.v9_trainer_phase_b import train_phase_b_candidate_v9
 
         with tempfile.TemporaryDirectory() as raw:
             directory = Path(raw)

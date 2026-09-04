@@ -7,7 +7,6 @@ import unittest
 
 from engine.game_state import features_from_table
 from engine.poker_policy import AggressivePokerPolicy
-from engine.policy_features import FEATURE_NAMES
 from engine.table_simulator import (
     _FAMILY_BRANCHES,
     RecordingPolicy,
@@ -17,19 +16,6 @@ from engine.table_simulator import (
     TexturedAgent,
     board_coordination,
 )
-
-
-def _weights_favoring_fold() -> dict:
-    return {
-        "input_size": len(FEATURE_NAMES),
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": ["fold", "check_call", "aggress"],
-        "w1": [[0.0] * len(FEATURE_NAMES)],
-        "b1": [0.0],
-        "w2": [[0.0], [0.0], [0.0]],
-        "b2": [5.0, 0.0, 0.0],
-    }
 
 
 class _FoldBot:
@@ -185,7 +171,7 @@ class TableSimulatorTests(unittest.TestCase):
 
     def test_live_policy_neutralizes_the_perma_shover(self) -> None:
         policy = AggressivePokerPolicy(
-            weights=_weights_favoring_fold(), equity_trials=60
+            equity_trials=60
         )
         simulator = TableSimulator(seed=21)
         result = simulator.play_match(
@@ -223,7 +209,7 @@ class TableSimulatorTests(unittest.TestCase):
 
     def test_self_play_examples_carry_settled_rewards(self) -> None:
         policy = AggressivePokerPolicy(
-            weights=_weights_favoring_fold(), equity_trials=40
+            equity_trials=40
         )
         simulator = TableSimulator(seed=8, collect_examples=True)
         result = simulator.play_match(
@@ -244,7 +230,7 @@ class TableSimulatorTests(unittest.TestCase):
         self,
     ) -> None:
         policy = AggressivePokerPolicy(
-            weights=_weights_favoring_fold(), equity_trials=20
+            equity_trials=20
         )
         simulator = TableSimulator(
             seed=8,
@@ -302,7 +288,7 @@ class TableSimulatorTests(unittest.TestCase):
                     "hero",
                     RecordingPolicy(
                         AggressivePokerPolicy(
-                            weights=_weights_favoring_fold(), equity_trials=20
+                            equity_trials=20
                         )
                     ),
                 ),
@@ -310,7 +296,7 @@ class TableSimulatorTests(unittest.TestCase):
                     "sparring",
                     RecordingPolicy(
                         SparringPolicy(
-                            weights=_weights_favoring_fold(), equity_trials=20
+                            equity_trials=20
                         ),
                         record_examples=False,
                     ),
@@ -532,7 +518,7 @@ class EquityCacheTest(unittest.TestCase):
 
     def test_cache_is_off_by_default(self) -> None:
         policy = AggressivePokerPolicy(
-            weights=_weights_favoring_fold(), equity_trials=10
+            equity_trials=10
         )
         self.assertIsNone(policy.equity_cache)
 
@@ -546,7 +532,7 @@ class EquityCacheTest(unittest.TestCase):
         cache = SharedEquityCache()
         self.assertIs(copy.deepcopy(cache), cache)
         policy = AggressivePokerPolicy(
-            weights=_weights_favoring_fold(), equity_trials=10, equity_cache=cache
+            equity_trials=10, equity_cache=cache
         )
         self.assertIs(copy.deepcopy(policy).equity_cache, cache)
 
@@ -666,7 +652,7 @@ class BranchSetTests(unittest.TestCase):
                         "hero",
                         RecordingPolicy(
                             AggressivePokerPolicy(
-                                weights=_weights_favoring_fold(), equity_trials=20
+                                equity_trials=20
                             )
                         ),
                     ),
@@ -690,7 +676,7 @@ class BranchSetTests(unittest.TestCase):
                     "hero",
                     RecordingPolicy(
                         AggressivePokerPolicy(
-                            weights=_weights_favoring_fold(), equity_trials=20
+                            equity_trials=20
                         )
                     ),
                 ),
@@ -869,7 +855,7 @@ class BranchSetTests(unittest.TestCase):
                     "hero",
                     RecordingPolicy(
                         AggressivePokerPolicy(
-                            weights=_weights_favoring_fold(), equity_trials=20
+                            equity_trials=20
                         )
                     ),
                 ),

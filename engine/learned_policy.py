@@ -46,7 +46,7 @@ from engine.learning_contract import (
     LearningContractError,
     validate_artifact_manifest,
 )
-from engine.offline_trainer import _forward, _forward_v2
+from engine.forward_kernel import _forward, _forward_v2
 from engine.opponent_model import AggressionTracker, TrackerSettings
 from engine.policy_features import LABELS
 

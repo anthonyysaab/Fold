@@ -1,12 +1,12 @@
 """Tests for the retired-corpus gate.
 
-The defect these pin (2026-09-04): ``engine.v9_trainer --dataset`` and
-``engine.v9_trainer_phase_b --phase-a-dataset`` both DEFAULTED to
+The defect these pin (2026-09-04): ``training.v9_trainer --dataset`` and
+``training.v9_trainer_phase_b --phase-a-dataset`` both DEFAULTED to
 ``artifacts/phase_a_v9/phase-a-dataset-v9.jsonl.gz`` -- the Arena-built
 corpus the 2026-09-03 PHH switch retired. A bare invocation therefore
 trained on quarantined data and said nothing, because the file exists
 and loads cleanly. The quarantine was a directory move and a note; the
-gate is ``engine.dataset_provenance``.
+gate is ``training.dataset_provenance``.
 
 Which of these fail on the unfixed code, and how that was established
 (``.handoff/DECISIONS.md`` section 3.5):
@@ -27,9 +27,11 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 from pathlib import Path
 
-from engine.dataset_provenance import (
+from training.dataset_provenance import (
     LIVE_SOURCES,
     RetiredDatasetError,
     describe,
@@ -161,13 +163,13 @@ class TrainerDatasetArgumentTests(unittest.TestCase):
     """
 
     def test_phase_a_trainer_requires_an_explicit_dataset(self) -> None:
-        from engine import v9_trainer
+        from training import v9_trainer
 
         with self.assertRaises(SystemExit):
             v9_trainer.main(["--model-version", "unused"])
 
     def test_phase_b_trainer_requires_an_explicit_dataset(self) -> None:
-        from engine import v9_trainer_phase_b
+        from training import v9_trainer_phase_b
 
         with self.assertRaises(SystemExit):
             v9_trainer_phase_b.main(
@@ -177,12 +179,103 @@ class TrainerDatasetArgumentTests(unittest.TestCase):
     def test_no_module_still_exports_the_retired_default(self) -> None:
         """The retired path must not survive as an importable constant."""
 
-        from engine import v9_trainer_phase_b
+        from training import v9_trainer_phase_b
 
         self.assertFalse(
             hasattr(v9_trainer_phase_b, "DEFAULT_PHASE_A_DATASET_V9"),
             "the retired dataset default is still importable",
         )
+
+
+class PhaseBTrainerCliTests(unittest.TestCase):
+    """The Phase-B trainer's CLI must carry the flag its main() reads.
+
+    FAILS ON THE UNFIXED CODE (verified 2026-09-04): ``main`` called
+    ``args.allow_retired_dataset`` while its parser never defined
+    ``--allow-retired-dataset``, so EVERY invocation raised
+    ``AttributeError`` immediately after loading the Phase-B corpus — the
+    trainer could not run at all. The existing pins all stop at argparse
+    (they assert ``SystemExit`` on a missing required argument), so none of
+    them reached the line, and the 2026-09-03 integration passed a green
+    suite with the trainer unusable. These tests get PAST the corpus load
+    by stubbing it, which is the only way to reach the guard.
+    """
+
+    @staticmethod
+    def _stub_corpus():
+        return SimpleNamespace(decisions=(), equity_trials=1000)
+
+    def _argv(self, dataset: Path, extra: list[str]) -> list[str]:
+        return [
+            "--phase-b-corpus", "unused-the-loader-is-stubbed",
+            "--phase-a-dataset", str(dataset),
+            "--model-version", "candidate-test",
+            *extra,
+        ]
+
+    def test_main_reaches_the_provenance_guard(self) -> None:
+        """Not AttributeError: the guard itself must be what refuses."""
+
+        from training import v9_trainer_phase_b
+
+        with tempfile.TemporaryDirectory() as raw:
+            dataset = _write_dataset(Path(raw), "arena", _ARENA_GENERATOR)
+            with mock.patch.object(
+                v9_trainer_phase_b,
+                "load_phase_b_corpus_v9",
+                return_value=self._stub_corpus(),
+            ):
+                with self.assertRaises(RetiredDatasetError):
+                    v9_trainer_phase_b.main(self._argv(dataset, []))
+
+    def test_the_flag_reaches_require_live_dataset(self) -> None:
+        """The escape hatch is wired through, not merely declared."""
+
+        from training import v9_trainer_phase_b
+
+        with tempfile.TemporaryDirectory() as raw:
+            dataset = _write_dataset(Path(raw), "arena", _ARENA_GENERATOR)
+            with mock.patch.object(
+                v9_trainer_phase_b,
+                "load_phase_b_corpus_v9",
+                return_value=self._stub_corpus(),
+            ), mock.patch.object(
+                v9_trainer_phase_b, "require_live_dataset"
+            ) as guard:
+                guard.side_effect = RuntimeError("stop after the guard")
+                with self.assertRaises(RuntimeError):
+                    v9_trainer_phase_b.main(
+                        self._argv(dataset, ["--allow-retired-dataset"])
+                    )
+            self.assertTrue(guard.call_args.kwargs["allow_retired"])
+
+
+    def test_the_phase_a_trainer_carries_the_same_flag(self) -> None:
+        """The two trainers' escape hatches must not drift apart again.
+
+        The Phase-A trainer has the identical construct — ``main`` reads
+        ``args.allow_retired_dataset`` — and it happens to be correct today
+        only because that file also defines the option. Nothing pinned it,
+        which is how the Phase-B half shipped broken.
+        """
+
+        from training import v9_trainer
+
+        with tempfile.TemporaryDirectory() as raw:
+            dataset = _write_dataset(Path(raw), "arena", _ARENA_GENERATOR)
+            with mock.patch.object(
+                v9_trainer, "require_live_dataset"
+            ) as guard:
+                guard.side_effect = RuntimeError("stop after the guard")
+                with self.assertRaises(RuntimeError):
+                    v9_trainer.main(
+                        [
+                            "--dataset", str(dataset),
+                            "--model-version", "candidate-test",
+                            "--allow-retired-dataset",
+                        ]
+                    )
+            self.assertTrue(guard.call_args.kwargs["allow_retired"])
 
 
 class RealDatasetTests(unittest.TestCase):

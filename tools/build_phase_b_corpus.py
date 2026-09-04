@@ -151,7 +151,7 @@ from engine.table_simulator import (
     TableSimulator,
     TexturedAgent,
 )
-from engine.v8_trainer import BRANCH_LABELS_V8
+from engine.architecture_v8 import BRANCH_LABELS_V8
 
 CORPUS_KIND = "phase-b-corpus"
 CORPUS_SCHEMA_VERSION = 1

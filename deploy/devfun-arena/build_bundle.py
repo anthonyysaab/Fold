@@ -3,11 +3,12 @@
 The dev.fun sandbox runs an uploaded ``bundle.zip`` in a restricted container.
 Two constraints shape this build:
 
-* the sandbox blocks filesystem reads, so the strategy builds an inert
-  contract-matching zero proposal network programmatically instead of loading
-  ``artifacts/tiny-policy-pure.json`` (the network is never consulted anyway:
-  no ``table_sizes`` are declared, so the deterministic v5 equity rules drive
-  every decision);
+* the sandbox blocks filesystem reads, which no longer constrains the
+  strategy: P2 retired the proposal network on 2026-09-04, so the policy holds
+  no model, reads nothing, and the deterministic v5 equity rules drive every
+  decision. Until then this build worked around the block by constructing an
+  inert contract-matching zero network in place of
+  ``artifacts/tiny-policy-pure.json``;
 * ``harness/`` must stay under 256 KB uncompressed, so training-only modules
   are dropped and only the live decision closure ships.
 

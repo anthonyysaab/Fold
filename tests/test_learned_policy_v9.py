@@ -38,7 +38,7 @@ from engine.rules.composition import (
     DEFAULT_RULE_LAYER,
     composed_sizing_record,
 )
-from engine.v8_trainer import default_v9_architecture
+from training.v8_trainer import default_v9_architecture
 
 # Synthetic head outputs with hand-chosen values. Slot orders are the
 # contract's: fold_through (active, aggressive); equity_called (passive,

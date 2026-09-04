@@ -10,6 +10,7 @@ from pathlib import Path
 
 from engine.branch_contract_v9 import MODEL_FORMAT_VERSION_V9
 from engine.policy_features import FEATURE_NAMES, LABELS
+from engine.architecture_v8 import validate_v9_architecture
 
 # Schema 2 (2026-08-12) adds the session opponent model and table standing
 # to the inputs: three cycles proved diet balancing alone cannot teach
@@ -314,13 +315,17 @@ def _validate_v9_manifest_schema(
     check accepting both shapes is how an artifact of one schema reaches
     live play under the other's meanings unnoticed.
 
-    ``validate_v9_architecture`` lives in :mod:`engine.v8_trainer`, which
-    imports this module, so that import is deferred to call time.
+    ``validate_v9_architecture`` lives in :mod:`engine.architecture_v8`,
+    which imports nothing from here, so this is a plain module-level
+    dependency. It was a deferred call-time import until 2026-09-04, when
+    the validator still lived in `v8_trainer` and that module imported
+    ``MODEL_FORMAT`` back from here -- a real cycle. `schema4` and
+    `branch_contract_v9` stay deferred only to keep this module importable
+    from the trimmed deploy bundles.
     """
 
     from engine import schema4
     from engine.branch_contract_v9 import BRANCH_LABELS_V9
-    from engine.v8_trainer import validate_v9_architecture
 
     if manifest.get("feature_schema_version") != schema4.SCHEMA_VERSION_V9:
         raise LearningContractError("unsupported feature schema version")

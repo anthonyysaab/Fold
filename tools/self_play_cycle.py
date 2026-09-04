@@ -34,7 +34,7 @@ from pathlib import Path
 from engine.decision_engine import SharedEquityCache
 from engine.foreign_data import load_foreign_training_examples
 from engine.learned_policy import load_policy
-from engine.offline_trainer import (
+from training.offline_trainer import (
     print_branch_summary,
     TRAINING_OBJECTIVE,
     TrainingConfig,

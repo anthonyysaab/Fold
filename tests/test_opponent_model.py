@@ -10,20 +10,6 @@ from engine.opponent_model import (
     TrackerSettings,
 )
 from engine.poker_policy import AggressivePokerPolicy
-from engine.policy_features import FEATURE_NAMES
-
-
-def _weights_favoring_fold() -> dict:
-    return {
-        "input_size": len(FEATURE_NAMES),
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": ["fold", "check_call", "aggress"],
-        "w1": [[0.0] * len(FEATURE_NAMES)],
-        "b1": [0.0],
-        "w2": [[0.0], [0.0], [0.0]],
-        "b2": [5.0, 0.0, 0.0],
-    }
 
 
 def _shove_table(*, table_id: str, hole_cards: list[str], agent_id: str | None) -> dict:
@@ -333,7 +319,6 @@ class PermaShoveRemedyTests(unittest.TestCase):
 
     def test_repeated_shoves_widen_the_range_until_the_bot_calls(self) -> None:
         policy = AggressivePokerPolicy(
-            weights=_weights_favoring_fold(),
             equity_trials=1,
             opponent_tracker=AggressionTracker(TrackerSettings(decay=1.0)),
             hyper_aggression_chance=0.0,

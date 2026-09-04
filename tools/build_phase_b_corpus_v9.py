@@ -83,7 +83,7 @@ enforce):
   belief buckets were computed from — the same provider serves the hero
   and the extractor), ``equity_trials``, and the frozen-instrument
   fields. After writing, the corpus is reloaded through the REAL
-  trainer loader (``engine.v9_trainer_phase_b.load_phase_b_corpus_v9``),
+  trainer loader (``training.v9_trainer_phase_b.load_phase_b_corpus_v9``),
   so a corpus this tool blesses is one the trainer provably accepts,
   frozen-g re-derivation and all.
 
@@ -146,7 +146,7 @@ from engine.rules.composition import (
     composed_sizing_record,
 )
 from engine.rules.ruin_damper import table_exposure
-from engine.v9_trainer_phase_b import load_phase_b_corpus_v9
+from training.v9_trainer_phase_b import load_phase_b_corpus_v9
 from tools.build_phase_b_corpus import (
     DEFAULT_ACCEPT_THRESHOLD,
     DEFAULT_RESAMPLE_TRIES,

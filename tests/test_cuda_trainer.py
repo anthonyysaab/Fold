@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from engine.learning_contract import LEARNING_INPUT_SIZE
-from engine.offline_trainer import TrainingConfig, train_candidate
+from training.offline_trainer import TrainingConfig, train_candidate
 from engine.training_telemetry import TrainingExample
 
 try:

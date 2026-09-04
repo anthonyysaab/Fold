@@ -32,12 +32,12 @@ from engine.aggression_sizing import context_int_to_temperature
 from engine.learned_policy_v8 import RESIDUAL_CAP_POT_FRACTION
 from engine.learned_policy_v9 import compose_branch_values_v9
 from engine.rules.composition import composed_sizing_record
-from engine.v8_trainer import V8TrainingConfig
-from engine.v8_trainer_phase_b import (
+from training.v8_trainer import V8TrainingConfig
+from training.v8_trainer_phase_b import (
     RESIDUAL_CAP_POT_FRACTION_DEFAULT,
     PhaseBTrainingConfig,
 )
-from engine.v9_trainer_phase_b import (
+from training.v9_trainer_phase_b import (
     compose_from_constants_v9,
     fit_phase_b_v9,
     load_phase_b_corpus_v9,
@@ -518,7 +518,7 @@ class V9PhaseBTorchTests(unittest.TestCase):
     def _fixtures(self, directory: Path):
         from test_v9_trainer import _synthetic_documents, _write_dataset
 
-        from engine.v9_trainer import load_phase_a_dataset_v9
+        from training.v9_trainer import load_phase_a_dataset_v9
 
         corpus_path = directory / "tiny.phase-b-v9.jsonl.gz"
         _write_corpus(corpus_path, _synthetic_corpus())
@@ -529,7 +529,7 @@ class V9PhaseBTorchTests(unittest.TestCase):
         return corpus, rows, corpus_path, dataset_path
 
     def test_trains_exports_and_passes_parity(self) -> None:
-        from engine.v9_trainer import validate_v9_manifest
+        from training.v9_trainer import validate_v9_manifest
 
         with tempfile.TemporaryDirectory() as raw:
             directory = Path(raw)
@@ -587,6 +587,58 @@ class V9PhaseBTorchTests(unittest.TestCase):
         # decay group), while Phase A alone would have left it at zero.
         share = manifest["evaluation"]["residual_share"]
         self.assertGreater(share["wager_executions"], 0)
+        self._assert_residual_share_is_readable(share)
+
+    def _assert_residual_share_is_readable(self, share: dict) -> None:
+        """Gate (d) needs the saturation, not just the share.
+
+        FAILS ON THE UNFIXED CODE (verified 2026-09-04, ``PENDING_EDITS``
+        row 33): ``residual_share`` reported only the capped sum, the composed
+        sum and their ratio, so every key asserted below raised ``KeyError``.
+
+        Why the ratio alone is not evidence: when the residual head is clamped
+        at +/-cap on every wager execution, the numerator is exactly
+        ``cap x sum(pot_unit)`` -- a corpus constant. Measured on the real
+        arms, ``candidate-v9-0004b`` and ``-0004c`` both reported
+        ``sum_abs_capped_residual`` 25.056789 over the same 5,769 wager
+        executions (identical to six decimals, from two demonstrably different
+        networks) while their RAW residual magnitudes were 3,158.76 and
+        6,565.20 -- 126x and 262x the cap. The gate read "bounded" off a head
+        two orders of magnitude outside its bound.
+        """
+
+        executions = share["wager_executions"]
+        self.assertEqual(
+            share["saturated_wager_executions"] <= executions, True
+        )
+        self.assertAlmostEqual(
+            share["saturated_fraction"],
+            share["saturated_wager_executions"] / executions,
+            places=5,
+        )
+        # Clamping can only shrink a magnitude.
+        self.assertGreaterEqual(
+            share["sum_abs_raw_residual"], share["sum_abs_capped_residual"]
+        )
+        # Impossible by construction unless the head is clamped everywhere:
+        # at full saturation every masked |residual| IS the cap, so the two
+        # sums must coincide. This is the check that would have caught the
+        # degeneracy on 0002a/b/c and 0004b/c.
+        self.assertLessEqual(
+            share["sum_abs_capped_residual"],
+            share["sum_cap_over_wager_executions"] + 1e-6,
+        )
+        if share["saturated_fraction"] == 1.0:
+            self.assertAlmostEqual(
+                share["sum_abs_capped_residual"],
+                share["sum_cap_over_wager_executions"],
+                places=5,
+                msg=(
+                    "every wager execution is clamped, so the reported "
+                    "residual magnitude is cap x sum(pot_unit) and carries "
+                    "no model information -- gate (d) has no evidence here"
+                ),
+            )
 
     def test_same_seed_is_deterministic_on_cpu(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

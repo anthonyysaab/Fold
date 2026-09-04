@@ -19,16 +19,15 @@ from engine.learning_contract import (
     LearningContractError,
     validate_v7_architecture,
 )
-from engine.offline_trainer import (
+from training.offline_trainer import (
+    TrainingSummary,
     _baseline_floor_v7,
     _branch_metrics_v7,
-    _forward_v2,
-    _layer_norm,
     _margin_quantiles_v7,
     _round9,
     print_branch_summary,
-    TrainingSummary,
 )
+from engine.forward_kernel import _forward_v2, _layer_norm
 from engine.training_telemetry import TrainingExample
 
 

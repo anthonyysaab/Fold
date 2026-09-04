@@ -11,7 +11,7 @@ the long form is `archive/docs-superseded-2026-09-02/.../SESSION_AUDIT_AND_LINUX
 |---|---|
 | `live_session.service` | systemd unit template (placeholders: paths, user) |
 | `devfun-arena/strategy.py`, `devfun-arena/build_bundle.py` | the Eval-sandbox adapter and bundle builder (`bundle.zip`, 256 KB harness cap; the learned model does not fit) — dormant path, submit with `tools/submit.py`, poll with `tools/poll.py` |
-| `chipzen/` | Chipzen (chipzen.ai) upload bot: the heuristic-aggressive-v6 port (`bot.py` maps Chipzen `GameState` to the Arena-shaped table, inert network weights, so the deterministic equity rules drive every decision — same as `--aggressive`), full-cython Dockerfile, local probes, and the upload artifact `../0fold-heuristic-v1.tar.gz` (gitignored; 23 MB compressed, caps 250 MB/200 MB; caps verified 2026-09-02) |
+| `chipzen/` | Chipzen (chipzen.ai) upload bot: the heuristic-aggressive-v6 port (`bot.py` maps Chipzen `GameState` to the Arena-shaped table; the policy carries no network at all since P2, so the deterministic equity rules drive every decision — same as `--aggressive`), full-cython Dockerfile, local probes, and the upload artifact `../0fold-heuristic-v1.tar.gz` (gitignored; 23 MB compressed, caps 250 MB/200 MB; caps verified 2026-09-02) |
 
 ## Chipzen upload (chipzen.ai/get-started-upload)
 

@@ -299,7 +299,7 @@ class PluribusHandTests(unittest.TestCase):
                 "".join(json.dumps(row) + "\n" for row in rows),
                 encoding="utf-8",
             )
-            from engine.v9_trainer import load_phase_a_dataset_v9
+            from training.v9_trainer import load_phase_a_dataset_v9
 
             loaded = load_phase_a_dataset_v9(dataset)
         self.assertEqual(len(loaded), 12)

@@ -132,25 +132,26 @@ class HarvestEquivalenceTests(unittest.TestCase):
         self.assertEqual(_digest(parallel), _digest(sequential))
 
 
-class SharedWeightsTests(unittest.TestCase):
-    def test_network_weights_are_shared_not_copied(self) -> None:
+class PolicyDeepCopyTests(unittest.TestCase):
+    """What counterfactual replay must and must not share across a deep copy.
+
+    This class used to also pin ``FixedPolicyNetwork.__deepcopy__``, a
+    weight-sharing opt-out that existed because copying the retired 125-input
+    network's ~8,300 immutable floats per rollout dominated harvest time. P2
+    deleted the network on 2026-09-04, so there is nothing left to share and
+    the optimization is not "missing" -- do not reintroduce a ``__deepcopy__``
+    here hunting for it.
+
+    The tracker assertion below is unrelated to that and still load-bearing:
+    it pins ``DecisionEngine.__deepcopy__``, which must give each replay its
+    OWN opponent tracker or rollouts would contaminate each other's beliefs.
+    """
+
+    def test_each_deep_copy_gets_its_own_opponent_tracker(self) -> None:
         policy = build_policy(aggressive=True, equity_trials=4)
         clone = copy.deepcopy(policy)
 
-        # Counterfactual replay deep-copies seats, and each seat carries its
-        # agent; copying ~8,300 immutable weights per rollout dominated the
-        # harvest before the network opted out.
-        self.assertIs(clone.forward, policy.forward)
         self.assertIsNot(clone.opponent_tracker, policy.opponent_tracker)
-
-    def test_shared_weights_still_produce_identical_logits(self) -> None:
-        policy = build_policy(aggressive=True, equity_trials=4)
-        clone = copy.deepcopy(policy)
-        features = [0.1] * len(policy.forward.w1[0])
-
-        self.assertEqual(
-            clone.forward.logits(features), policy.forward.logits(features)
-        )
 
 
 if __name__ == "__main__":

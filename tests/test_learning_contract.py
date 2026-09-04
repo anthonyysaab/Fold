@@ -135,7 +135,7 @@ def _manifest_v9() -> dict:
 
     from engine import schema4
     from engine.branch_contract_v9 import BRANCH_LABELS_V9, MODEL_FORMAT_VERSION_V9
-    from engine.v8_trainer import default_v9_architecture
+    from training.v8_trainer import default_v9_architecture
 
     return {
         "format": MODEL_FORMAT,

@@ -23,13 +23,13 @@ from pathlib import Path
 from engine import schema4
 from engine.branch_contract_v9 import MODEL_FORMAT_VERSION_V9
 from engine.rules.composition import composed_sizing_record
-from engine.v8_trainer import (
+from training.v8_trainer import (
     CONTEXT_STD_FLOOR,
     V8TrainingConfig,
     default_v9_architecture,
     load_phase_a_dataset,
 )
-from engine.v9_trainer import (
+from training.v9_trainer import (
     context_normalization_v9,
     fit_phase_a_v9,
     load_phase_a_dataset_v9,

@@ -40,7 +40,8 @@ from engine.learned_policy_v8 import (
     load_policy_v8,
 )
 from engine.learning_contract import MODEL_FORMAT
-from engine.v8_trainer import (
+from training.v8_trainer import default_v8_architecture
+from engine.architecture_v8 import (
     BRANCH_LABELS_V8,
     CARD_ENCODER_WIDTH,
     CONTEXT_ENCODER_WIDTH,
@@ -48,22 +49,23 @@ from engine.v8_trainer import (
     MODEL_FORMAT_VERSION_V8,
     TRUNK_WIDTHS,
     V8_HEAD_SIZES,
-    default_v8_architecture,
 )
+from tools.interpreters import cuda_python
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _TRAINED_MANIFEST = (
     _REPO_ROOT / "artifacts" / "candidates" / "candidate-v8-0001.manifest.json"
 )
-#: The training interpreter moved on 2026-09-03 and now lives INSIDE the
-#: repo (owner decision, `.handoff/DECISIONS.md` section 6), so this is
-#: repo-relative rather than absolute. It was
-#: ``C:/Users/user/poker-nn-training/.venv/...`` until then, a path that no
-#: longer exists -- which meant the two tests guarded on it skipped even
-#: when run on the CUDA interpreter, silently and forever.
-_CUDA_VENV_PYTHON = (
-    _REPO_ROOT / "neural network training" / ".venv" / "Scripts" / "python.exe"
-)
+#: The training interpreter has moved twice: onto this tree on 2026-09-03, then
+#: into `training/` on 2026-09-04 when the nested repository was dissolved
+#: (owner decisions, `.handoff/DECISIONS.md` section 6). The first move was the
+#: one that hurt -- the guard below still named
+#: ``C:/Users/user/poker-nn-training/.venv/...``, so these two tests skipped
+#: even on the CUDA interpreter, silently and forever. The path now has exactly
+#: one definition, in `tools/interpreters.py`, so a third move is one edit.
+#: `cuda_python` (not `require_cuda_python`) is deliberate: a machine without
+#: torch should skip here, not fail the suite.
+_CUDA_VENV_PYTHON = cuda_python()
 
 _LN_EPS = 1e-5
 _IDENTITY_NORMALIZATION = {

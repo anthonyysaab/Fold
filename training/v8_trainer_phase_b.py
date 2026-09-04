@@ -60,7 +60,7 @@ venv. Artifacts are immutable candidates: state ``"candidate"``, promotion
 
 Usage (CUDA venv, repo root)::
 
-    python -m engine.v8_trainer_phase_b \
+    python -m training.v8_trainer_phase_b \
         --model-version candidate-v8-0002a --init-seeds 401
 """
 
@@ -88,29 +88,31 @@ from engine.decision_engine import (
 )
 from engine.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
 from engine.learning_contract import MODEL_FORMAT
-from engine.offline_trainer import (
+from training.offline_trainer import (
     _assert_finite_weights,
     _round9,
     validate_training_device,
 )
 from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
-from engine.v8_trainer import (
-    BRANCH_LABELS_V8,
-    EQUITY_SLOTS,
-    FOLD_THROUGH_BRANCHES,
-    MODEL_FORMAT_VERSION_V8,
+from training.v8_trainer import (
     PhaseARow,
     V8TrainingConfig,
-    V8_HEAD_SIZES,
     check_v8_config,
     context_normalization,
     default_v8_architecture,
     load_phase_a_dataset,
     split_rows,
     table_split_value,
-    validate_v8_architecture,
     validate_v8_manifest,
     validate_v8_weight_shapes,
+)
+from engine.architecture_v8 import (
+    BRANCH_LABELS_V8,
+    EQUITY_SLOTS,
+    FOLD_THROUGH_BRANCHES,
+    MODEL_FORMAT_VERSION_V8,
+    V8_HEAD_SIZES,
+    validate_v8_architecture,
 )
 
 TRAINING_OBJECTIVE_V8_PHASE_B = "phase_b_composed_value_v8"
@@ -531,7 +533,7 @@ def fit_phase_b(
 
     card_indices = list(schema3.CARD_INDICES)
     context_indices = list(schema3.CONTEXT_INDICES)
-    from engine.v8_trainer import (
+    from training.v8_trainer import (
         CARD_ENCODER_WIDTH,
         CONTEXT_ENCODER_WIDTH,
         HEAD_TOWER_WIDTH,

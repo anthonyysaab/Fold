@@ -17,14 +17,9 @@ import unittest
 from pathlib import Path
 
 from engine import schema3
-from engine.v8_trainer import (
-    CARD_ENCODER_WIDTH,
-    CONTEXT_ENCODER_WIDTH,
+from training.v8_trainer import (
     CONTEXT_STD_FLOOR,
-    MODEL_FAMILY_V8,
-    MODEL_FORMAT_VERSION_V8,
     V8TrainingConfig,
-    V8_HEAD_SIZES,
     check_v8_config,
     context_normalization,
     fit_phase_a,
@@ -33,6 +28,13 @@ from engine.v8_trainer import (
     table_split_value,
     train_phase_a_candidate,
     validate_v8_manifest,
+)
+from engine.architecture_v8 import (
+    CARD_ENCODER_WIDTH,
+    CONTEXT_ENCODER_WIDTH,
+    MODEL_FAMILY_V8,
+    MODEL_FORMAT_VERSION_V8,
+    V8_HEAD_SIZES,
 )
 
 try:

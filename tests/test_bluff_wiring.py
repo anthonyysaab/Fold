@@ -13,7 +13,6 @@ from engine.opponent_model import (
     TrackerSettings,
 )
 from engine.poker_policy import AggressivePokerPolicy
-from engine.policy_features import FEATURE_NAMES
 from engine.training_telemetry import make_decision_record
 
 ALWAYS = dataclasses.replace(
@@ -28,19 +27,6 @@ ALWAYS = dataclasses.replace(
 )
 
 NEVER = dataclasses.replace(DEFAULT_BLUFF_SETTINGS, bluff_density=0.0)
-
-
-def _weights_favoring_fold() -> dict:
-    return {
-        "input_size": len(FEATURE_NAMES),
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": ["fold", "check_call", "aggress"],
-        "w1": [[0.0] * len(FEATURE_NAMES)],
-        "b1": [0.0],
-        "w2": [[0.0], [0.0], [0.0]],
-        "b2": [5.0, 0.0, 0.0],
-    }
 
 
 def _table(
@@ -107,7 +93,6 @@ def _table(
 
 def _policy(bluff_settings=ALWAYS, tracker=None) -> AggressivePokerPolicy:
     return AggressivePokerPolicy(
-        weights=_weights_favoring_fold(),
         equity_trials=1,
         bluff_settings=bluff_settings,
         opponent_tracker=tracker,
