@@ -19,6 +19,7 @@ import gzip
 import json
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from engine import schema4
@@ -380,6 +381,122 @@ class BuildPathV9Tests(unittest.TestCase):
         self.assertIn("to_call_zero", first)
         self.assertIn("read_temperature_x10", first)
         self.assertNotIn("fold_through_small", first["masks"])
+
+
+class BuildPathV9EdgeTests(unittest.TestCase):
+    """The widened-archive mechanics: per-table dedupe and root skips."""
+
+    _write_roots = staticmethod(BuildPathV9Tests._write_roots)
+
+    def test_dedupe_tables(self) -> None:
+        """Dedupe drops exactly the duplicate table ids, nothing else.
+
+        A byte-copy of a table file contributes rows under the same
+        table id; with dedupe on those rows drop wholesale while every
+        other table's rows stay, and with dedupe off they are kept.
+        """
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            roots = self._write_roots(directory)
+            baseline_output = (
+                directory / "out" / "phase-a-dataset-v9.jsonl.gz"
+            )
+            build_dataset_v9(roots, baseline_output, seed=7, workers=1, **_FAST)
+            baseline_rows = load_phase_a_dataset_v9(baseline_output)
+            baseline_counts = Counter(row.table_id for row in baseline_rows)
+
+            # The duplicate collection: a byte-copy of the first file.
+            duplicate_root = directory / "mini-ft-dup-root"
+            tables = duplicate_root / "raw" / "tables"
+            tables.mkdir(parents=True)
+            (tables / "mini-ft-root.json").write_text(
+                (roots[0] / "raw" / "tables" / "mini-ft-root.json").read_text(
+                    encoding="utf-8"
+                ),
+                encoding="utf-8",
+            )
+
+            # How many rows the duplicate file alone contributes.
+            dup_only = directory / "dup-only" / "dup.jsonl.gz"
+            build_dataset_v9(
+                [duplicate_root], dup_only, seed=7, workers=1, **_FAST
+            )
+            dup_rows = len(load_phase_a_dataset_v9(dup_only))
+            self.assertGreater(dup_rows, 0)
+
+            roots.append(duplicate_root)
+            output = directory / "out-deduped" / "phase-a-dataset-v9.jsonl.gz"
+            sidecar_document = build_dataset_v9(
+                roots, output, seed=7, workers=1, **_FAST
+            )
+            rows = load_phase_a_dataset_v9(output)
+            self.assertEqual(len(rows), len(baseline_rows))
+            self.assertEqual(
+                Counter(row.table_id for row in rows), baseline_counts
+            )
+            self.assertEqual(
+                sidecar_document["counts"]["duplicate_table_rows_dropped"],
+                dup_rows,
+            )
+            self.assertEqual(
+                sidecar_document["counts"]["rows"], len(baseline_rows)
+            )
+
+            # Dedupe off keeps the duplicate table's rows too.
+            output_all = directory / "out-all" / "phase-a-dataset-v9.jsonl.gz"
+            sidecar_all = build_dataset_v9(
+                roots,
+                output_all,
+                seed=7,
+                workers=1,
+                dedupe_tables=False,
+                **_FAST,
+            )
+            rows_all = load_phase_a_dataset_v9(output_all)
+            all_counts = Counter(row.table_id for row in rows_all)
+            self.assertEqual(len(rows_all), len(baseline_rows) + dup_rows)
+            self.assertEqual(
+                all_counts["mini-ft-root-table"],
+                2 * baseline_counts["mini-ft-root-table"],
+            )
+            self.assertEqual(
+                all_counts["mini-sd-root-table"],
+                baseline_counts["mini-sd-root-table"],
+            )
+            self.assertEqual(
+                sidecar_all["counts"]["duplicate_table_rows_dropped"], 0
+            )
+
+    def test_skipped_roots(self) -> None:
+        """A container directory and an empty raw/tables are recorded,
+        not fatal."""
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            roots = self._write_roots(directory)
+            container = directory / "container-dir"
+            container.mkdir()
+            empty = directory / "empty-tables-root"
+            (empty / "raw" / "tables").mkdir(parents=True)
+            roots.extend([container, empty])
+
+            output = directory / "out" / "phase-a-dataset-v9.jsonl.gz"
+            sidecar_document = build_dataset_v9(
+                roots, output, seed=7, workers=1, **_FAST
+            )
+            skipped = sidecar_document["skipped_roots"]
+            self.assertEqual(
+                skipped.get(str(container)), "no raw/tables directory"
+            )
+            self.assertEqual(
+                skipped.get(str(empty)), "no raw table replays"
+            )
+            rows = load_phase_a_dataset_v9(output)
+            self.assertEqual(
+                sidecar_document["counts"]["rows"], len(rows)
+            )
+            self.assertTrue(rows)
 
 
 if __name__ == "__main__":

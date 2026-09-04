@@ -1,0 +1,5 @@
+# Third-party packages used by tools/ only. The serve path stays stdlib-only
+# and training uses the CUDA venv (CONTEXT.md section 1). Install into the
+# tests/lint interpreter:
+#   python -m pip install -r requirements-tools.txt
+pokerkit==0.7.4   # PHH hand-history parser + state machine, imported by tools/phh_* only

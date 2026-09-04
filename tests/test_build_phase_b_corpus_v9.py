@@ -691,6 +691,21 @@ class EndToEndHarvestTests(unittest.TestCase):
             + simulator.single_branch_groups
             + dropped,
         )
+        # Defect 18h: the emitted-set-size histogram must be counted at
+        # the emission — one entry per emitted decision, sizes >= 2, and
+        # the histogram must equal the branch rows actually recorded.
+        self.assertEqual(
+            sum(simulator.emitted_branch_counts.values()),
+            simulator.decisions_emitted,
+        )
+        self.assertTrue(all(size >= 2 for size in simulator.emitted_branch_counts))
+        self.assertEqual(
+            sum(len(row["branches"]) for row in simulator.phase_b_rows),
+            sum(
+                size * count
+                for size, count in simulator.emitted_branch_counts.items()
+            ),
+        )
         # Well-formed sim snapshots never degrade the belief provider;
         # the counter exists so a real harvest surfaces any that do.
         self.assertEqual(simulator.belief_degrades, 0)
@@ -803,6 +818,49 @@ class EndToEndHarvestTests(unittest.TestCase):
         self.assertGreater(simulator.p3_stats.swaps_applied, 0)
         for row in simulator.phase_b_rows:
             self.assertIn("p3", row)
+
+
+class LegDiagnosticsTests(unittest.TestCase):
+    """Defect 18h: the leg result carries the emitted-size histogram and
+    every drop counter, so the leg summary prints a complete picture."""
+
+    def test_run_leg_v9_serialises_emitted_branch_counts(self) -> None:
+        from test_learned_policy_v9 import _write_artifact
+        from tools.build_phase_b_corpus import LegSpec
+        from tools.build_phase_b_corpus_v9 import run_leg_v9
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            candidate = str(_write_artifact(directory))
+            spec = LegSpec(
+                name="mini-leg",
+                opponents=("median-bot", "tight-bot"),
+                hands=6,
+                seed=7,
+                session_hands=6,
+                candidate=candidate,
+                equity_trials=20,
+                potential_trials=40,
+                feature_seed=7,
+                counterfactual_rollouts=1,
+                accept_threshold=0.35,
+                resample_tries=40,
+            )
+            result = run_leg_v9(spec)
+        self.assertGreater(result["decisions_emitted"], 0)
+        counts = result["emitted_branch_counts"]
+        self.assertIsInstance(counts, dict)
+        self.assertEqual(sum(counts.values()), result["decisions_emitted"])
+        self.assertTrue(all(int(size) >= 2 for size in counts))
+        for name in (
+            "single_branch_groups",
+            "purity_dropped_decisions",
+            "probe_action_mismatches",
+            "probe_size_mismatches",
+            "probe_collisions",
+            "belief_degrades",
+        ):
+            self.assertIn(name, result)
 
 
 class OwnerDecisionPinTests(unittest.TestCase):

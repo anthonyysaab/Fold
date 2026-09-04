@@ -62,6 +62,13 @@ enforce):
   left is a genuine wager demotion (a risk-cap-collapsed escalation
   executing as a call/check — the state the L5 demotion rule will own),
   dropped and counted per class, reported per leg and in the summary.
+- **Leg diagnostics are complete (defect 18h).** The emitted-set-size
+  histogram (``emitted_branch_counts``, the field the v8 harvester
+  serialises per leg and the simulator already counts) is counted at
+  the purity-clean emission and serialised per leg, and the leg print
+  carries every counter: emitted sizes, single-branch groups, purity
+  drops with the action/size-mismatch and collision breakdowns, and
+  belief degrades.
 - **Rows are the pinned schema-2 shape.** ``decision.context`` is
   exactly ``compose_branch_values_v9``'s argument list (raw ints; the
   read as ``10·T``; ``legal_labels`` in slot order; the serve path's
@@ -738,6 +745,14 @@ class PhaseBHarvestSimulatorV9(PhaseBHarvestSimulator):
                 }
             )
             self.decisions_emitted += 1
+            # Defect 18h: the emitted-set-size histogram the v8 harvester
+            # serialises per leg was dropped on the v9 line. This is the
+            # one place the emitted set is final — the purity verdict has
+            # passed and every candidate becomes one branch row — so the
+            # count is exact here, per decision.
+            self.emitted_branch_counts[len(candidates)] = (
+                self.emitted_branch_counts.get(len(candidates), 0) + 1
+            )
         return []
 
 
@@ -897,6 +912,11 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         "hero_chip_delta": 0,
         "hero_hands": 0,
     }
+    # Defect 18h: the emitted-set-size histogram the simulator counts
+    # per session; each session builds a fresh simulator, so without
+    # this the histogram is computed and thrown away once per session
+    # (the v8 harvester's run_leg does the same accumulation).
+    emitted_branch_counts: dict[int, int] = {}
     probe_action_mismatches: Counter[str] = Counter()
     probe_size_mismatches: Counter[str] = Counter()
     p3_totals = {
@@ -947,6 +967,10 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         totals["belief_degrades"] += simulator.belief_degrades
         probe_action_mismatches.update(simulator.probe_action_mismatches)
         probe_size_mismatches.update(simulator.probe_size_mismatches)
+        for size, count in simulator.emitted_branch_counts.items():
+            emitted_branch_counts[size] = (
+                emitted_branch_counts.get(size, 0) + count
+            )
         totals["hero_chip_delta"] += result.chip_deltas.get("hero", 0)
         totals["hero_hands"] += result.hands_by_agent.get("hero", result.hands)
         for key in p3_totals:
@@ -985,6 +1009,9 @@ def run_leg_v9(spec: LegSpec) -> dict[str, Any]:
         "probe_collisions": totals["probe_collisions"],
         "belief_degrades": totals["belief_degrades"],
         "branch_rows": sum(len(row["branches"]) for row in rows),
+        "emitted_branch_counts": {
+            str(key): value for key, value in sorted(emitted_branch_counts.items())
+        },
         "hero_bb_per_100": round(hero_bb_per_100, 3),
         "belief_fit_source": provider.fit_source,
         "p3_resample": dict(p3_totals),
@@ -1343,7 +1370,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"{leg['name']}: {leg['branch_rows']} branch rows from "
             f"{leg['decisions_emitted']} decisions over {leg['hands']} hands "
             f"(hero {leg['hero_bb_per_100']:+.1f} bb/100, "
-            f"purity drop rate {leg['purity_drop_rate']:.4f}, "
+            f"emitted sizes {leg['emitted_branch_counts']}, "
+            f"single-branch groups {leg['single_branch_groups']}, "
+            f"purity drops {leg['purity_dropped_decisions']} "
+            f"(rate {leg['purity_drop_rate']:.4f}), "
+            f"probe action mismatches {leg['probe_action_mismatches']}, "
+            f"probe size mismatches {leg['probe_size_mismatches']}, "
+            f"probe collisions {leg['probe_collisions']}, "
+            f"belief degrades {leg['belief_degrades']}, "
             f"p3 fallback rate {leg['p3_fallback_rate']:.4f}, "
             f"{leg['wall_seconds']}s)"
         )

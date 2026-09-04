@@ -29,7 +29,16 @@ import time
 from pathlib import Path
 from typing import Any
 
-CUDA_PYTHON = r"C:\Users\user\poker-nn-training\.venv\Scripts\python.exe"
+# The training interpreter moved into this repo on 2026-09-03 (owner
+# decision, .handoff/DECISIONS.md section 6); the old absolute path is
+# gone from the machine.
+CUDA_PYTHON = str(
+    Path(__file__).resolve().parents[1]
+    / "neural network training"
+    / ".venv"
+    / "Scripts"
+    / "python.exe"
+)
 STDLIB_PYTHON = r"C:\Users\user\AppData\Local\Programs\Python\Python311\python.exe"
 # Both trees were moved under archive/data/ by the 2026-09-02 janitor pass
 # (see archive/README.md); the experiment itself is closed and its result,

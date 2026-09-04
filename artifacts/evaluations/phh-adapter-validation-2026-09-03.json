@@ -1,0 +1,223 @@
+{
+  "tool": "tools.validate_phh_replay",
+  "run_at": "2026-09-03T20:19:13.374854+00:00",
+  "adapter_version": "1",
+  "dataset_commit": "e2ec038d31a1a46a82d147db4bbfdb0910459705",
+  "roots": [
+    "phh-dataset\\data\\pluribus"
+  ],
+  "seed": 7,
+  "sample": 500,
+  "sampling": {
+    "rule": "each accepted hand is selected independently when blake2b('<seed>:<table_id>') / 2**64 < probability; the draw does not depend on walk order and is reproduced by re-running with the same --seed",
+    "target": 500,
+    "population_files": 10000,
+    "probability": 0.05,
+    "hands_selected": 520,
+    "note": "probability is --sample divided by the FILE count, so on multi-hand .phhs roots the realised sample runs larger than --sample; hands_selected is the realised size"
+  },
+  "fast_trials": {
+    "potential_trials": 32,
+    "equity_trials": 64
+  },
+  "counts": {
+    "files": 10000,
+    "hands": 10000,
+    "actions": 91356
+  },
+  "self_check": {
+    "clean_passed": true,
+    "corrupted_failed_invariant_1": true,
+    "half_chip_split_classified": true,
+    "wrong_seat_odd_chip_failed": true
+  },
+  "invariants": {
+    "1_finishing_stacks": {
+      "passed": true,
+      "statement": "every replay's finishing stacks equal the PHH file's, compared as exact Decimal; the one accepted inequality is a half-chip split, where every differing seat differs by less than one chip, was recorded fractionally by the file, and is a winner of the hand, and the totals agree exactly",
+      "hands_exactly_equal": 9992,
+      "hands_not_exactly_equal": 8,
+      "exact_equality_holds_on_every_hand": false,
+      "hands_half_chip_split": 8,
+      "hands_mismatch": 0,
+      "half_chip_split_hands": [
+        {
+          "table_id": "phh/pluribus/102/0",
+          "deltas": {
+            "1": "+0.5",
+            "5": "-0.5"
+          },
+          "winner_seats": [
+            1,
+            5
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/32/23",
+          "deltas": {
+            "3": "+0.5",
+            "6": "-0.5"
+          },
+          "winner_seats": [
+            3,
+            6
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/41b/204",
+          "deltas": {
+            "1": "+0.5",
+            "4": "-0.5"
+          },
+          "winner_seats": [
+            1,
+            4
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/60/88",
+          "deltas": {
+            "2": "+0.5",
+            "6": "-0.5"
+          },
+          "winner_seats": [
+            2,
+            6
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/75b/76",
+          "deltas": {
+            "3": "+0.5",
+            "6": "-0.5"
+          },
+          "winner_seats": [
+            3,
+            6
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/88/128",
+          "deltas": {
+            "4": "+0.5",
+            "6": "-0.5"
+          },
+          "winner_seats": [
+            4,
+            6
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/91/43",
+          "deltas": {
+            "4": "+0.5",
+            "5": "-0.5"
+          },
+          "winner_seats": [
+            4,
+            5
+          ]
+        },
+        {
+          "table_id": "phh/pluribus/91/53",
+          "deltas": {
+            "1": "+0.5",
+            "4": "-0.5"
+          },
+          "winner_seats": [
+            1,
+            4
+          ]
+        }
+      ],
+      "mismatch_examples": []
+    },
+    "2_action_legality": {
+      "passed": true,
+      "statement": "every ActionTaken is in its own availableActions with a bet/raise inside its range, a call equal to callChips, an all-in equal to allInToAmount, and no amount on a check or fold",
+      "actions": 91356,
+      "violations": {}
+    },
+    "3_pot_equals_committed": {
+      "passed": true,
+      "statement": "payload.pot equals the committed tally before the action, the snapshot's potChips equals that pot plus the action's own chips and the snapshot's per-seat totalCommittedChips, and the tally ends at the table's",
+      "violations": {
+        "pot_pre_violations": 0,
+        "snapshot_pot_violations": 0,
+        "post_commit_violations": 0,
+        "stack_delta_unreadable": 0,
+        "final_committed_seat_violations": 0
+      }
+    },
+    "4_board_length_by_street": {
+      "passed": true,
+      "statement": "the board every action sees is 0/3/4/5 cards for preflop/flop/turn/river",
+      "violations": {}
+    },
+    "5_chip_conservation": {
+      "passed": true,
+      "statement": "the replay's finishing stacks sum to the file's starting sum, and so do the file's own finishing stacks",
+      "hands_conservation_violations": 0,
+      "hands_file_conservation_violations": 0
+    },
+    "6_refusals_and_seven_plus": {
+      "passed": true,
+      "statement": "the adapter refused no hand, and no hand seats more than risk_temperature.MAX_PLAYERS (6) players \u2014 a sufficient condition for the builder's active-player skip, which invariant 7 measures directly",
+      "max_players": 6,
+      "refusal_counts": {},
+      "refusal_total": 0,
+      "hands_over_max_players": 0,
+      "decisions_over_max_players": 0
+    },
+    "7_fast_sample_labels": {
+      "passed": true,
+      "statement": "on the seeded sample: one row per decision, rows by street equal to decisions by street, free-spot rows equal to the adapter's callChips==0 decisions, both fold-through lanes produced and never both on one row, and zero skipped_decisions / timeout_actions / board_corrected / rows_missing",
+      "failures": [],
+      "hands_sampled": 520,
+      "hands_total": 10000,
+      "decisions_sampled": 4642,
+      "rows": 4642,
+      "skipped_decisions": 0,
+      "timeout_actions": 0,
+      "board_corrected": 0,
+      "belief_degrades": 0,
+      "allin_call_for_less": 6,
+      "unsized_wagers": 0,
+      "rows_missing": 0,
+      "hero_cards_unknown": 0,
+      "unknown_continuing_opponent_rows": 0,
+      "available_label_unmasked_rows": 0,
+      "fold_through_active_rows": 353,
+      "fold_through_aggressive_rows": 571,
+      "both_lanes_masked_rows": 0,
+      "free_spot_rows": 1084,
+      "free_spot_decisions": 1084,
+      "per_street_rows": {
+        "preflop": 3193,
+        "flop": 699,
+        "turn": 448,
+        "river": 302
+      },
+      "per_street_decisions": {
+        "preflop": 3193,
+        "flop": 699,
+        "turn": 448,
+        "river": 302
+      }
+    }
+  },
+  "caveats": [
+    "invariant 1: exact equality does NOT hold on 8 of 10000 hands. Those files record a half chip on both winners of a split pot (their stacks still sum to the starting sum exactly); an integer-chip replay cannot, so pokerkit gives the whole odd chip to one of the two. Each such hand was checked seat by seat: |delta| < 1 chip, on a seat the file recorded fractionally, and that seat a winner of the hand.",
+    "invariant 7 ran on 520 of 10000 hands (5.2%), a seeded Bernoulli sample keyed on each hand's table id (seed 7, selection probability 0.050000); invariants 1-6 ran on every hand.",
+    "skipped_decisions == 0 is measured on the sample only; the other 9480 hands were converted and checked by invariants 1-6 but their rows were not built."
+  ],
+  "limitations": [
+    "invariant 2 compares two expressions the adapter builds from the same pre-action state (tools/phh_replay.py `_action_event`): it catches a disagreement between `availableActions` and the chosen action, not a wrong shared premise. pokerkit already refused any action it considered illegal when it applied it.",
+    "invariant 6's seat-count test is trivially satisfied on a 6-max-only corpus; the builder's real skip is an active-player count at the decision. The direct measurement of that skip is invariant 7's `skipped_decisions`, which covers only the sample.",
+    "invariant 7's `hero_cards_unknown` cannot be non-zero: a decision whose hero holding is unknown raises in the builder (tools/build_phase_a_dataset_v9.py) and is counted as `skipped_decisions`, so no row exists and the decision is counted in `rows_missing` before the hero test is reached. `rows_missing` is the counter that actually fires.",
+    "invariant 7's `both_lanes_masked_rows` cannot be non-zero: the builder raises PhaseAInvariantError on that condition before the row is returned, and that error aborts the run rather than being counted. It is reported as a restatement of the loader contract, not as an independent measurement.",
+    "invariant 7's `available_label_unmasked_rows` recomputes the masking condition from the same private helpers the builder imports (`_hole_cards_by_seat`, `_in_hand_opponents`, `_continuing_opponents`), so it mirrors the implementation it checks. `unknown_continuing_opponent_rows` and `rows_missing` are the two counters in that block that fire independently.",
+    "nothing here measures play quality, label correctness against a solver, or Arena-vs-PHH row equivalence. This is a conversion gate only. An earlier draft of this record carried a hand-built Arena-vs-PHH stretch diff; it was removed because its translator lived outside the repo (unreproducible the moment the record froze) and because it read the quarantined Arena archive for a purpose .handoff/DATA.md section 1.1 does not sanction. The removed text is in the lane handoff for the owner to rule on."
+  ],
+  "overall": "pass"
+}

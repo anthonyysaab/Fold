@@ -69,7 +69,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from engine import schema4
 from engine.aggression_sizing import read_to_context_int, table_temperature
@@ -518,6 +518,347 @@ def _print_summary_v9(
     )
 
 
+class PhaseARowSink:
+    """The shared v9 Phase-A row sink — one mechanism, two builders.
+
+    Everything downstream of row generation for the Phase-A pipeline
+    lives here once: the chunked flush sorted by
+    ``(table_id, sequence)``, the per-table dedupe, the heapq k-way
+    merge, the gzip archive with ``mtime=0`` (identical inputs give
+    byte-identical archives), the atomic replace, the per-street label
+    coverage accumulation, the ``.summary.json`` sidecar, and the
+    trainer self-load that proves the written dataset parses. Used by
+    ``build_dataset_v9`` (Arena roots) and by
+    ``tools.build_phase_a_dataset_phh`` (PHH hand-history files).
+
+    Dedupe keys on the TABLE ID, per row, not per file: one ``.phhs``
+    file holds many hands (many table ids), so a duplicate table's rows
+    drop wholesale while the file's other hands stay. On the Arena
+    roots one file is one table, so this is exactly the pre-sink
+    behaviour — the frozen oracle ``ecb4739df9d1b9ec`` pins it.
+    """
+
+    def __init__(
+        self,
+        output: Path,
+        *,
+        dedupe_tables: bool = True,
+        chunk_rows: int = 50_000,
+    ) -> None:
+        self._output = Path(output)
+        self._dedupe_tables = dedupe_tables
+        self._chunk_row_limit = chunk_rows
+        self._output.parent.mkdir(parents=True, exist_ok=True)
+        self._temporary_dir = tempfile.TemporaryDirectory(
+            prefix="phase-a-v9-chunks-", dir=self._output.parent
+        )
+        self._chunk_files: list[Path] = []
+        self._chunk: list[dict[str, Any]] = []
+        self._seen_tables: set[str] = set()
+        self._duplicate_rows_dropped = 0
+        self._tables_with_rows: Counter[str] = Counter()
+        self._collection_order: list[str] = []
+        self._stats_by_collection: dict[str, Counter[str]] = {}
+        self._row_count = 0
+        self._coverage: dict[str, dict[str, int]] | None = None
+        self._totals: dict[str, int] = {}
+        self._sidecar_path: Path | None = None
+
+    @property
+    def output(self) -> Path:
+        return self._output
+
+    @property
+    def duplicate_rows_dropped(self) -> int:
+        return self._duplicate_rows_dropped
+
+    @property
+    def row_count(self) -> int:
+        return self._row_count
+
+    @property
+    def coverage(self) -> dict[str, dict[str, int]]:
+        if self._coverage is None:
+            raise RuntimeError("finish() must run before reading coverage")
+        return self._coverage
+
+    @property
+    def totals(self) -> dict[str, int]:
+        return self._totals
+
+    @property
+    def sidecar_path(self) -> Path:
+        if self._sidecar_path is None:
+            raise RuntimeError("finish() must run before reading sidecar_path")
+        return self._sidecar_path
+
+    @property
+    def combined_stats(self) -> dict[str, int]:
+        """Every per-collection counter folded into one (for sidecars)."""
+        combined: Counter[str] = Counter()
+        for counter in self._stats_by_collection.values():
+            combined.update(counter)
+        return dict(combined)
+
+    def consume(
+        self,
+        collection: str,
+        rows: Sequence[Mapping[str, Any]],
+        stats: Mapping[str, int] | None = None,
+    ) -> None:
+        """Feed one collection's rows into the pending chunk.
+
+        With ``dedupe_tables`` on, rows whose table id was already
+        consumed drop wholesale and are counted in
+        ``duplicate_rows_dropped``; ``tables_with_rows`` counts the
+        kept tables. ``stats`` is folded into the per-collection
+        counters that the sidecar reports.
+        """
+
+        self._collection_order.append(collection)
+        counter = self._stats_by_collection.setdefault(collection, Counter())
+        if stats:
+            counter.update(stats)
+        if not rows:
+            return
+        if self._dedupe_tables:
+            order: list[str] = []
+            groups: dict[str, list[dict[str, Any]]] = {}
+            for row in rows:
+                table_id = str(row["table_id"])
+                if table_id not in groups:
+                    groups[table_id] = []
+                    order.append(table_id)
+                groups[table_id].append(row)
+            kept: list[dict[str, Any]] = []
+            new_tables = 0
+            for table_id in order:
+                group = groups[table_id]
+                if table_id in self._seen_tables:
+                    self._duplicate_rows_dropped += len(group)
+                    continue
+                self._seen_tables.add(table_id)
+                new_tables += 1
+                kept.extend(group)
+            if new_tables:
+                self._tables_with_rows[collection] += new_tables
+        else:
+            kept = list(rows)
+            self._tables_with_rows[collection] += len(
+                {str(row["table_id"]) for row in kept}
+            )
+        self._chunk.extend(kept)
+        if len(self._chunk) >= self._chunk_row_limit:
+            self._flush_chunk()
+
+    def _flush_chunk(self) -> None:
+        if not self._chunk:
+            return
+        self._chunk.sort(key=lambda row: (row["table_id"], row["sequence"]))
+        chunk_path = (
+            Path(self._temporary_dir.name)
+            / f"chunk-{len(self._chunk_files):05d}.jsonl"
+        )
+        with chunk_path.open("w", encoding="utf-8") as stream:
+            for row in self._chunk:
+                stream.write(json.dumps(row, separators=(",", ":")) + "\n")
+        self._chunk_files.append(chunk_path)
+        self._chunk.clear()
+
+    @staticmethod
+    def _chunk_rows(path: Path):
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                if line.strip():
+                    yield json.loads(line)
+
+    @staticmethod
+    def _sort_key(row: Mapping[str, Any]) -> tuple[str, int]:
+        return (row["table_id"], row["sequence"])
+
+    def finish(
+        self,
+        *,
+        generator: Mapping[str, Any],
+        skipped_roots: Mapping[str, str] | None = None,
+        file_count: int | None = None,
+        counts_extra: Mapping[str, Any] | None = None,
+        label_coverage_in_generator: bool = False,
+    ) -> dict[str, Any]:
+        """Flush, k-way merge into the gzip archive, write the sidecar.
+
+        The sidecar's ``generator`` block is caller-shaped (Arena vs
+        PHH provenance); everything else the sink owns.
+        ``label_coverage_in_generator`` adds the totals into the
+        generator block as ``label_coverage`` (the PHH sidecar records
+        it there; the Arena sidecar keeps it in ``counts`` only). The
+        build ends by loading the written archive through the trainer's
+        own ``load_phase_a_dataset_v9`` — a dataset this sink blesses
+        is one the trainer provably accepts.
+        """
+
+        self._flush_chunk()
+        if not self._chunk_files:
+            raise ValueError("no decision rows were produced")
+
+        # k-way merge in (table_id, sequence) order — the exact order
+        # the in-memory sort of the whole set would produce.
+        # heapq.merge is stable across equal keys, so rows from equal
+        # (table_id, sequence) keys keep file order, matching the old
+        # global sort byte for byte.
+        coverage: dict[str, dict[str, int]] = {
+            street: {
+                "rows": 0,
+                "free_spot_rows": 0,
+                **{name: 0 for name in _LABEL_NAMES_V9},
+            }
+            for street in _STREETS
+        }
+        temporary = self._output.with_suffix(self._output.suffix + ".tmp")
+        row_count = 0
+        with open(temporary, "wb") as raw_stream:
+            # mtime=0 so identical inputs give byte-identical archives.
+            with gzip.GzipFile(
+                fileobj=raw_stream, mode="wb", filename="", mtime=0
+            ) as stream:
+                for row in heapq.merge(
+                    *(self._chunk_rows(path) for path in self._chunk_files),
+                    key=self._sort_key,
+                ):
+                    stream.write(
+                        (json.dumps(row, separators=(",", ":")) + "\n").encode()
+                    )
+                    row_count += 1
+                    entry = coverage[row["street"]]
+                    entry["rows"] += 1
+                    if row["to_call_zero"]:
+                        entry["free_spot_rows"] += 1
+                    for name in _LABEL_NAMES_V9:
+                        entry[name] += row["masks"][name]
+        temporary.replace(self._output)
+        self._temporary_dir.cleanup()
+        self._row_count = row_count
+        self._coverage = coverage
+
+        totals: dict[str, int] = {"rows": row_count}
+        for name in ("free_spot_rows", *_LABEL_NAMES_V9):
+            totals[name] = sum(coverage[street][name] for street in _STREETS)
+        self._totals = totals
+
+        collection_names = list(dict.fromkeys(self._collection_order))
+        collection_stats = {
+            name: dict(sorted(self._stats_by_collection[name].items()))
+            for name in collection_names
+        }
+        counts: dict[str, Any] = {
+            "files": (
+                file_count
+                if file_count is not None
+                else len(collection_names)
+            ),
+            "tables_with_rows": sum(self._tables_with_rows.values()),
+            "rows": row_count,
+            "duplicate_table_rows_dropped": self._duplicate_rows_dropped,
+            "label_coverage": totals,
+        }
+        if counts_extra:
+            counts.update(counts_extra)
+        sidecar_document: dict[str, Any] = {
+            "schema_version": schema4.SCHEMA_VERSION_V9,
+            "input_size": schema4.INPUT_SIZE_V9,
+            # The composed record the vectors' costs were extracted
+            # under — the v9 Phase-A trainer's resolve_sizing_record
+            # reads THIS, so a training run's manifest describes the
+            # same g state the features baked. Canonical (JSON) form.
+            "sizing": json.loads(
+                json.dumps(
+                    composed_sizing_record(), sort_keys=True, allow_nan=False
+                )
+            ),
+            "generator": dict(generator),
+            "counts": counts,
+            "dedupe_tables": self._dedupe_tables,
+            "skipped_roots": dict(skipped_roots or {}),
+            "per_street": coverage,
+            "per_collection": {
+                name: {
+                    "tables_with_rows": self._tables_with_rows.get(name, 0),
+                    **collection_stats.get(name, {}),
+                }
+                for name in collection_names
+            },
+            "files": {"dataset": self._output.name},
+        }
+        if label_coverage_in_generator:
+            sidecar_document["generator"]["label_coverage"] = totals
+        self._sidecar_path = self._output.parent / (
+            self._output.name.removesuffix(".jsonl.gz") + ".summary.json"
+        )
+        self._sidecar_path.write_text(
+            json.dumps(sidecar_document, indent=2) + "\n", encoding="utf-8"
+        )
+
+        # The proof, not a formality: the trainer's loader is the contract.
+        from engine.v9_trainer import load_phase_a_dataset_v9
+
+        loaded = load_phase_a_dataset_v9(self._output)
+        if len(loaded) != row_count:
+            raise PhaseAInvariantError(
+                f"the trainer loaded {len(loaded)} rows from a dataset "
+                f"written with {row_count}"
+            )
+        return sidecar_document
+
+
+def _consume_files(
+    sink: PhaseARowSink,
+    work: Sequence[tuple[Any, ...]],
+    collection_names: Sequence[str],
+    process: Callable[
+        [tuple[Any, ...]],
+        tuple[str, list[dict[str, Any]], dict[str, int]],
+    ],
+    *,
+    workers: int,
+    noun: str = "files",
+) -> None:
+    """Map ``process`` over ``work`` and feed every result into the sink.
+
+    ``process`` must be a module-level function so ``workers > 1``
+    pickles it; progress is printed per 100 units, identical for the
+    Arena (``noun="files"``) and PHH (``noun="roots"``) builders.
+    """
+
+    started = time.monotonic()
+    total_rows = 0
+
+    def _report(index: int) -> None:
+        elapsed = time.monotonic() - started
+        print(
+            f"processed {index + 1}/{len(work)} {noun}, {total_rows} rows "
+            f"({sink.duplicate_rows_dropped} duplicate rows dropped), "
+            f"{elapsed:.0f}s",
+            flush=True,
+        )
+
+    if workers > 1:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            for index, result in enumerate(
+                pool.map(process, work, chunksize=8)
+            ):
+                sink.consume(collection_names[index], result[1], result[2])
+                total_rows += len(result[1])
+                if (index + 1) % 100 == 0 or index + 1 == len(work):
+                    _report(index)
+    else:
+        for index, item in enumerate(work):
+            result = process(item)
+            sink.consume(collection_names[index], result[1], result[2])
+            total_rows += len(result[1])
+            if (index + 1) % 100 == 0 or index + 1 == len(work):
+                _report(index)
+
+
 def build_dataset_v9(
     roots: Sequence[Path],
     output: Path,
@@ -536,18 +877,22 @@ def build_dataset_v9(
     own ``load_phase_a_dataset_v9`` — a dataset this tool blesses is one
     the trainer provably accepts (the L3 LANDED rule).
 
-    The widened-roots run (2026-09-02 diagnosis, ~1.14M rows) cannot
-    hold every row in RAM, so rows stream through fixed-size sorted
-    chunks that are k-way merged into the final archive — the same
-    ``(table_id, sequence)`` order the in-memory sort produced, byte for
-    byte. ``dedupe_tables`` (on by default) drops rows whose table id
-    was already emitted: the widened archive contains 536 byte-identical
-    duplicate table files between collections (md5-verified in the
-    diagnosis), which would double-count training rows. The default
-    roots contain no duplicates, so a default rebuild is byte-identical
-    to the pre-streaming builder. Roots whose ``raw/tables`` is missing
-    or empty are skipped with a warning (the container directories and
-    two empty leaf collections in the archive).
+    All row-sink machinery (chunk flush, per-table dedupe, k-way merge,
+    byte-deterministic gzip, atomic replace, coverage, sidecar,
+    self-load) lives in the shared ``PhaseARowSink`` — also used by
+    ``tools.build_phase_a_dataset_phh``. The widened-roots run
+    (2026-09-02 diagnosis, ~1.14M rows) cannot hold every row in RAM,
+    so rows stream through fixed-size sorted chunks that are k-way
+    merged into the final archive — the same ``(table_id, sequence)``
+    order the in-memory sort produced, byte for byte. ``dedupe_tables``
+    (on by default) drops rows whose table id was already emitted: the
+    widened archive contains 536 byte-identical duplicate table files
+    between collections (md5-verified in the diagnosis), which would
+    double-count training rows. The default roots contain no
+    duplicates, so a default rebuild is byte-identical to the
+    pre-streaming builder. Roots whose ``raw/tables`` is missing or
+    empty are skipped with a warning (the container directories and two
+    empty leaf collections in the archive).
     """
 
     files: list[tuple[str, Path]] = []
@@ -570,160 +915,17 @@ def build_dataset_v9(
         print(f"skipping root {root}: {reason}", flush=True)
 
     started = time.monotonic()
-    stats_by_collection: dict[str, Counter[str]] = {
-        name: Counter() for name, _ in files
-    }
-    tables_with_rows: Counter[str] = Counter()
-    duplicate_rows_dropped = 0
-    seen_tables: set[str] = set()
+    sink = PhaseARowSink(
+        output, dedupe_tables=dedupe_tables, chunk_rows=chunk_rows
+    )
     work = [
         (str(path), seed, equity_trials, potential_trials) for _, path in files
     ]
     collection_names = [name for name, _ in files]
+    _consume_files(sink, work, collection_names, _process_file_v9, workers=workers)
 
-    output = Path(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temporary_dir = tempfile.TemporaryDirectory(
-        prefix="phase-a-v9-chunks-", dir=output.parent
-    )
-    chunk_files: list[Path] = []
-    chunk: list[dict[str, Any]] = []
-
-    def _flush_chunk() -> None:
-        if not chunk:
-            return
-        chunk.sort(key=lambda row: (row["table_id"], row["sequence"]))
-        chunk_path = Path(temporary_dir.name) / f"chunk-{len(chunk_files):05d}.jsonl"
-        with chunk_path.open("w", encoding="utf-8") as stream:
-            for row in chunk:
-                stream.write(json.dumps(row, separators=(",", ":")) + "\n")
-        chunk_files.append(chunk_path)
-        chunk.clear()
-
-    def _consume(
-        collection: str, result: tuple[str, list[dict[str, Any]], dict[str, int]]
-    ) -> None:
-        nonlocal duplicate_rows_dropped
-        _, rows, stats = result
-        stats_by_collection[collection].update(stats)
-        kept = rows
-        # Dedupe is per TABLE (one file = one table): the archive holds
-        # byte-identical duplicate table FILES, and a duplicate table's
-        # rows must drop wholesale — per-row dedupe would keep only the
-        # first row of every table.
-        if dedupe_tables and rows:
-            table_id = str(rows[0]["table_id"])
-            if table_id in seen_tables:
-                duplicate_rows_dropped += len(rows)
-                kept = []
-            else:
-                seen_tables.add(table_id)
-        if kept:
-            tables_with_rows[collection] += 1
-        chunk.extend(kept)
-        if len(chunk) >= chunk_rows:
-            _flush_chunk()
-
-    total_rows = 0
-    if workers > 1:
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            for index, result in enumerate(
-                pool.map(_process_file_v9, work, chunksize=8)
-            ):
-                _consume(collection_names[index], result)
-                total_rows += len(result[1])
-                if (index + 1) % 100 == 0 or index + 1 == len(work):
-                    elapsed = time.monotonic() - started
-                    print(
-                        f"processed {index + 1}/{len(work)} files, "
-                        f"{total_rows} rows ({duplicate_rows_dropped} duplicate "
-                        f"rows dropped), {elapsed:.0f}s",
-                        flush=True,
-                    )
-    else:
-        for index, item in enumerate(work):
-            result = _process_file_v9(item)
-            _consume(collection_names[index], result)
-            total_rows += len(result[1])
-            if (index + 1) % 100 == 0 or index + 1 == len(work):
-                elapsed = time.monotonic() - started
-                print(
-                    f"processed {index + 1}/{len(work)} files, "
-                    f"{total_rows} rows ({duplicate_rows_dropped} duplicate "
-                    f"rows dropped), {elapsed:.0f}s",
-                    flush=True,
-                )
-    _flush_chunk()
-
-    if not chunk_files:
-        raise ValueError("no decision rows were produced")
-
-    # k-way merge in (table_id, sequence) order — the exact order the
-    # in-memory sort of the whole set would produce. heapq.merge is
-    # stable across equal keys, so rows from equal (table_id, sequence)
-    # keys keep file order, matching the old global sort byte for byte.
-    coverage: dict[str, dict[str, int]] = {
-        street: {
-            "rows": 0,
-            "free_spot_rows": 0,
-            **{name: 0 for name in _LABEL_NAMES_V9},
-        }
-        for street in _STREETS
-    }
-    output = Path(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".tmp")
-    row_count = 0
-
-    def _chunk_rows(path: Path):
-        with path.open(encoding="utf-8") as stream:
-            for line in stream:
-                if line.strip():
-                    yield json.loads(line)
-
-    def _sort_key(row: Mapping[str, Any]) -> tuple[str, int]:
-        return (row["table_id"], row["sequence"])
-
-    with open(temporary, "wb") as raw_stream:
-        # mtime=0 so identical inputs give byte-identical archives.
-        with gzip.GzipFile(
-            fileobj=raw_stream, mode="wb", filename="", mtime=0
-        ) as stream:
-            for row in heapq.merge(
-                *(_chunk_rows(path) for path in chunk_files), key=_sort_key
-            ):
-                stream.write(
-                    (json.dumps(row, separators=(",", ":")) + "\n").encode()
-                )
-                row_count += 1
-                entry = coverage[row["street"]]
-                entry["rows"] += 1
-                if row["to_call_zero"]:
-                    entry["free_spot_rows"] += 1
-                for name in _LABEL_NAMES_V9:
-                    entry[name] += row["masks"][name]
-    temporary.replace(output)
-    temporary_dir.cleanup()
-
-    totals: dict[str, int] = {"rows": row_count}
-    for name in ("free_spot_rows", *_LABEL_NAMES_V9):
-        totals[name] = sum(coverage[street][name] for street in _STREETS)
-
-    collection_stats = {
-        name: dict(sorted(stats_by_collection[name].items()))
-        for name in dict.fromkeys(collection_names)
-    }
-    sidecar_document: dict[str, Any] = {
-        "schema_version": schema4.SCHEMA_VERSION_V9,
-        "input_size": schema4.INPUT_SIZE_V9,
-        # The composed record the vectors' costs were extracted under —
-        # the v9 Phase-A trainer's resolve_sizing_record reads THIS, so
-        # a training run's manifest describes the same g state the
-        # features baked. Canonical (JSON) form.
-        "sizing": json.loads(
-            json.dumps(composed_sizing_record(), sort_keys=True, allow_nan=False)
-        ),
-        "generator": {
+    sidecar_document = sink.finish(
+        generator={
             "tool": "tools.build_phase_a_dataset_v9",
             "seed": seed,
             "equity_trials": equity_trials,
@@ -734,49 +936,17 @@ def build_dataset_v9(
             "roots": [str(root) for root in roots],
             "limit": limit,
         },
-        "counts": {
-            "files": len(files),
-            "tables_with_rows": sum(tables_with_rows.values()),
-            "rows": row_count,
-            "duplicate_table_rows_dropped": duplicate_rows_dropped,
-            "label_coverage": totals,
-        },
-        "dedupe_tables": dedupe_tables,
-        "skipped_roots": dict(skipped_roots),
-        "per_street": coverage,
-        "per_collection": {
-            name: {
-                "tables_with_rows": tables_with_rows.get(name, 0),
-                **collection_stats.get(name, {}),
-            }
-            for name in dict.fromkeys(collection_names)
-        },
-        "files": {"dataset": output.name},
-    }
-    sidecar = output.parent / (
-        output.name.removesuffix(".jsonl.gz") + ".summary.json"
-    )
-    sidecar.write_text(
-        json.dumps(sidecar_document, indent=2) + "\n", encoding="utf-8"
+        skipped_roots=dict(skipped_roots),
+        file_count=len(files),
     )
 
-    # The proof, not a formality: the trainer's loader is the contract.
-    from engine.v9_trainer import load_phase_a_dataset_v9
-
-    loaded = load_phase_a_dataset_v9(output)
-    if len(loaded) != row_count:
-        raise PhaseAInvariantError(
-            f"the trainer loaded {len(loaded)} rows from a dataset written "
-            f"with {row_count}"
-        )
-
-    _print_summary_v9(coverage, totals)
+    _print_summary_v9(sink.coverage, sink.totals)
     elapsed = time.monotonic() - started
-    print(f"\nwrote {output} ({row_count} rows) in {elapsed:.0f}s")
-    print(f"trainer loader accepted the dataset ({len(loaded)} rows)")
-    if duplicate_rows_dropped:
-        print(f"dropped {duplicate_rows_dropped} duplicate table rows")
-    print(f"wrote {sidecar}")
+    print(f"\nwrote {sink.output} ({sink.row_count} rows) in {elapsed:.0f}s")
+    print(f"trainer loader accepted the dataset ({sink.row_count} rows)")
+    if sink.duplicate_rows_dropped:
+        print(f"dropped {sink.duplicate_rows_dropped} duplicate table rows")
+    print(f"wrote {sink.sidecar_path}")
     return sidecar_document
 
 
@@ -790,7 +960,15 @@ def _parser() -> argparse.ArgumentParser:
         default=[str(root) for root in DEFAULT_ROOTS],
         help="collection directories containing raw/tables/*.json",
     )
-    parser.add_argument("--output", default=str(DEFAULT_OUTPUT_V9))
+    parser.add_argument(
+        "--output",
+        required=True,
+        help=(
+            "where to write the dataset. Required: the old default was "
+            "the frozen artifact's own path, so a bare rerun overwrote "
+            "the ecb4739df9d1b9ec oracle in place."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument(
         "--equity-trials", type=int, default=DEFAULT_EQUITY_TRIALS

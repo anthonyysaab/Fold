@@ -99,6 +99,7 @@ from engine.branch_contract_v9 import (
     MODEL_FORMAT_VERSION_V9,
     branch_action,
 )
+from engine.dataset_provenance import describe, require_live_dataset
 from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
@@ -155,10 +156,6 @@ TRAINING_OBJECTIVE_V9_PHASE_B = "phase_b_composed_value_v9"
 DEFAULT_PHASE_B_CORPUS_V9 = (
     Path("artifacts") / "phase_b_v9" / "phase-b-corpus-v9.jsonl.gz"
 )
-DEFAULT_PHASE_A_DATASET_V9 = (
-    Path("artifacts") / "phase_a_v9" / "phase-a-dataset-v9.jsonl.gz"
-)
-
 #: The wager-making branches, in contract order. They are exactly the
 #: fold-through branches: a branch carries fold equity iff it makes a
 #: wager, which is why one tuple serves both roles.
@@ -1623,7 +1620,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--phase-b-corpus", default=str(DEFAULT_PHASE_B_CORPUS_V9)
     )
     parser.add_argument(
-        "--phase-a-dataset", default=str(DEFAULT_PHASE_A_DATASET_V9)
+        "--phase-a-dataset",
+        required=True,
+        help=(
+            "Phase-A dataset (.jsonl.gz). Required: there is no safe "
+            "default. It used to default to the Arena-built corpus the "
+            "2026-09-03 PHH switch retired."
+        ),
     )
     parser.add_argument("--output-dir", default="artifacts/candidates")
     parser.add_argument("--model-version", required=True)
@@ -1732,8 +1735,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"({len(corpus.decisions)} decisions, "
         f"equity_trials {corpus.equity_trials})"
     )
+    source = require_live_dataset(
+        args.phase_a_dataset, allow_retired=args.allow_retired_dataset
+    )
+    print(f"phase-a dataset provenance: {describe(args.phase_a_dataset)}")
     rows = load_phase_a_dataset_v9(args.phase_a_dataset)
-    print(f"phase-a dataset: {args.phase_a_dataset} ({len(rows)} rows)")
+    print(
+        f"phase-a dataset: {args.phase_a_dataset} "
+        f"({len(rows)} rows, source {source})"
+    )
     summary = train_phase_b_candidate_v9(
         corpus,
         rows,
@@ -1762,7 +1772,6 @@ if __name__ == "__main__":
 
 
 __all__ = [
-    "DEFAULT_PHASE_A_DATASET_V9",
     "DEFAULT_PHASE_B_CORPUS_V9",
     "PhaseBCorpusV9",
     "PhaseBDecisionV9",

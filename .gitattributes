@@ -1,0 +1,14 @@
+# The repo is LF. core.autocrlf=true on Windows must never rewrite checked-out
+# files: the weights checksum strips exactly one trailing LF (CLAUDE.md §7).
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.weights.json -text
+*.jsonl -text
+*.phh text eol=lf
+*.phhs text eol=lf
+*.gz binary
+*.zip binary
+*.png binary
+*.pyd binary
+*.so binary

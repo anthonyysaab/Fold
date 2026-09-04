@@ -16,8 +16,10 @@ HARD STOPS (owner-gated money; never retried automatically):
 EXIT CODES. 0 means a deliberate stop: you interrupted it, or an owner-gated
 money guard fired. Anything else is a failure and says so loudly on the way
 out -- 7 when competition discovery never recovered, 8 when consecutive
-sessions kept failing. A supervisor that dies on failure must never report
-success, because "exited 0" is what a clean shutdown looks like.
+sessions kept failing, 9 when the abandoned-seat reconciliation refused to
+join because the seat was not verifiably free. A supervisor that dies on
+failure must never report success, because "exited 0" is what a clean
+shutdown looks like.
 
 This is a foreground console process, not a daemon or a service: it holds the
 window it runs in and ends with your login session.
@@ -29,6 +31,23 @@ route out releases the table and the agent is never seated with no runner
 answering. Windows allows only a few seconds for that handler, so it does the
 one leave request and nothing else. A hard power cut cannot be intercepted;
 Arena then times out the remaining hands.
+
+DEFECT 22 -- stops that never reach Python. A SIGKILL-class kill (Task
+Manager, ``Stop-Process -Force``, ``Popen.terminate()`` on Windows) runs no
+in-process code at all, so no handler releases the table and nothing finishes
+the archive: observed 2026-09-01/02 at ``runs/2026-09-01T235328Z`` and
+``runs/2026-09-02T023838Z`` (``stop_reason: null``, no session record). Two
+compensating layers. First, the stop intent -- the reason plus the seated
+competition -- is written to ``run.json`` *before* any network leave, so a
+process killed during the leave (a second Ctrl+C, the console handler's grace
+window expiring) still leaves evidence of what it was doing. Second,
+``--reconcile-abandoned-seat`` (default OFF, owner-enabled) makes the next
+start release the seat left by a previous run that never verifiably released
+one -- no clean stop, or a clean stop whose leave Arena never confirmed
+(``seat_release_confirmed: false``). It verifies through the read-only peek
+and calls the leave endpoint before any join. Releasing is allowed there,
+joining is not, and nothing rebuys. Every seat check on that path fails
+closed: a seat that cannot be read is not a free seat.
 
 Usage::
 
@@ -42,9 +61,11 @@ import argparse
 import contextlib
 import io
 import json
+import os
 import shutil
 import signal
 import sys
+import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
@@ -86,6 +107,7 @@ DISCOVERY_BACKOFF_S = (5, 15, 45, 120, 300)
 EXIT_OK = 0
 EXIT_DISCOVERY_FAILED = 7
 EXIT_SESSION_FAILURES = 8
+EXIT_RECONCILIATION_FAILED = 9
 
 # A bankroll stop ends the supervisor, so it gets the same confirmation the
 # runner now applies to a busted reading: one transient sample must not end
@@ -179,6 +201,9 @@ class RunArchive:
     def __init__(self, root: Path, launched_at: float, args: argparse.Namespace):
         self.directory = root / _utc_stamp(launched_at)
         self.directory.mkdir(parents=True, exist_ok=True)
+        # The console control handler writes the stop intent on a different
+        # thread, so run.json rewrites are locked and atomic.
+        self._lock = threading.Lock()
         self._run: dict[str, Any] = {
             "launched_at": _utc_stamp(launched_at),
             "session_seconds": args.session_seconds,
@@ -196,13 +221,32 @@ class RunArchive:
             "telemetry": not args.no_telemetry,
             "sessions": 0,
             "stop_reason": None,
+            "competition_id": None,
+            # None until a release is attempted; False is a seat that may
+            # still be held (see record_release and previous_unclean_run).
+            "seat_release_confirmed": None,
         }
         self._write_run()
 
     def _write_run(self) -> None:
-        (self.directory / "run.json").write_text(
-            json.dumps(self._run, indent=2), encoding="utf-8"
-        )
+        with self._lock:
+            payload = json.dumps(dict(self._run), indent=2)
+        path = self.directory / "run.json"
+        temporary = path.with_name("run.json.tmp")
+        temporary.write_text(payload, encoding="utf-8")
+        os.replace(temporary, path)
+
+    def mark_seated(self, competition: str) -> None:
+        """Record which competition the agent is about to join (defect 22).
+
+        Written before the runner joins, so a supervisor killed mid-session
+        still leaves the competition id in ``run.json`` -- the evidence the
+        next start's reconciliation needs when no session manifest exists.
+        """
+
+        with self._lock:
+            self._run["competition_id"] = competition
+        self._write_run()
 
     @staticmethod
     def _telemetry_bytes() -> int | None:
@@ -245,11 +289,32 @@ class RunArchive:
         )
         path = self.directory / f"session-{manifest['index']:03d}.json"
         path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-        self._run["sessions"] = manifest["index"]
+        with self._lock:
+            self._run["sessions"] = manifest["index"]
+        self._write_run()
+
+    def record_release(self, confirmed: bool) -> None:
+        """Record whether Arena confirmed the shutdown leave (LIMITS 6).
+
+        ``finish`` writes the stop reason *before* the network leave, so a
+        clean ``stop_reason`` alone cannot say whether the seat was actually
+        released. This is the field that can: ``False`` marks the run for the
+        next start's reconciliation even though it stopped cleanly.
+
+        The caller writes ``False`` before the leave and ``True`` only once
+        Arena confirms it -- the same order defect 22 forced on the stop
+        reason. A kill inside the leave then leaves an unreleased seat on
+        disk, which is the recoverable answer; the unrecoverable one is a
+        clean record over a held seat.
+        """
+
+        with self._lock:
+            self._run["seat_release_confirmed"] = bool(confirmed)
         self._write_run()
 
     def finish(self, stop_reason: str) -> None:
-        self._run["stop_reason"] = stop_reason
+        with self._lock:
+            self._run["stop_reason"] = stop_reason
         self._write_run()
 
 
@@ -469,16 +534,256 @@ def participant_state(api_key: str, competition: str) -> Mapping[str, Any] | Non
     return participant if isinstance(participant, Mapping) else None
 
 
-def leave_quietly(api_key: str, competition: str) -> None:
-    """Best-effort table release; never raises during shutdown."""
+def leave_quietly(api_key: str, competition: str) -> bool:
+    """Best-effort table release; never raises during shutdown.
+
+    One request and no retry -- the console control handler gets only a few
+    seconds -- but the answer is *read*: ``True`` only for a 2xx with a JSON
+    body, exactly the bar :func:`run_agent.confirm_leave` applies. Until
+    2026-09-03 this printed ``left <comp> cleanly`` for every answer, HTTP 503
+    included, so an unreleased seat looked like a clean stop and no later
+    start re-examined it (LIMITS 6). An unconfirmed leave now says so and
+    names the recovery command; the caller records it.
+    """
 
     try:
-        run_agent.request_arena(
+        status, response = run_agent.request_arena(
             api_key, "POST", "/api/arena/texas/leave", {"competitionId": competition}
         )
-        print(f"left {competition} cleanly")
     except Exception as error:  # shutdown path must not raise
         print(f"could not confirm leave: {error!r:.80}")
+        return False
+    if 200 <= status < 300 and isinstance(response, Mapping):
+        print(f"left {competition} cleanly")
+        return True
+    print(
+        f"WARNING: the leave for {competition} was not confirmed (HTTP {status}); "
+        f"the seat may still be held. Recover with: "
+        f"python -m tools.leave {competition}"
+    )
+    return False
+
+
+def previous_unclean_run(root: Path) -> Path | None:
+    """The newest run folder whose ``run.json`` shows no released seat, else None.
+
+    Two signatures, both meaning "this run may still hold a seat". Every clean
+    exit writes a stop reason via :meth:`RunArchive.finish`, so a missing or
+    null ``stop_reason`` is the defect-22 signature: the previous supervisor
+    died without its release path. A run that *did* stop cleanly but whose
+    leave Arena never confirmed carries ``seat_release_confirmed: false``
+    (:meth:`RunArchive.record_release`); its stop reason is clean, so only
+    that field distinguishes it from a released seat. An absent field is not a
+    failed release -- runs written before the field existed stay clean.
+
+    Folder names are UTC stamps, so the lexicographically last one is newest.
+    """
+
+    if not root.is_dir():
+        return None
+    candidates: list[Path] = []
+    for child in root.iterdir():
+        if not child.is_dir():
+            continue
+        run_path = child / "run.json"
+        if not run_path.is_file():
+            continue
+        try:
+            run = json.loads(run_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(run, Mapping):
+            continue
+        if run.get("stop_reason") is None or run.get("seat_release_confirmed") is False:
+            candidates.append(child)
+    return max(candidates, key=lambda path: path.name) if candidates else None
+
+
+def competition_of_unclean_run(run_dir: Path) -> str | None:
+    """The competition a dead supervisor may still be seated in, or None.
+
+    ``run.json`` has carried ``competition_id`` since the defect-22 fix, and
+    session manifests carried it before, so either record answers. A kill
+    before either write leaves nothing to release.
+    """
+
+    try:
+        run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        run = {}
+    if isinstance(run, Mapping):
+        competition = run.get("competition_id")
+        if isinstance(competition, str) and competition:
+            return competition
+    manifests = sorted(
+        run_dir.glob("session-*.json"), key=lambda path: path.name, reverse=True
+    )
+    for manifest in manifests:
+        try:
+            session = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(session, Mapping):
+            competition = session.get("competition_id")
+            if isinstance(competition, str) and competition:
+                return competition
+    return None
+
+
+def is_seated_snapshot(snapshot: Mapping | None) -> bool:
+    """Whether a validated pending snapshot shows a seat or queue entry.
+
+    Mirrors the runner's ``seated_or_queued`` check; ``runner`` is excluded
+    because the envelope carries one alongside an empty seat.
+    """
+
+    if snapshot is None:
+        return False
+    return bool(
+        snapshot.get("lobby") or snapshot.get("tables") or snapshot.get("activeTables")
+    )
+
+
+def peek_seat(api_key: str, competition: str) -> tuple[Mapping | None, int]:
+    """The read-only seat snapshot for ``competition``, plus the HTTP status.
+
+    The single seat probe on the release path, so every caller means the same
+    thing by an unreadable answer. ``None`` is "unverified", never "empty": a
+    non-200, or a 200 whose body fails ``run_agent.validate_pending_snapshot``.
+    The pre- and post-leave peeks in :func:`reconcile_abandoned_seat`
+    disagreed on exactly that point until 2026-09-03 -- the second one read
+    ``None`` through :func:`is_seated_snapshot`, which answers False for
+    ``None``, and fell through to a join. One helper, one meaning.
+    """
+
+    status, payload = run_agent.request_arena(
+        api_key,
+        "GET",
+        f"/api/arena/texas/pending-actions?competitionId={competition}",
+    )
+    snapshot = run_agent.validate_pending_snapshot(payload) if status == 200 else None
+    return snapshot, status
+
+
+def _stamp_reconciled_run(run_dir: Path, reason: str) -> None:
+    """Record a reconciliation outcome in the previous run's ``run.json``.
+
+    A stamped folder is no longer selected by :func:`previous_unclean_run`, so
+    the next start skips it instead of sending the leave again. Called only
+    once the seat is *verified* free, and it must clear both selection
+    signatures -- a run whose leave went unconfirmed would otherwise be
+    re-attempted at every start forever.
+
+    A run with no stop reason (the hard-kill signature) takes ``reason`` as
+    its stop reason. A run that stopped cleanly but could not confirm its
+    leave keeps the stop reason it already has: that is the evidence of how it
+    stopped, and ``reconciled_by`` carries what reconciliation did. Never
+    fails startup.
+    """
+
+    run_path = run_dir / "run.json"
+    try:
+        run = json.loads(run_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if not isinstance(run, Mapping):
+        return
+    if run.get("stop_reason") is None:
+        run["stop_reason"] = reason
+    run["seat_release_confirmed"] = True
+    run["reconciled_by"] = f"next-start reconciliation (defect 22 dial): {reason}"
+    try:
+        run_path.write_text(json.dumps(run, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def reconcile_abandoned_seat(api_key: str, *, root: Path | None = None) -> str | None:
+    """Release a seat left by a previous supervisor that died without its
+    release path (defect 22).
+
+    The default-OFF dial behind ``--reconcile-abandoned-seat``. When the
+    newest run folder shows no verified seat release -- no clean stop, or a
+    clean stop whose leave Arena never confirmed -- the previous supervisor
+    may have left the agent seated; that seat must be free before this process
+    joins anything, because joining a seat that still holds the old agent
+    silently reconnects a second runner to it (DECISIONS §1.2). Only the
+    read-only peek and the leave endpoint are used here: releasing is allowed,
+    joining is not, and nothing rebuys.
+
+    Returns a refusal reason that must halt startup, or None to play on. On
+    a refusal the previous run stays unstamped so every restart re-attempts
+    the release until it succeeds; a released or empty seat is stamped so
+    later starts do not repeat the leave.
+
+    Both seat peeks go through :func:`peek_seat` and both fail closed: an
+    answer that could not be read is a refusal, never a free seat. The
+    post-leave peek used to test only :func:`is_seated_snapshot`, which is
+    False for ``None``, so an HTTP 500 or an unusable 200 after the leave
+    stamped the run and joined anyway -- and the stamp meant no later start
+    ever re-attempted that release.
+    """
+
+    root = root or ARCHIVE_ROOT
+    run_dir = previous_unclean_run(root)
+    if run_dir is None:
+        return None
+    competition = competition_of_unclean_run(run_dir)
+    if competition is None:
+        _stamp_reconciled_run(
+            run_dir, "no verified seat release and no competition recorded"
+        )
+        print(
+            f"reconciliation: previous run {run_dir.name} left no verified seat "
+            "release but recorded no competition; playing on"
+        )
+        return None
+    snapshot, status = peek_seat(api_key, competition)
+    if snapshot is None:
+        return (
+            f"previous run {run_dir.name} left no verified seat release and "
+            f"the seat for {competition} could not be verified (HTTP {status}); "
+            f"refusing to join. Recover with: python -m tools.leave {competition}"
+        )
+    if not is_seated_snapshot(snapshot):
+        _stamp_reconciled_run(
+            run_dir, "no verified seat release; verified not seated at next start"
+        )
+        print(
+            f"reconciliation: previous run {run_dir.name} left no verified seat "
+            f"release but {competition} shows no seat; playing on"
+        )
+        return None
+    print(
+        f"reconciliation: previous run {run_dir.name} left {competition} still "
+        "seated; releasing before any join"
+    )
+    if not run_agent.confirm_leave(api_key, competition):
+        return (
+            f"the seat for {competition} left by the previous run could not be "
+            f"released; refusing to join. Recover with: "
+            f"python -m tools.leave {competition}"
+        )
+    snapshot, status = peek_seat(api_key, competition)
+    if snapshot is None:
+        # Symmetric with the pre-leave peek: an unread answer is not a free
+        # seat. Unstamped, so the next start re-attempts the release.
+        return (
+            f"the leave for {competition} was sent but the release could not "
+            f"be verified (HTTP {status}); refusing to join. Recover with: "
+            f"python -m tools.leave {competition}"
+        )
+    if is_seated_snapshot(snapshot):
+        return (
+            f"the leave for {competition} was sent but the seat still reads "
+            f"occupied; refusing to join. Recover with: "
+            f"python -m tools.leave {competition}"
+        )
+    _stamp_reconciled_run(
+        run_dir, "no verified seat release; seat released by the next start"
+    )
+    print("reconciliation: seat released; playing on")
+    return None
 
 
 # Console control events Windows delivers but CPython does not turn into
@@ -608,6 +913,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "purging them when the policy version changed"
         ),
     )
+    parser.add_argument(
+        "--reconcile-abandoned-seat",
+        action="store_true",
+        help=(
+            "defect-22 dial (default OFF, owner-enabled): when the previous "
+            "run.json shows no clean stop, verify the seat through the "
+            "read-only peek and call the leave endpoint before any join. "
+            "Releasing is allowed, joining is not, and nothing rebuys"
+        ),
+    )
     args = parser.parse_args(argv)
     if args.session_seconds <= 0:
         parser.error("--session-seconds must be greater than zero")
@@ -636,21 +951,63 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     api_key, _ = run_agent.load_credentials()
 
+    # Defect-22 dial: release a seat the previous supervisor may have left
+    # behind, before this process joins anything. Default OFF.
+    if args.reconcile_abandoned_seat:
+        refusal = reconcile_abandoned_seat(api_key)
+        if refusal is not None:
+            print(
+                "!!! SUPERVISOR REFUSED TO JOIN: "
+                f"{refusal}. This is a deliberate halt: the seat is not "
+                "verifiably free. !!!"
+            )
+            return EXIT_RECONCILIATION_FAILED
+
     # The console handler fires on a different thread than the loop, so the
     # seated competition and the released flag live in one shared place.
     seat: dict[str, Any] = {"competition": None, "released": False}
+    archive_cell: dict[str, RunArchive | None] = {"archive": None}
 
     def release_table() -> None:
-        """Leave the table once, from whichever exit route arrives first."""
+        """Leave the table once, from whichever exit route arrives first.
+
+        The leave answer is recorded, not assumed: an unconfirmed release
+        leaves a clean-looking ``stop_reason`` behind, and only
+        ``seat_release_confirmed`` tells the next start to re-examine it.
+        """
 
         competition = seat["competition"]
         if competition is None or seat["released"]:
             return
         seat["released"] = True
-        leave_quietly(api_key, competition)
+        archive = archive_cell["archive"]
+        if archive is not None:
+            # Intent before the network call, exactly like the stop reason: a
+            # kill inside the leave must leave "unreleased" on disk for the
+            # next start to reconcile, not a clean-looking record.
+            with contextlib.suppress(OSError):
+                archive.record_release(False)
+        confirmed = leave_quietly(api_key, competition)
+        if archive is not None and confirmed:
+            with contextlib.suppress(OSError):
+                archive.record_release(True)
+
+    def console_stop() -> None:
+        """Window close / logoff / shutdown: record the stop, then leave.
+
+        The leave is one network call and Windows grants the handler only a
+        few seconds, so the local ``run.json`` write must come first: if the
+        grace window expires mid-leave, the evidence survives (defect 22).
+        """
+
+        archive = archive_cell["archive"]
+        if archive is not None:
+            with contextlib.suppress(OSError):
+                archive.finish("console closed, logged off, or shutting down")
+        release_table()
 
     install_stop_signals()
-    install_console_shutdown_handler(release_table)
+    install_console_shutdown_handler(console_stop)
 
     started = time.time()
     sessions = 0
@@ -673,6 +1030,7 @@ def main(argv: list[str] | None = None) -> int:
             elif previous != identity:
                 print(f"archive now tracking deployment {identity}")
             archive = RunArchive(ARCHIVE_ROOT, started, args)
+            archive_cell["archive"] = archive
             print(f"archiving this run under {archive.directory}")
         except OSError as error:
             print(f"archive disabled (cannot write runs/): {error}")
@@ -704,6 +1062,9 @@ def main(argv: list[str] | None = None) -> int:
                     exit_code = EXIT_DISCOVERY_FAILED
                     break
             seat["competition"] = competition
+            if archive is not None:
+                with contextlib.suppress(OSError):
+                    archive.mark_seated(competition)
 
             participant = participant_state(api_key, competition)
             reason = bankroll_stop_reason(participant, min_chips=args.min_chips)
@@ -779,7 +1140,10 @@ def main(argv: list[str] | None = None) -> int:
                 break
             if code == 6:
                 # The runner could not confirm its own leave; try once more
-                # from here so the restart begins from a released seat.
+                # from here so the restart begins from a released seat. The
+                # answer is deliberately not acted on: RETRY_NOTES[6] -- if
+                # this one is unconfirmed too, re-attaching a runner to that
+                # seat still beats leaving it seated with nobody answering.
                 print("  unconfirmed leave: releasing the seat once more")
                 leave_quietly(api_key, competition)
             delay = RESTART_BACKOFF_S[failures - 1]
@@ -793,10 +1157,13 @@ def main(argv: list[str] | None = None) -> int:
         stop_reason = "stopped by you"
         exit_code = EXIT_OK
     finally:
-        release_table()
+        # Write the stop intent to run.json BEFORE the network leave: the
+        # leave can outlive a second Ctrl+C or the console handler's grace
+        # window, and a kill during it must still leave evidence (defect 22).
         if archive is not None:
             with contextlib.suppress(OSError):
                 archive.finish(stop_reason)
+        release_table()
         print(
             f"\n=== STOPPED: {stop_reason}. "
             f"{sessions} session(s) over {(time.time() - started) / 3600:.1f}h ==="
