@@ -960,7 +960,15 @@ def _parser() -> argparse.ArgumentParser:
         default=[str(root) for root in DEFAULT_ROOTS],
         help="collection directories containing raw/tables/*.json",
     )
-    parser.add_argument("--output", default=str(DEFAULT_OUTPUT_V9))
+    parser.add_argument(
+        "--output",
+        required=True,
+        help=(
+            "where to write the dataset. Required: the old default was "
+            "the frozen artifact's own path, so a bare rerun overwrote "
+            "the ecb4739df9d1b9ec oracle in place."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument(
         "--equity-trials", type=int, default=DEFAULT_EQUITY_TRIALS

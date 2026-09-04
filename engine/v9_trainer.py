@@ -84,6 +84,7 @@ from engine.branch_contract_v9 import (
     MODEL_FORMAT_VERSION_V9,
     V9_HEAD_SIZES,
 )
+from engine.dataset_provenance import describe, require_live_dataset
 from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
@@ -1300,8 +1301,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset",
-        default=str(
-            Path("artifacts") / "phase_a_v9" / "phase-a-dataset-v9.jsonl.gz"
+        required=True,
+        help=(
+            "Phase-A dataset (.jsonl.gz). Required: there is no safe "
+            "default. It used to default to the Arena-built "
+            "phase-a-dataset-v9.jsonl.gz, which the 2026-09-03 PHH switch "
+            "retired, so a bare invocation trained on quarantined data and "
+            "said nothing."
+        ),
+    )
+    parser.add_argument(
+        "--allow-retired-dataset",
+        action="store_true",
+        help=(
+            "train on a corpus the project has retired (no live "
+            "generator.source). Deliberate ablation only; record the arm."
         ),
     )
     parser.add_argument("--output-dir", default="artifacts/candidates")
@@ -1359,8 +1373,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         sizing_record = json.loads(
             Path(args.sizing_record).read_text(encoding="utf-8")
         )
+    source = require_live_dataset(
+        args.dataset, allow_retired=args.allow_retired_dataset
+    )
+    print(f"dataset provenance: {describe(args.dataset)}")
     rows = load_phase_a_dataset_v9(args.dataset)
-    print(f"dataset: {args.dataset} ({len(rows)} rows)")
+    print(f"dataset: {args.dataset} ({len(rows)} rows, source {source})")
     summary = train_phase_a_candidate_v9(
         rows,
         args.output_dir,

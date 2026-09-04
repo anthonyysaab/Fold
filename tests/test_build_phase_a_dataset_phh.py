@@ -269,14 +269,17 @@ class ShardingTests(unittest.TestCase):
         self.assertEqual(
             summary_one["counts"]["hands"], summary_many["counts"]["hands"]
         )
-        # The sidecar's per-collection coverage is now per FILE, not per
-        # root -- the shard's one visible record change, and it must not
-        # depend on the worker count either.
+        # The shard must leave no trace in the record either: coverage
+        # stays keyed by ROOT, one entry, at any worker count -- the same
+        # shape the --limit fallback produces below.
         self.assertEqual(
             sorted(summary_one["per_collection"]),
             sorted(summary_many["per_collection"]),
         )
-        self.assertEqual(len(summary_one["per_collection"]), 3)
+        self.assertEqual(len(summary_one["per_collection"]), 1)
+        self.assertEqual(
+            summary_one["per_collection"], summary_many["per_collection"]
+        )
 
     def test_limit_still_caps_hands_per_root(self) -> None:
         """``--limit`` keeps the per-root path and its hand semantics.

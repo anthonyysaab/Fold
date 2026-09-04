@@ -59,10 +59,10 @@ Full procedures with preconditions: `.handoff/PROCEDURES.md`. The six most
 used, from the repo root with the stdlib interpreter:
 
 ```powershell
-python -m pytest tests/ -q                                             # 1007 / 21 / 355
+python -m pytest tests/ -q                                             # 1,145 / 29 / 370
 python -m tools.api /api/arena/agent/me /api/arena/competition/list-active   # live state, read-only
 python -m tools.evaluate_v8 --candidate-v9 artifacts/candidates/<v>.manifest.json --workers 6 --output artifacts/evaluations/<v>-gauntlet.json --workdir artifacts/evaluations/<v>-gauntlet.json.stages
-python -m tools.ols_baseline --corpus artifacts/phase_b_v9/candidate-v9-phase-b-merged.phase-b.jsonl.gz --phase-a-dataset artifacts/phase_a_v9/phase-a-dataset-v9.jsonl.gz --candidate artifacts/candidates/<v>.manifest.json
+python -m tools.ols_baseline --corpus artifacts/phase_b_v9/candidate-v9-phase-b-merged.phase-b.jsonl.gz --phase-a-dataset artifacts/phase_a_v9/phase-a-dataset-v9-pluribus-<date>.jsonl.gz --candidate artifacts/candidates/<v>.manifest.json
 python -m tools.promote_candidate artifacts/candidates/<v>.manifest.json --reason "<evaluation summary>"   # OWNER
 .\play.cmd                                                             # OWNER; Ctrl+C once to stop
 ```

@@ -41,9 +41,11 @@ per-session ``--roots`` instead: that changes the id prefix from
 rewrites every seed. ``--limit`` caps hands PER ROOT, which a per-file
 shard cannot enforce without coordinating workers, so setting it falls
 back to the per-root path (it is a smoke-test flag; the production run
-does not pass it). The shard's one visible record change: the
-sidecar's ``per_collection`` coverage is keyed per FILE rather than per
-root (per root when ``--limit`` sends the build down the fallback).
+does not pass it). The shard is invisible in the output: the
+dataset bytes are unchanged, and so is the sidecar, because the sink is
+handed the ROOT as each shard's collection name and aggregates them.
+Keying it per file instead cost 813 KB of ``{'hands': 1}`` entries in a
+tracked record on the first 10,000-hand build -- 99.7% of the file.
 
 Offline and read-only over ``phh-dataset/``; writes only the dataset
 and its sidecar under ``artifacts/phase_a_v9/``. No Arena requests, no
@@ -268,7 +270,12 @@ def build_phase_a_dataset_phh(
                 (root, path, seed, equity_trials, potential_trials)
                 for root, path in shards
             ],
-            [path for _root, path in shards],
+            # The collection name is the ROOT, not the shard: the sink
+            # aggregates repeated names and de-duplicates them for the
+            # sidecar, so per-collection coverage stays keyed the way
+            # the Arena builder keys it and the shard leaves no trace
+            # in the record -- just as it leaves none in the bytes.
+            [root for root, _path in shards],
             _process_phh_file,
             workers=workers,
             noun="files",

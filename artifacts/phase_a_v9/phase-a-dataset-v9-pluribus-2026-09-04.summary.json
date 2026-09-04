@@ -1,0 +1,131 @@
+{
+  "schema_version": 4,
+  "input_size": 414,
+  "sizing": {
+    "identity": "g-v9-composed-1",
+    "parameters": {
+      "active_base": 0.5,
+      "active_span": 0.195,
+      "aggressive_base": 0.75,
+      "aggressive_span": 0.25,
+      "cap_base": 0.325,
+      "cap_span": 0.125,
+      "setpoint": 45.0,
+      "temperature_span": 35.0
+    },
+    "rules": {
+      "commitment": {
+        "enabled": false,
+        "spr_threshold": 1.0
+      },
+      "damper": {
+        "enabled": false,
+        "kappa_r": 8.0
+      },
+      "escalation": {
+        "enabled": false,
+        "steps": [
+          0.0,
+          0.0,
+          0.0799,
+          0.0978
+        ]
+      },
+      "geometric": {
+        "enabled": false
+      },
+      "snap": {
+        "band": 0.15,
+        "enabled": false
+      }
+    }
+  },
+  "generator": {
+    "tool": "tools.build_phase_a_dataset_phh",
+    "source": "phh",
+    "seed": 7,
+    "equity_trials": 500,
+    "potential_trials": 400,
+    "read_equity_trials": 200,
+    "belief_provider": "P3BeliefProvider",
+    "belief_fit_source": "artifacts\\p3\\p3-fit.json",
+    "dataset_commit": "e2ec038d31a1a46a82d147db4bbfdb0910459705",
+    "roots": [
+      "phh-dataset\\data\\pluribus"
+    ],
+    "limit": null,
+    "phh_replay_version": "1",
+    "refusals": {},
+    "skipped_decisions": 0,
+    "timeout_actions": 0,
+    "label_coverage": {
+      "rows": 91356,
+      "free_spot_rows": 22135,
+      "fold_through_active": 7258,
+      "fold_through_aggressive": 11214,
+      "range_bucket": 83748,
+      "equity_called": 83748
+    }
+  },
+  "counts": {
+    "files": 10000,
+    "tables_with_rows": 10000,
+    "rows": 91356,
+    "duplicate_table_rows_dropped": 0,
+    "label_coverage": {
+      "rows": 91356,
+      "free_spot_rows": 22135,
+      "fold_through_active": 7258,
+      "fold_through_aggressive": 11214,
+      "range_bucket": 83748,
+      "equity_called": 83748
+    },
+    "hands": 10000
+  },
+  "dedupe_tables": true,
+  "skipped_roots": {},
+  "per_street": {
+    "preflop": {
+      "rows": 61700,
+      "free_spot_rows": 674,
+      "fold_through_active": 269,
+      "fold_through_aggressive": 10577,
+      "range_bucket": 57960,
+      "equity_called": 57960
+    },
+    "flop": {
+      "rows": 14077,
+      "free_spot_rows": 10260,
+      "fold_through_active": 3157,
+      "fold_through_aggressive": 342,
+      "range_bucket": 12478,
+      "equity_called": 12478
+    },
+    "turn": {
+      "rows": 9194,
+      "free_spot_rows": 6741,
+      "fold_through_active": 2147,
+      "fold_through_aggressive": 128,
+      "range_bucket": 8046,
+      "equity_called": 8046
+    },
+    "river": {
+      "rows": 6385,
+      "free_spot_rows": 4460,
+      "fold_through_active": 1685,
+      "fold_through_aggressive": 167,
+      "range_bucket": 5264,
+      "equity_called": 5264
+    }
+  },
+  "per_collection": {
+    "phh-dataset\\data\\pluribus": {
+      "tables_with_rows": 10000,
+      "allin_call_for_less": 164,
+      "hands": 10000
+    }
+  },
+  "files": {
+    "dataset": "phase-a-dataset-v9-pluribus-2026-09-04.jsonl.gz"
+  }
+}
