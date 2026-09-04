@@ -57,7 +57,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from engine.offline_trainer import _forward_v2
+from engine.forward_kernel import _forward_v2
 
 DEFAULT_MANIFEST = "artifacts/candidates/candidate-v7-0001c.approved.manifest.json"
 DEFAULT_JOURNAL = ".arena-training.jsonl"

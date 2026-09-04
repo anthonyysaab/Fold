@@ -1,7 +1,22 @@
 """Feature names and action labels shared by every policy implementation.
 
-The trained checkpoint, the PyTorch inference adapter, and the pure-Python
-deployment build all validate against these exact names and orders.
+These 125 names are the schema-2 BASE BLOCK of the live v8/v9 feature vector,
+not a legacy remnant -- despite having been written for a 125-input network
+that no longer exists. `game_state.features_from_table` builds the vector from
+this exact order on every decision by every policy, and
+`feature_extract_v8.assemble` then looks the base values up BY NAME to compose
+the wider schema-3/4 vectors. `learning_contract` derives
+``LEARNING_FEATURE_NAMES`` and ``LEARNING_INPUT_SIZE`` structurally from it, and
+`training_telemetry` indexes into it positionally.
+
+``LABELS`` is the frozen three-family action vocabulary, shared by the decision
+engine, the trainers and the simulator.
+
+The three consumers this docstring used to name -- the trained checkpoint, the
+PyTorch inference adapter and the pure-Python deployment build -- are all gone:
+the first two were archived on 2026-08-16, and P2 deleted the third on
+2026-09-04 along with ``LEGALITY_FEATURE_INDEXES``, whose only reader was the
+retired network's legality mask.
 """
 
 from __future__ import annotations
@@ -40,13 +55,7 @@ FEATURE_NAMES: tuple[str, ...] = (
     *_SCALAR_FEATURE_NAMES,
 )
 
-LEGALITY_FEATURE_INDEXES: tuple[int, ...] = tuple(
-    FEATURE_NAMES.index(name)
-    for name in ("legal_fold", "legal_check_call", "legal_aggress")
-)
-
 __all__ = [
     "FEATURE_NAMES",
     "LABELS",
-    "LEGALITY_FEATURE_INDEXES",
 ]

@@ -8,6 +8,7 @@
 *.phh text eol=lf
 *.phhs text eol=lf
 *.gz binary
+*.pt binary
 *.zip binary
 *.png binary
 *.pyd binary

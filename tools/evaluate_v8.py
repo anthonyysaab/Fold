@@ -69,7 +69,7 @@ from engine.table_simulator import (
     _family_of,
     run_sessions,
 )
-from engine.v8_trainer import MODEL_FAMILY_V8
+from engine.architecture_v8 import MODEL_FAMILY_V8
 from tools.evaluate_policies import (
     _BATTERIES,
     _battery_entry,

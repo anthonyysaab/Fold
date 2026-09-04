@@ -116,7 +116,7 @@ from engine.learned_policy_v8 import (
     _validate_v8_weights,
 )
 from engine.learning_contract import MODEL_FORMAT
-from engine.offline_trainer import _sigmoid
+from engine.forward_kernel import _sigmoid
 from engine.opponent_model import AggressionTracker
 from engine.rules.composition import (
     ComposedWager,
@@ -126,7 +126,7 @@ from engine.rules.composition import (
     parameters_and_rules_from_record,
 )
 from engine.rules.ruin_damper import table_exposure
-from engine.v8_trainer import validate_v9_architecture
+from engine.architecture_v8 import validate_v9_architecture
 
 
 class LearnedPolicyV9Error(LearnedPolicyError):

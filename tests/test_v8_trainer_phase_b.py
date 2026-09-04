@@ -23,8 +23,8 @@ from engine.learned_policy_v8 import (
     RESIDUAL_CAP_POT_FRACTION,
     compose_branch_values,
 )
-from engine.v8_trainer import V8TrainingConfig
-from engine.v8_trainer_phase_b import (
+from training.v8_trainer import V8TrainingConfig
+from training.v8_trainer_phase_b import (
     RESIDUAL_CAP_POT_FRACTION_DEFAULT,
     PhaseBTrainingConfig,
     check_phase_b_config,

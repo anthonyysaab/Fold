@@ -18,8 +18,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import training.offline_trainer
 from engine.learning_contract import LEARNING_INPUT_SIZE
-from engine.offline_trainer import (
+from training.offline_trainer import (
     DEGENERATE_GROUP_FILTERS,
     TrainingConfig,
     _action_value_target,
@@ -465,8 +466,12 @@ class RandomArmTests(unittest.TestCase):
         retraining spread -- irreproducibility is the last thing it needs.
         """
 
+        # Located through the module, not by a hard-coded relative path: this
+        # test read "engine/offline_trainer.py" until the trainers moved to
+        # training/ on 2026-09-04, and a literal path is invisible to an
+        # import check -- it fails at run time, after the move looks clean.
         source = pathlib.Path(
-            "engine/offline_trainer.py"
+            training.offline_trainer.__file__
         ).read_text(encoding="utf-8")
         start = source.index("def _mask_flags")
         body = source[start : source.index("def action_weights", start)]

@@ -1,41 +1,52 @@
-"""Phase-A supervised trainer for the v8 composed-value network.
+"""Phase-A supervised trainer for the v9 composed-value network (L3).
 
-V8_DESIGN.md §4 (amended) / §5 Phase A: train the three independently
-supervisable component heads — ``fold_through``, ``range``, and
-``equity_called`` — on the complete-information Phase-A dataset built by
-``tools.build_phase_a_dataset``. The ``residual`` head is exported
-zero-initialized and receives **zero gradient** in this phase: it belongs
-to the composed-value objective (Phase B), not to supervised component
-fitting.
+Fork of :mod:`training.v8_trainer` for the v9 branch contract
+(`engine/branch_contract_v9.py`), left as a sibling module so the v8
+trainer stays byte-identical for the frozen format-3 line. The network
+recipe — encoders, trunk, towers, AdamW schedule, early stopping, seed
+selection — is the measured v7/v8 recipe verbatim; what changes is the
+DATA CONTRACT, pinned in `.handoff/notes/V9_RESTRUCTURE_PLAN.md`
+("L3/L4 DATA CONTRACTS") before any of this code existed:
 
-Architecture (schema 3 is normative for the input partition):
+- **The renamed label keys ARE the version guard.** Masks and labels are
+  ``fold_through_active`` / ``fold_through_aggressive`` (the two wager
+  lanes of ``FOLD_THROUGH_BRANCHES_V9``). A v8 dataset (``fold_through_
+  small/large``) fails loudly here, and a v9 dataset fails loudly in the
+  v8 loader — old files can never load with misrouted slots.
+- **``to_call_zero`` is the lane-legality indicator.** Active-lane
+  fold-through supervision is valid ONLY on free-spot rows (a call
+  closes the action and defines no fold-through); aggressive supervision
+  ONLY on priced rows (the contract masks the lane at ``to_call == 0``).
+  The loader REJECTS violations instead of masking them away.
+- **``read_temperature_x10``** carries g's temperature read as the raw
+  int ``10·T`` (``aggression_sizing.read_to_context_int``). Consumers
+  decode it through the ARTIFACT'S OWN sizing parameters and never
+  recompute the read — ``round(x, 1)`` is banker's rounding, which torch
+  cannot reproduce. Phase A's supervised losses do not consume it, but
+  every row must carry a valid read so the same rows can flow into the
+  Phase-B interleave and later audits without a re-harvest.
+- **Equity labels route to ``EQUITY_SLOTS_V9`` positions BY NAME**
+  (``passive`` / ``active`` / ``aggressive``), never by literal index:
+  the taken wager lane for sized wagers (active-lane bets, aggressive
+  raises); ``passive`` for a free-spot row without a wager (the
+  checked-through conditional); ``active`` for every priced row without
+  hero aggression (calls, and folds share that continuing-set-at-price
+  conditional, exactly as v8's folds shared ``check_call``'s).
 
-- card encoder 208 -> 64, context encoder 205 -> 48, each
-  linear -> ReLU -> LayerNorm; the card block is **not** z-scored
-  (identity scales are stored), the context block is z-scored from the
-  training split only with the retained 0.05 std floor.
-- trunk 112 -> 128 -> 128, LayerNorm + dropout after every trunk layer
-  except the last (linear -> ReLU only), exactly the v7 discipline.
-- four towers, 32 wide: fold_through -> 2, range -> 8 (softmax),
-  equity_called -> 3, residual -> 4 (zero-initialized output).
+Head widths and slot orders all derive from ``branch_contract_v9``'s
+tuples — the single definition site — and the architecture block is
+``v8_trainer.default_v9_architecture`` (same shape as v8 by design; the
+v9 change is slot MEANINGS, which is why the manifest carries format 4,
+schema 4, ``BRANCH_LABELS_V9``, and a mandatory ``sizing`` record).
 
-Optimization copies the measured v7 recipe verbatim: AdamW with
-decoupled weight decay excluding biases and LayerNorm, He init with
-zero-initialized output heads, dropout train-only, global-norm gradient
-clip 1.0, linear warmup then cosine decay, early stopping with
-best-checkpoint restore on total validation loss, and non-finite
-gradients/parameters failing closed.
-
-Phase-A losses are masked by the dataset's per-row label masks:
-
-- ``fold_through``: BCE per branch; a row supervises only the branch its
-  realized size matched (mask from the dataset).
-- ``range``: cross-entropy over the 8 strength-percentile octiles.
-- ``equity_called``: MSE against the exact/MC equity label, routed to
-  the slot of the realized action — the taken aggress branch for sized
-  aggressions, the ``check_call`` slot for every non-aggress row (the
-  continuing set was observed at the existing price without hero
-  aggression; folds share that conditional).
+The manifest's ``sizing`` block is the composed sizing record the
+dataset was built under (g identity + every rule-dial state). It is
+resolved fail-loud: an explicit ``sizing_record`` argument must agree
+with the dataset sidecar's record when the sidecar carries one; with no
+explicit record the sidecar's is used; only when neither exists does the
+module default (`engine.rules.composition.composed_sizing_record`, every
+dial off) apply. Loading a record written under a foreign g identity
+refuses.
 
 Torch imports are function-local (``offline_trainer.py``'s pattern): the
 module imports cleanly on the stdlib-only interpreter, and training runs
@@ -44,8 +55,8 @@ in the CUDA venv. This trainer writes immutable candidate artifacts only
 manifest validator accepts no state but ``"candidate"``.
 
 Usage (CUDA venv):
-    python -m engine.v8_trainer \
-        --model-version candidate-v8-0001 --init-seeds 101 202 303
+    python -m training.v9_trainer \
+        --model-version candidate-v9-0001 --init-seeds 101 202 303
 """
 
 from __future__ import annotations
@@ -65,265 +76,97 @@ from typing import Any
 
 from bluff import DEFAULT_BLUFF_SETTINGS
 
-from engine import schema3
+from engine import schema4
+from engine.branch_contract_v9 import (
+    BRANCH_LABELS_V9,
+    EQUITY_SLOTS_V9,
+    FOLD_THROUGH_BRANCHES_V9,
+    MODEL_FORMAT_VERSION_V9,
+    V9_HEAD_SIZES,
+)
+from training.dataset_provenance import describe, require_live_dataset
 from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
 )
-from engine.feature_extract_v8 import _BRANCH_LARGE, _BRANCH_SMALL
 from engine.learning_contract import MODEL_FORMAT
-from engine.offline_trainer import (
+from training.offline_trainer import (
     _assert_finite_weights,
     _round9,
     validate_training_device,
 )
 from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
+from engine.rules.composition import (
+    composed_sizing_record,
+    parameters_and_rules_from_record,
+)
+from training.v8_trainer import (
+    CONTEXT_STD_FLOOR,
+    V8TrainingConfig,
+    _require_finite_unit,
+    check_v8_config,
+    default_v9_architecture,
+    split_rows,
+)
+from engine.architecture_v8 import (
+    CARD_ENCODER_WIDTH,
+    CONTEXT_ENCODER_WIDTH,
+    HEAD_TOWER_WIDTH,
+    TRUNK_WIDTHS,
+    validate_v9_architecture,
+)
 
-MODEL_FORMAT_VERSION_V8 = 3
-MODEL_FAMILY_V8 = "v8-composed-value"
-TRAINING_OBJECTIVE_V8_PHASE_A = "phase_a_supervised_component_heads_v8"
+TRAINING_OBJECTIVE_V9_PHASE_A = "phase_a_supervised_component_heads_v9"
+SUPERVISED_HEADS_V9 = ("fold_through", "range", "equity_called")
 
-CARD_ENCODER_WIDTH = 64
-CONTEXT_ENCODER_WIDTH = 48
-TRUNK_WIDTHS = (128, 128)
-HEAD_TOWER_WIDTH = 32
-V8_HEAD_SIZES: dict[str, int] = {
-    "fold_through": 2,
-    "range": schema3.BELIEF_BUCKETS,
-    "equity_called": 3,
-    "residual": 4,
-}
-SUPERVISED_HEADS = ("fold_through", "range", "equity_called")
-BRANCH_LABELS_V8 = ("fold", "check_call", "aggress_small", "aggress_large")
-FOLD_THROUGH_BRANCHES = ("aggress_small", "aggress_large")
-EQUITY_SLOTS = ("aggress_small", "aggress_large", "check_call")
-CONTEXT_STD_FLOOR = 0.05
+#: The renamed mask/label keys, in FOLD_THROUGH_BRANCHES_V9 order. The
+#: rename IS the dataset version bump: never keep old key names with new
+#: semantics (pinned rule).
+_FT_LABEL_NAMES_V9: tuple[str, ...] = tuple(
+    f"fold_through_{branch}" for branch in FOLD_THROUGH_BRANCHES_V9
+)
+_FT_ACTIVE = FOLD_THROUGH_BRANCHES_V9.index("active")
+_FT_AGGRESSIVE = FOLD_THROUGH_BRANCHES_V9.index("aggressive")
+#: Equity slots resolved BY NAME once, at the single definition site.
+_EQ_SLOT_PASSIVE = EQUITY_SLOTS_V9.index("passive")
+_EQ_SLOT_ACTIVE = EQUITY_SLOTS_V9.index("active")
+_EQ_SLOT_AGGRESSIVE = EQUITY_SLOTS_V9.index("aggressive")
 
-_FT_LABEL_NAMES = ("fold_through_small", "fold_through_large")
+#: The v8 key names, recognized only to refuse them with guidance.
+_V8_FT_KEYS = frozenset({"fold_through_small", "fold_through_large"})
 
 
 @dataclass(frozen=True, slots=True)
-class PhaseARow:
-    """One validated Phase-A supervision row."""
+class PhaseARowV9:
+    """One validated v9 Phase-A supervision row."""
 
     table_id: str
     street: str
     features: tuple[float, ...]
     fold_through_label: float
-    fold_through_mask: tuple[int, int]  # (aggress_small, aggress_large)
+    fold_through_mask: tuple[int, ...]  # FOLD_THROUGH_BRANCHES_V9 order
     range_bucket: int
     range_mask: int
     equity_called: float
     equity_mask: int
-    equity_slot: int  # index into EQUITY_SLOTS
-
-
-@dataclass(frozen=True, slots=True)
-class V8TrainingConfig:
-    epochs: int = 150
-    learning_rate: float = 1e-3
-    weight_decay: float = 0.01
-    dropout: float = 0.2
-    warmup_steps: int = 200
-    early_stop_patience: int = 10
-    batch_size: int = 256
-    validation_fraction: float = 0.1
-    split_seed: int = 17
-    init_seed: int = 101
-    device: str = "cuda"
-    model_version: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class V8TrainingSummary:
-    rows: int
-    train_rows: int
-    validation_rows: int
-    selected_init_seed: int
-    train_losses: Mapping[str, float | None]
-    validation_losses: Mapping[str, float | None]
-    seed_runs: tuple[Mapping[str, object], ...]
-    calibration: Mapping[str, object]
-    weights_sha256: str
-    weights_path: Path
-    manifest_path: Path
-    wall_time_seconds: float
-
-
-def check_v8_config(config: V8TrainingConfig) -> None:
-    if config.epochs < 1:
-        raise ValueError("epochs must be positive")
-    if not math.isfinite(config.learning_rate) or config.learning_rate <= 0.0:
-        raise ValueError("learning_rate must be positive and finite")
-    if not math.isfinite(config.weight_decay) or config.weight_decay < 0.0:
-        raise ValueError("weight_decay must be non-negative and finite")
-    if not 0.0 <= config.dropout < 1.0:
-        raise ValueError("dropout must be in [0, 1)")
-    if config.warmup_steps < 0:
-        raise ValueError("warmup_steps cannot be negative")
-    if config.early_stop_patience < 1:
-        raise ValueError("early_stop_patience must be positive")
-    if config.batch_size < 1:
-        raise ValueError("batch_size must be positive")
-    if not 0.0 < config.validation_fraction < 1.0:
-        raise ValueError("validation_fraction must be in (0, 1)")
-    if config.device not in {"cpu", "cuda"}:
-        raise ValueError("device must be cpu or cuda")
-
-
-def default_v8_architecture() -> dict[str, object]:
-    """The fixed Phase-A architecture; schema 3 supplies the partition."""
-
-    return {
-        "family": MODEL_FAMILY_V8,
-        "card_indices": list(schema3.CARD_INDICES),
-        "context_indices": list(schema3.CONTEXT_INDICES),
-        "card_encoder_width": CARD_ENCODER_WIDTH,
-        "context_encoder_width": CONTEXT_ENCODER_WIDTH,
-        "trunk_widths": list(TRUNK_WIDTHS),
-        "head_towers": {name: HEAD_TOWER_WIDTH for name in V8_HEAD_SIZES},
-        "heads": dict(V8_HEAD_SIZES),
-        "fold_through_branches": list(FOLD_THROUGH_BRANCHES),
-        "equity_slots": list(EQUITY_SLOTS),
-        "layer_norm": True,
-        "dropout": None,
-    }
-
-
-def default_v9_architecture() -> dict[str, object]:
-    """The v9 architecture block; schema 4 supplies the partition.
-
-    Same encoder/trunk/tower widths as v8 — the v9 change is the branch
-    CONTRACT (slot meanings and the ``schema4`` partition), never
-    the network shape. Head sizes come from ``branch_contract_v9``, the
-    single definition site.
-    """
-
-    from engine import schema4
-    from engine.branch_contract_v9 import (
-        EQUITY_SLOTS_V9,
-        FOLD_THROUGH_BRANCHES_V9,
-        MODEL_FAMILY_V9,
-        V9_HEAD_SIZES,
-    )
-
-    return {
-        "family": MODEL_FAMILY_V9,
-        "card_indices": list(schema4.CARD_INDICES_V9),
-        "context_indices": list(schema4.CONTEXT_INDICES_V9),
-        "card_encoder_width": CARD_ENCODER_WIDTH,
-        "context_encoder_width": CONTEXT_ENCODER_WIDTH,
-        "trunk_widths": list(TRUNK_WIDTHS),
-        "head_towers": {name: HEAD_TOWER_WIDTH for name in V9_HEAD_SIZES},
-        "heads": dict(V9_HEAD_SIZES),
-        "fold_through_branches": list(FOLD_THROUGH_BRANCHES_V9),
-        "equity_slots": list(EQUITY_SLOTS_V9),
-        "layer_norm": True,
-        "dropout": None,
-    }
-
-
-def validate_v9_architecture(architecture: Mapping[str, object]) -> None:
-    """Fail-closed validation of a format-4 architecture block.
-
-    A separate validator, never a widening of the v8 one: a validator
-    that accepts both shapes is how a v8 artifact serves under v9 slot
-    meanings without anyone noticing.
-    """
-
-    from engine import schema4
-    from engine.branch_contract_v9 import (
-        EQUITY_SLOTS_V9,
-        FOLD_THROUGH_BRANCHES_V9,
-        MODEL_FAMILY_V9,
-        V9_HEAD_SIZES,
-    )
-
-    if architecture.get("family") != MODEL_FAMILY_V9:
-        raise ValueError(f"architecture family must be {MODEL_FAMILY_V9!r}")
-    if list(architecture.get("card_indices") or []) != list(
-        schema4.CARD_INDICES_V9
-    ):
-        raise ValueError("card_indices must match schema4.CARD_INDICES_V9")
-    if list(architecture.get("context_indices") or []) != list(
-        schema4.CONTEXT_INDICES_V9
-    ):
-        raise ValueError("context_indices must match schema4.CONTEXT_INDICES_V9")
-    if architecture.get("card_encoder_width") != CARD_ENCODER_WIDTH:
-        raise ValueError(f"card_encoder_width must be {CARD_ENCODER_WIDTH}")
-    if architecture.get("context_encoder_width") != CONTEXT_ENCODER_WIDTH:
-        raise ValueError(f"context_encoder_width must be {CONTEXT_ENCODER_WIDTH}")
-    if list(architecture.get("trunk_widths") or []) != list(TRUNK_WIDTHS):
-        raise ValueError(f"trunk_widths must be {list(TRUNK_WIDTHS)}")
-    if dict(architecture.get("heads") or {}) != V9_HEAD_SIZES:
-        raise ValueError(f"heads must be {V9_HEAD_SIZES}")
-    towers = dict(architecture.get("head_towers") or {})
-    if towers != {name: HEAD_TOWER_WIDTH for name in V9_HEAD_SIZES}:
-        raise ValueError(f"head_towers must all be {HEAD_TOWER_WIDTH}")
-    if list(architecture.get("fold_through_branches") or []) != list(
-        FOLD_THROUGH_BRANCHES_V9
-    ):
-        raise ValueError(
-            f"fold_through_branches must be {list(FOLD_THROUGH_BRANCHES_V9)}"
-        )
-    if list(architecture.get("equity_slots") or []) != list(EQUITY_SLOTS_V9):
-        raise ValueError(f"equity_slots must be {list(EQUITY_SLOTS_V9)}")
-    dropout = architecture.get("dropout")
-    if dropout is not None and not (
-        isinstance(dropout, float) and 0.0 <= dropout < 1.0
-    ):
-        raise ValueError("dropout must be None or a float in [0, 1)")
-
-
-def validate_v8_architecture(architecture: Mapping[str, object]) -> None:
-    if architecture.get("family") != MODEL_FAMILY_V8:
-        raise ValueError(f"architecture family must be {MODEL_FAMILY_V8!r}")
-    if list(architecture.get("card_indices") or []) != list(schema3.CARD_INDICES):
-        raise ValueError("card_indices must match schema3.CARD_INDICES")
-    if list(architecture.get("context_indices") or []) != list(
-        schema3.CONTEXT_INDICES
-    ):
-        raise ValueError("context_indices must match schema3.CONTEXT_INDICES")
-    if architecture.get("card_encoder_width") != CARD_ENCODER_WIDTH:
-        raise ValueError(f"card_encoder_width must be {CARD_ENCODER_WIDTH}")
-    if architecture.get("context_encoder_width") != CONTEXT_ENCODER_WIDTH:
-        raise ValueError(f"context_encoder_width must be {CONTEXT_ENCODER_WIDTH}")
-    if list(architecture.get("trunk_widths") or []) != list(TRUNK_WIDTHS):
-        raise ValueError(f"trunk_widths must be {list(TRUNK_WIDTHS)}")
-    if dict(architecture.get("heads") or {}) != V8_HEAD_SIZES:
-        raise ValueError(f"heads must be {V8_HEAD_SIZES}")
-    towers = dict(architecture.get("head_towers") or {})
-    if towers != {name: HEAD_TOWER_WIDTH for name in V8_HEAD_SIZES}:
-        raise ValueError(f"head_towers must all be {HEAD_TOWER_WIDTH}")
-    dropout = architecture.get("dropout")
-    if dropout is not None and not (
-        isinstance(dropout, float) and 0.0 <= dropout < 1.0
-    ):
-        raise ValueError("dropout must be None or a float in [0, 1)")
+    equity_slot: int  # index into EQUITY_SLOTS_V9, resolved by name
+    to_call_zero: bool
+    read_temperature_x10: int  # g's read, 10·T, decoded by consumers
 
 
 # ---------------------------------------------------------------------------
-# Dataset loading
+# Dataset loading — fail-closed, the renamed keys are the version guard
 # ---------------------------------------------------------------------------
 
 
-def _require_finite_unit(value: object, name: str, line: int) -> float:
-    if not isinstance(value, (int, float)) or isinstance(value, bool):
-        raise ValueError(f"line {line}: {name} is not a number")
-    number = float(value)
-    if not math.isfinite(number) or not 0.0 <= number <= 1.0:
-        raise ValueError(f"line {line}: {name} {value!r} is not in [0, 1]")
-    return number
-
-
-def _parse_row(document: Mapping[str, Any], line: int) -> PhaseARow:
+def _parse_row_v9(document: Mapping[str, Any], line: int) -> PhaseARowV9:
     features = document.get("features")
     if not isinstance(features, list):
         raise ValueError(f"line {line}: features is not a list")
-    if len(features) != schema3.INPUT_SIZE_V8:
+    if len(features) != schema4.INPUT_SIZE_V9:
         raise ValueError(
-            f"line {line}: features must have {schema3.INPUT_SIZE_V8} entries, "
-            f"found {len(features)}"
+            f"line {line}: features must have {schema4.INPUT_SIZE_V9} "
+            f"entries, found {len(features)}"
         )
     values: list[float] = []
     for value in features:
@@ -338,37 +181,69 @@ def _parse_row(document: Mapping[str, Any], line: int) -> PhaseARow:
     masks = document.get("masks")
     if not isinstance(labels, Mapping) or not isinstance(masks, Mapping):
         raise ValueError(f"line {line}: labels/masks are not objects")
+    if _V8_FT_KEYS & set(masks) or _V8_FT_KEYS & set(labels):
+        raise ValueError(
+            f"line {line}: fold_through_small/large are the v8 dataset's "
+            "keys — this is not a v9 Phase-A dataset (the renamed keys "
+            "are the version guard; v9 never relabels old corpora)"
+        )
     mask_values: dict[str, int] = {}
-    for name in (*_FT_LABEL_NAMES, "range_bucket", "equity_called"):
+    for name in (*_FT_LABEL_NAMES_V9, "range_bucket", "equity_called"):
         raw = masks.get(name)
         if raw not in (0, 1) or isinstance(raw, bool):
             raise ValueError(f"line {line}: mask {name} must be 0 or 1")
         mask_values[name] = int(raw)
-    ft_small = mask_values["fold_through_small"]
-    ft_large = mask_values["fold_through_large"]
-    if ft_small and ft_large:
+    ft_mask = tuple(mask_values[name] for name in _FT_LABEL_NAMES_V9)
+    if sum(ft_mask) > 1:
         raise ValueError(f"line {line}: both fold_through branch masks are set")
 
-    ft_label = 0.0
-    if ft_small or ft_large:
-        ft_label = _require_finite_unit(
-            labels.get("fold_through_small"), "fold_through_small", line
+    to_call_zero = document.get("to_call_zero")
+    if not isinstance(to_call_zero, bool):
+        raise ValueError(f"line {line}: to_call_zero must be a boolean")
+    # The lane-legality rules, rejected rather than masked away: an
+    # active-lane fold-through exists only where the lane executes as a
+    # BET (a call closes hero's action and buys no folds), and the
+    # aggressive lane does not exist at a free spot under the contract.
+    if ft_mask[_FT_ACTIVE] and not to_call_zero:
+        raise ValueError(
+            f"line {line}: fold_through_active is masked in on a priced "
+            "row — a call defines no fold-through; active-lane "
+            "supervision is valid only at to_call == 0"
         )
+    if ft_mask[_FT_AGGRESSIVE] and to_call_zero:
+        raise ValueError(
+            f"line {line}: fold_through_aggressive is masked in on a "
+            "free-spot row — the aggressive lane is escalation-only and "
+            "masked at to_call == 0"
+        )
+
+    ft_label = 0.0
+    if any(ft_mask):
+        supervised = _FT_LABEL_NAMES_V9[ft_mask.index(1)]
+        ft_label = _require_finite_unit(labels.get(supervised), supervised, line)
         if ft_label not in (0.0, 1.0):
             raise ValueError(
-                f"line {line}: fold_through label {ft_label!r} is not binary"
+                f"line {line}: {supervised} label {ft_label!r} is not binary"
             )
 
     bucket = labels.get("range_bucket")
     if not isinstance(bucket, int) or isinstance(bucket, bool):
         raise ValueError(f"line {line}: range_bucket is not an integer")
-    if mask_values["range_bucket"] and not 0 <= bucket < schema3.BELIEF_BUCKETS:
+    if mask_values["range_bucket"] and not 0 <= bucket < schema4.BELIEF_BUCKETS:
         raise ValueError(f"line {line}: range_bucket {bucket} out of range")
 
     equity = 0.0
     if mask_values["equity_called"]:
         equity = _require_finite_unit(
             labels.get("equity_called"), "equity_called", line
+        )
+
+    encoded = document.get("read_temperature_x10")
+    if not isinstance(encoded, int) or isinstance(encoded, bool):
+        raise ValueError(f"line {line}: read_temperature_x10 is not an integer")
+    if not 0 <= encoded <= 1000:
+        raise ValueError(
+            f"line {line}: read_temperature_x10 {encoded} is not in [0, 1000]"
         )
 
     table_id = document.get("table_id")
@@ -378,29 +253,40 @@ def _parse_row(document: Mapping[str, Any], line: int) -> PhaseARow:
     if street not in ("preflop", "flop", "turn", "river"):
         raise ValueError(f"line {line}: unsupported street {street!r}")
 
-    # Equity slot: the taken aggress branch for sized aggressions, the
-    # check_call slot for every other row (see the module docstring).
-    equity_slot = 0 if ft_small else 1 if ft_large else 2
-    return PhaseARow(
+    # Equity slot, resolved BY NAME (pinned rule): the taken wager lane
+    # for sized wagers; otherwise the conditional the row observed —
+    # checked-through (passive) at a free spot, the continuing set at
+    # the existing price (active) on priced rows, folds included.
+    if ft_mask[_FT_ACTIVE]:
+        slot = _EQ_SLOT_ACTIVE
+    elif ft_mask[_FT_AGGRESSIVE]:
+        slot = _EQ_SLOT_AGGRESSIVE
+    elif to_call_zero:
+        slot = _EQ_SLOT_PASSIVE
+    else:
+        slot = _EQ_SLOT_ACTIVE
+    return PhaseARowV9(
         table_id=table_id,
         street=str(street),
         features=tuple(values),
         fold_through_label=ft_label,
-        fold_through_mask=(ft_small, ft_large),
-        range_bucket=max(0, min(schema3.BELIEF_BUCKETS - 1, bucket)),
+        fold_through_mask=ft_mask,
+        range_bucket=max(0, min(schema4.BELIEF_BUCKETS - 1, bucket)),
         range_mask=mask_values["range_bucket"],
         equity_called=equity,
         equity_mask=mask_values["equity_called"],
-        equity_slot=equity_slot,
+        equity_slot=slot,
+        to_call_zero=to_call_zero,
+        read_temperature_x10=encoded,
     )
 
 
-def load_phase_a_dataset(path: str | Path) -> tuple[PhaseARow, ...]:
-    """Load and validate a Phase-A JSONL(.gz) dataset, fail-closed."""
+def load_phase_a_dataset_v9(path: str | Path) -> tuple[PhaseARowV9, ...]:
+    """Load and validate a v9 Phase-A JSONL(.gz) dataset, fail-closed."""
 
     resolved = Path(path)
     opener = gzip.open if resolved.name.endswith(".gz") else open
-    rows: list[PhaseARow] = []
+    rows: list[PhaseARowV9] = []
     with opener(resolved, "rt", encoding="utf-8") as stream:  # type: ignore[operator]
         for line_number, line in enumerate(stream, start=1):
             text = line.strip()
@@ -409,58 +295,33 @@ def load_phase_a_dataset(path: str | Path) -> tuple[PhaseARow, ...]:
             document = json.loads(text)
             if not isinstance(document, Mapping):
                 raise ValueError(f"line {line_number}: row is not an object")
-            rows.append(_parse_row(document, line_number))
+            rows.append(_parse_row_v9(document, line_number))
     if not rows:
         raise ValueError(f"no rows in {resolved}")
     return tuple(rows)
 
 
 # ---------------------------------------------------------------------------
-# Split and normalization
+# Normalization (schema-4 scoped; the split rule is shared with v8)
 # ---------------------------------------------------------------------------
 
 
-def table_split_value(split_seed: int, table_id: str) -> float:
-    """Deterministic per-table hash in [0, 1), independent of row order."""
-
-    digest = hashlib.sha256(f"{split_seed}:{table_id}".encode()).digest()
-    return int.from_bytes(digest[:8], "big") / 2.0**64
-
-
-def split_rows(
-    rows: Sequence[PhaseARow], config: V8TrainingConfig
-) -> tuple[list[PhaseARow], list[PhaseARow]]:
-    """90/10-style split by table_id hash: whole tables, seed recorded."""
-
-    validation_tables = {
-        table_id
-        for table_id in {row.table_id for row in rows}
-        if table_split_value(config.split_seed, table_id)
-        < config.validation_fraction
-    }
-    train = [row for row in rows if row.table_id not in validation_tables]
-    validation = [row for row in rows if row.table_id in validation_tables]
-    return train, validation
-
-
-def context_normalization(
-    rows: Sequence[PhaseARow],
+def context_normalization_v9(
+    rows: Sequence[PhaseARowV9],
 ) -> tuple[list[float], list[float]]:
-    """Full-vector scales: context z-scored (floor 0.05), card identity.
+    """Schema-4 scales: context z-scored (floor 0.05), card identity.
 
-    Means/stds are computed from the supplied rows only — the caller
-    passes the training split, never the validation split. The card
-    block's binary one-hots pass through raw (V8_DESIGN §3: z-scoring
-    them to 5-6 sigma is what broke the whole-vector OOD guard), so card
-    indices carry the identity transform (mean 0, std 1).
+    The v8 rule at the v9 partition — normalization arrays are
+    schema-scoped and regenerated, never carried across (schema4's
+    contract). Callers pass the training split only.
     """
 
     if not rows:
         raise ValueError("cannot compute normalization from zero rows")
-    means = [0.0] * schema3.INPUT_SIZE_V8
-    stds = [1.0] * schema3.INPUT_SIZE_V8
+    means = [0.0] * schema4.INPUT_SIZE_V9
+    stds = [1.0] * schema4.INPUT_SIZE_V9
     count = len(rows)
-    for index in schema3.CONTEXT_INDICES:
+    for index in schema4.CONTEXT_INDICES_V9:
         total = 0.0
         for row in rows:
             total += row.features[index]
@@ -473,56 +334,45 @@ def context_normalization(
     return means, stds
 
 
-def _mask_counts(rows: Sequence[PhaseARow]) -> dict[str, int]:
-    return {
+def _mask_counts_v9(rows: Sequence[PhaseARowV9]) -> dict[str, int]:
+    counts = {
         "rows": len(rows),
-        "fold_through_small": sum(row.fold_through_mask[0] for row in rows),
-        "fold_through_large": sum(row.fold_through_mask[1] for row in rows),
         "range_bucket": sum(row.range_mask for row in rows),
         "equity_called": sum(row.equity_mask for row in rows),
+        "free_spot_rows": sum(1 for row in rows if row.to_call_zero),
     }
+    for position, name in enumerate(_FT_LABEL_NAMES_V9):
+        counts[name] = sum(row.fold_through_mask[position] for row in rows)
+    return counts
 
 
 # ---------------------------------------------------------------------------
-# Torch fitting (function-local torch, offline_trainer.py's pattern)
+# The network (one factory; the Phase-B fork reuses it, never re-states it)
 # ---------------------------------------------------------------------------
 
 
-def fit_phase_a(
-    rows: Sequence[PhaseARow], config: V8TrainingConfig
-) -> dict[str, object]:
-    """Fit one init seed; return weights, per-head losses, calibration."""
+def build_network_v9(dropout: float):
+    """Construct the v9 network (torch), He-initialized, output heads zeroed.
 
-    check_v8_config(config)
-    train_rows, validation_rows = split_rows(rows, config)
-    if not train_rows:
-        raise ValueError("training split is empty")
-    if not validation_rows:
-        raise ValueError(
-            "validation split is empty; adjust validation_fraction or split_seed"
-        )
-    means, stds = context_normalization(train_rows)
+    One definition for both trainer phases — the v8 line's twin network
+    classes needed the same edit in the same commit to stay aligned, and
+    a matching wrong edit on both sides would have passed parity cleanly.
+    Call AFTER seeding torch: initialization draws from the global RNG.
+    Same encoder/trunk/tower widths as v8 (the v9 change is the branch
+    contract, never the shape); head sizes come from ``V9_HEAD_SIZES``.
+    """
 
     import torch
     from torch import nn
 
-    if config.device == "cuda":
-        device_name = validate_training_device("cuda")
-    else:
-        device_name = "cpu"
-    device = torch.device(config.device)
-    torch.manual_seed(config.init_seed)
-    if config.device == "cuda":
-        torch.cuda.manual_seed_all(config.init_seed)
+    card_count = len(schema4.CARD_INDICES_V9)
+    context_count = len(schema4.CONTEXT_INDICES_V9)
 
-    card_indices = list(schema3.CARD_INDICES)
-    context_indices = list(schema3.CONTEXT_INDICES)
-
-    class _NetworkV8(nn.Module):
+    class _NetworkV9(nn.Module):
         def __init__(self) -> None:
             super().__init__()
-            self.card_enc = nn.Linear(len(card_indices), CARD_ENCODER_WIDTH)
-            self.ctx_enc = nn.Linear(len(context_indices), CONTEXT_ENCODER_WIDTH)
+            self.card_enc = nn.Linear(card_count, CARD_ENCODER_WIDTH)
+            self.ctx_enc = nn.Linear(context_count, CONTEXT_ENCODER_WIDTH)
             self.card_ln = nn.LayerNorm(CARD_ENCODER_WIDTH)
             self.ctx_ln = nn.LayerNorm(CONTEXT_ENCODER_WIDTH)
             dims = [CARD_ENCODER_WIDTH + CONTEXT_ENCODER_WIDTH, *TRUNK_WIDTHS]
@@ -532,17 +382,17 @@ def fit_phase_a(
             self.trunk_ln = nn.ModuleList(
                 nn.LayerNorm(dims[i + 1]) for i in range(len(TRUNK_WIDTHS) - 1)
             )
-            self.drop = nn.Dropout(float(config.dropout))
+            self.drop = nn.Dropout(float(dropout))
             self.towers = nn.ModuleDict(
                 {
                     name: nn.Linear(TRUNK_WIDTHS[-1], HEAD_TOWER_WIDTH)
-                    for name in V8_HEAD_SIZES
+                    for name in V9_HEAD_SIZES
                 }
             )
             self.outs = nn.ModuleDict(
                 {
                     name: nn.Linear(HEAD_TOWER_WIDTH, size)
-                    for name, size in V8_HEAD_SIZES.items()
+                    for name, size in V9_HEAD_SIZES.items()
                 }
             )
 
@@ -556,10 +406,10 @@ def fit_phase_a(
                     hidden = self.drop(self.trunk_ln[index](hidden))
             return {
                 name: self.outs[name](torch.relu(self.towers[name](hidden)))
-                for name in V8_HEAD_SIZES
+                for name in V9_HEAD_SIZES
             }
 
-    model = _NetworkV8()
+    model = _NetworkV9()
     with torch.no_grad():
         for module in model.modules():
             if isinstance(module, nn.Linear):
@@ -568,15 +418,98 @@ def fit_phase_a(
         # Zero output layers (all four heads, residual included): the model
         # starts at the constant predictor — the v7 recipe's largest single
         # init effect, kept verbatim.
-        for name in V8_HEAD_SIZES:
+        for name in V9_HEAD_SIZES:
             nn.init.zeros_(model.outs[name].weight)
             nn.init.zeros_(model.outs[name].bias)
+    return model
+
+
+def export_network_weights(model) -> dict[str, object]:
+    """The JSON weight blocks for a fitted v9 network (either phase)."""
+
+    def block(module) -> dict[str, object]:
+        return {
+            "w": module.weight.detach().cpu().tolist(),
+            "b": module.bias.detach().cpu().tolist(),
+        }
+
+    def norm_block(module) -> dict[str, object]:
+        return {
+            "ln_g": module.weight.detach().cpu().tolist(),
+            "ln_b": module.bias.detach().cpu().tolist(),
+        }
+
+    trunk_blocks = []
+    for index, layer in enumerate(model.trunk):
+        entry = block(layer)
+        if index < len(model.trunk_ln):
+            entry.update(norm_block(model.trunk_ln[index]))
+        trunk_blocks.append(entry)
+    return {
+        "card_encoder": {**block(model.card_enc), **norm_block(model.card_ln)},
+        "context_encoder": {**block(model.ctx_enc), **norm_block(model.ctx_ln)},
+        "trunk": trunk_blocks,
+        "heads": {
+            name: {
+                "tower_w": model.towers[name].weight.detach().cpu().tolist(),
+                "tower_b": model.towers[name].bias.detach().cpu().tolist(),
+                "out_w": model.outs[name].weight.detach().cpu().tolist(),
+                "out_b": model.outs[name].bias.detach().cpu().tolist(),
+            }
+            for name in V9_HEAD_SIZES
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Torch fitting (function-local torch, offline_trainer.py's pattern)
+# ---------------------------------------------------------------------------
+
+
+def fit_phase_a_v9(
+    rows: Sequence[PhaseARowV9], config: V8TrainingConfig
+) -> dict[str, object]:
+    """Fit one init seed; return weights, per-head losses, calibration.
+
+    The v7/v8 optimization recipe verbatim (``v8_trainer.fit_phase_a``)
+    over the v9 data contract: schema-4 partition, contract-derived head
+    widths, equity slots by name. The residual head receives zero
+    gradient — it belongs to the Phase-B composed objective.
+    """
+
+    check_v8_config(config)
+    train_rows, validation_rows = split_rows(rows, config)
+    if not train_rows:
+        raise ValueError("training split is empty")
+    if not validation_rows:
+        raise ValueError(
+            "validation split is empty; adjust validation_fraction or split_seed"
+        )
+    means, stds = context_normalization_v9(train_rows)
+
+    import torch
+    from torch import nn
+
+    if config.device == "cuda":
+        device_name = validate_training_device("cuda")
+    else:
+        device_name = "cpu"
+    device = torch.device(config.device)
+    torch.manual_seed(config.init_seed)
+    if config.device == "cuda":
+        torch.cuda.manual_seed_all(config.init_seed)
+
+    card_indices = list(schema4.CARD_INDICES_V9)
+    context_indices = list(schema4.CONTEXT_INDICES_V9)
+    ft_width = len(FOLD_THROUGH_BRANCHES_V9)
+
+    model = build_network_v9(config.dropout)
     model.to(device)
 
     mean_tensor = torch.tensor(means, dtype=torch.float32)
     std_tensor = torch.tensor(stds, dtype=torch.float32)
 
-    def tensors(examples: Sequence[PhaseARow]) -> dict[str, object]:
+    def tensors(examples: Sequence[PhaseARowV9]) -> dict[str, object]:
         features = torch.tensor(
             [row.features for row in examples], dtype=torch.float32
         )
@@ -585,13 +518,13 @@ def fit_phase_a(
             "card": features[:, card_indices],
             "ctx": features[:, context_indices],
             "ft_target": torch.tensor(
-                [[row.fold_through_label] * 2 for row in examples],
+                [[row.fold_through_label] * ft_width for row in examples],
                 dtype=torch.float32,
                 device=device,
             ),
             "ft_mask": torch.tensor(
                 [
-                    [float(row.fold_through_mask[0]), float(row.fold_through_mask[1])]
+                    [float(flag) for flag in row.fold_through_mask]
                     for row in examples
                 ],
                 dtype=torch.float32,
@@ -685,13 +618,13 @@ def fit_phase_a(
     def optimize(loss) -> None:
         nonlocal step
         if not torch.isfinite(loss):
-            raise FloatingPointError("non-finite loss during v8 training")
+            raise FloatingPointError("non-finite loss during v9 training")
         set_learning_rate()
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         if not torch.isfinite(norm):
-            raise FloatingPointError("non-finite gradient during v8 training")
+            raise FloatingPointError("non-finite gradient during v9 training")
         optimizer.step()
         step += 1
 
@@ -707,7 +640,7 @@ def fit_phase_a(
             ft_loss, range_loss, eq_loss = head_losses(data, indexes)
         if was_training:
             model.train()
-        ft_defined = counts["fold_through_small"] + counts["fold_through_large"] > 0
+        ft_defined = sum(counts[name] for name in _FT_LABEL_NAMES_V9) > 0
         losses: dict[str, float | None] = {
             "fold_through": float(ft_loss) if ft_defined else None,
             "range": float(range_loss) if counts["range_bucket"] > 0 else None,
@@ -718,8 +651,8 @@ def fit_phase_a(
         losses["total"] = sum(value for value in losses.values() if value is not None)
         return losses
 
-    train_counts = _mask_counts(train_rows)
-    validation_counts = _mask_counts(validation_rows)
+    train_counts = _mask_counts_v9(train_rows)
+    validation_counts = _mask_counts_v9(validation_rows)
 
     generator = random.Random(config.init_seed + 1)
     best_loss = math.inf
@@ -742,7 +675,7 @@ def fit_phase_a(
             optimize(ft_loss + range_loss + eq_loss)
         for parameter in model.parameters():
             if not torch.isfinite(parameter).all():
-                raise FloatingPointError("non-finite parameter during v8 training")
+                raise FloatingPointError("non-finite parameter during v9 training")
         epoch_losses = evaluated_losses(validation_data, validation_counts)
         epoch_total = float(epoch_losses["total"])
         if epoch_total < best_loss - 1e-9:
@@ -780,7 +713,7 @@ def fit_phase_a(
 
         pairs: list[tuple[float, float]] = []
         for row, probabilities in zip(validation_rows, ft_probabilities):
-            for branch in range(2):
+            for branch in range(ft_width):
                 if row.fold_through_mask[branch]:
                     pairs.append((probabilities[branch], row.fold_through_label))
         pairs.sort()
@@ -804,15 +737,15 @@ def fit_phase_a(
                 }
             )
 
-        bucket_predicted = [0.0] * schema3.BELIEF_BUCKETS
-        bucket_observed = [0] * schema3.BELIEF_BUCKETS
+        bucket_predicted = [0.0] * schema4.BELIEF_BUCKETS
+        bucket_observed = [0] * schema4.BELIEF_BUCKETS
         range_count = 0
         for row, probabilities in zip(validation_rows, range_probabilities):
             if not row.range_mask:
                 continue
             range_count += 1
             bucket_observed[row.range_bucket] += 1
-            for bucket in range(schema3.BELIEF_BUCKETS):
+            for bucket in range(schema4.BELIEF_BUCKETS):
                 bucket_predicted[bucket] += probabilities[bucket]
         range_buckets = [
             {
@@ -824,12 +757,12 @@ def fit_phase_a(
                     bucket_observed[bucket] / max(1, range_count), 6
                 ),
             }
-            for bucket in range(schema3.BELIEF_BUCKETS)
+            for bucket in range(schema4.BELIEF_BUCKETS)
         ]
 
         eq_error = 0.0
         eq_count = 0
-        slot_counts = [0] * len(EQUITY_SLOTS)
+        slot_counts = [0] * len(EQUITY_SLOTS_V9)
         for row, predicted in zip(validation_rows, eq_predicted):
             if not row.equity_mask:
                 continue
@@ -853,44 +786,13 @@ def fit_phase_a(
                 "mae": round(eq_error / max(1, eq_count), 6),
                 "supervised_slot_counts": {
                     name: slot_counts[index]
-                    for index, name in enumerate(EQUITY_SLOTS)
+                    for index, name in enumerate(EQUITY_SLOTS_V9)
                 },
             },
         }
 
-    def block(module) -> dict[str, object]:
-        return {
-            "w": module.weight.detach().cpu().tolist(),
-            "b": module.bias.detach().cpu().tolist(),
-        }
-
-    def norm_block(module) -> dict[str, object]:
-        return {
-            "ln_g": module.weight.detach().cpu().tolist(),
-            "ln_b": module.bias.detach().cpu().tolist(),
-        }
-
-    trunk_blocks = []
-    for index, layer in enumerate(model.trunk):
-        entry = block(layer)
-        if index < len(model.trunk_ln):
-            entry.update(norm_block(model.trunk_ln[index]))
-        trunk_blocks.append(entry)
-    weights = {
-        "card_encoder": {**block(model.card_enc), **norm_block(model.card_ln)},
-        "context_encoder": {**block(model.ctx_enc), **norm_block(model.ctx_ln)},
-        "trunk": trunk_blocks,
-        "heads": {
-            name: {
-                "tower_w": model.towers[name].weight.detach().cpu().tolist(),
-                "tower_b": model.towers[name].bias.detach().cpu().tolist(),
-                "out_w": model.outs[name].weight.detach().cpu().tolist(),
-                "out_b": model.outs[name].bias.detach().cpu().tolist(),
-            }
-            for name in V8_HEAD_SIZES
-        },
-    }
-    _assert_finite_weights(weights, "v8 phase-A training")
+    weights = export_network_weights(model)
+    _assert_finite_weights(weights, "v9 phase-A training")
     parameter_count = sum(parameter.numel() for parameter in model.parameters())
     return {
         "weights": weights,
@@ -937,12 +839,17 @@ def _require_vector(name: str, value: object, size: int) -> None:
         raise ValueError(f"{name} must have {size} entries")
 
 
-def validate_v8_weight_shapes(weights: Mapping[str, object]) -> None:
-    """Fail-closed structural check before an artifact is written."""
+def validate_v9_weight_shapes(weights: Mapping[str, object]) -> None:
+    """Fail-closed structural check before a v9 artifact is written.
+
+    A separate validator against the schema-4/contract constants, never a
+    widened v8 one — numerically the two shapes agree today, which is
+    exactly why the checks must diverge the moment either contract moves.
+    """
 
     card = weights["card_encoder"]
     _require_matrix(
-        "card_encoder.w", card["w"], CARD_ENCODER_WIDTH, schema3.CARD_BLOCK_SIZE
+        "card_encoder.w", card["w"], CARD_ENCODER_WIDTH, schema4.CARD_BLOCK_SIZE_V9
     )
     _require_vector("card_encoder.b", card["b"], CARD_ENCODER_WIDTH)
     _require_vector("card_encoder.ln_g", card["ln_g"], CARD_ENCODER_WIDTH)
@@ -952,7 +859,7 @@ def validate_v8_weight_shapes(weights: Mapping[str, object]) -> None:
         "context_encoder.w",
         context["w"],
         CONTEXT_ENCODER_WIDTH,
-        schema3.CONTEXT_BLOCK_SIZE,
+        schema4.CONTEXT_BLOCK_SIZE_V9,
     )
     _require_vector("context_encoder.b", context["b"], CONTEXT_ENCODER_WIDTH)
     _require_vector("context_encoder.ln_g", context["ln_g"], CONTEXT_ENCODER_WIDTH)
@@ -970,9 +877,9 @@ def validate_v8_weight_shapes(weights: Mapping[str, object]) -> None:
         elif "ln_g" in entry or "ln_b" in entry:
             raise ValueError("the final trunk block must not carry LayerNorm")
     heads = weights["heads"]
-    if set(heads) != set(V8_HEAD_SIZES):
-        raise ValueError(f"heads must be exactly {sorted(V8_HEAD_SIZES)}")
-    for name, size in V8_HEAD_SIZES.items():
+    if set(heads) != set(V9_HEAD_SIZES):
+        raise ValueError(f"heads must be exactly {sorted(V9_HEAD_SIZES)}")
+    for name, size in V9_HEAD_SIZES.items():
         head = heads[name]
         _require_matrix(
             f"heads.{name}.tower_w", head["tower_w"], HEAD_TOWER_WIDTH, TRUNK_WIDTHS[-1]
@@ -982,7 +889,7 @@ def validate_v8_weight_shapes(weights: Mapping[str, object]) -> None:
         _require_vector(f"heads.{name}.out_b", head["out_b"], size)
 
 
-_REQUIRED_MANIFEST_KEYS = (
+_REQUIRED_MANIFEST_KEYS_V9 = (
     "format",
     "format_version",
     "model_version",
@@ -994,6 +901,7 @@ _REQUIRED_MANIFEST_KEYS = (
     "feature_names",
     "action_labels",
     "architecture",
+    "sizing",
     "weights_file",
     "weights_sha256",
     "training_window",
@@ -1005,33 +913,52 @@ _REQUIRED_MANIFEST_KEYS = (
 )
 
 
-def validate_v8_manifest(manifest: Mapping[str, object]) -> None:
-    """Structural contract for a format-3 candidate manifest.
+def validate_v9_manifest(manifest: Mapping[str, object]) -> None:
+    """Structural contract for a format-4 candidate manifest.
 
-    Deliberately accepts no state but ``"candidate"``: promotion is a
+    Mirrors ``v8_trainer.validate_v8_manifest`` at the v9 constants, plus
+    the v9-only obligations: a mandatory, identity-checked composed
+    ``sizing`` record (an artifact that cannot state its sizing cannot be
+    served) and no inherited ``serve.margin_quantiles`` (v9 defines no
+    hybrid mode). Accepts no state but ``"candidate"``: promotion is a
     separate, explicit, human-authorised act and never this module's.
     """
 
-    for key in _REQUIRED_MANIFEST_KEYS:
+    for key in _REQUIRED_MANIFEST_KEYS_V9:
         if key not in manifest:
             raise ValueError(f"manifest is missing {key!r}")
     if manifest["format"] != MODEL_FORMAT:
         raise ValueError(f"format must be {MODEL_FORMAT!r}")
-    if manifest["format_version"] != MODEL_FORMAT_VERSION_V8:
-        raise ValueError(f"format_version must be {MODEL_FORMAT_VERSION_V8}")
+    if manifest["format_version"] != MODEL_FORMAT_VERSION_V9:
+        raise ValueError(f"format_version must be {MODEL_FORMAT_VERSION_V9}")
     if manifest["state"] != "candidate":
-        raise ValueError("a v8 trainer manifest state must be 'candidate'")
+        raise ValueError("a v9 trainer manifest state must be 'candidate'")
     if manifest["promotion"] is not None:
-        raise ValueError("a v8 trainer manifest cannot carry a promotion record")
-    if manifest["feature_schema_version"] != schema3.SCHEMA_VERSION:
-        raise ValueError(f"feature_schema_version must be {schema3.SCHEMA_VERSION}")
-    if manifest["input_size"] != schema3.INPUT_SIZE_V8:
-        raise ValueError(f"input_size must be {schema3.INPUT_SIZE_V8}")
-    if list(manifest["feature_names"]) != list(schema3.FEATURE_NAMES_V8):
-        raise ValueError("feature_names must match schema3.FEATURE_NAMES_V8")
-    if list(manifest["action_labels"]) != list(BRANCH_LABELS_V8):
-        raise ValueError(f"action_labels must be {list(BRANCH_LABELS_V8)}")
-    validate_v8_architecture(manifest["architecture"])  # type: ignore[arg-type]
+        raise ValueError("a v9 trainer manifest cannot carry a promotion record")
+    if manifest["feature_schema_version"] != schema4.SCHEMA_VERSION_V9:
+        raise ValueError(
+            f"feature_schema_version must be {schema4.SCHEMA_VERSION_V9}"
+        )
+    if manifest["input_size"] != schema4.INPUT_SIZE_V9:
+        raise ValueError(f"input_size must be {schema4.INPUT_SIZE_V9}")
+    if list(manifest["feature_names"]) != list(schema4.FEATURE_NAMES_V9):
+        raise ValueError("feature_names must match schema4.FEATURE_NAMES_V9")
+    if list(manifest["action_labels"]) != list(BRANCH_LABELS_V9):
+        raise ValueError(f"action_labels must be {list(BRANCH_LABELS_V9)}")
+    validate_v9_architecture(manifest["architecture"])  # type: ignore[arg-type]
+    sizing = manifest["sizing"]
+    if not isinstance(sizing, Mapping):
+        raise ValueError("manifest sizing must be a composed sizing record")
+    try:
+        parameters_and_rules_from_record(sizing)
+    except ValueError as error:
+        raise ValueError(f"manifest sizing record is invalid: {error}") from error
+    serve = manifest.get("serve")
+    if isinstance(serve, Mapping) and serve.get("margin_quantiles"):
+        raise ValueError(
+            "v9 defines no hybrid mode: serve.margin_quantiles must not be "
+            "present"
+        )
     sha = manifest["weights_sha256"]
     if not (isinstance(sha, str) and len(sha) == 64):
         raise ValueError("weights_sha256 must be a 64-character digest")
@@ -1057,13 +984,73 @@ def _seed_run_record(result: Mapping[str, object]) -> dict[str, object]:
     }
 
 
-def train_phase_a_candidate(
-    rows: Sequence[PhaseARow],
+def _dataset_sidecar(dataset_path: str | Path | None) -> Mapping[str, object] | None:
+    """The dataset's ``.summary.json`` sidecar document, when readable."""
+
+    if dataset_path is None:
+        return None
+    sidecar_path = Path(dataset_path).parent / (
+        Path(dataset_path).name.removesuffix(".jsonl.gz") + ".summary.json"
+    )
+    if not sidecar_path.is_file():
+        return None
+    try:
+        sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return sidecar if isinstance(sidecar, Mapping) else None
+
+
+def resolve_sizing_record(
+    sizing_record: Mapping[str, object] | None,
+    sidecar: Mapping[str, object] | None,
+) -> dict[str, object]:
+    """The composed sizing record a v9 Phase-A manifest ships, fail-loud.
+
+    Precedence: an explicit record must AGREE with the dataset sidecar's
+    when the sidecar carries one (a disagreement means the features'
+    baked costs and the manifest's declared sizing describe different
+    g states — refuse, never pick); with no explicit record the
+    sidecar's wins; the module default (every dial off) applies only
+    when neither exists. Whatever is resolved must parse through
+    ``parameters_and_rules_from_record`` — a bare or foreign-identity
+    record refuses there.
+    """
+
+    def canonical(record: Mapping[str, object]) -> dict[str, object]:
+        # JSON round-trip: a record fresh from composed_sizing_record()
+        # carries tuples where one read back from a manifest or sidecar
+        # carries lists. The canonical form is the on-disk one.
+        return json.loads(json.dumps(record, sort_keys=True, allow_nan=False))
+
+    recorded = sidecar.get("sizing") if sidecar is not None else None
+    if recorded is not None and not isinstance(recorded, Mapping):
+        raise ValueError("the dataset sidecar's sizing block is not a mapping")
+    if sizing_record is not None and recorded is not None:
+        if canonical(sizing_record) != canonical(recorded):
+            raise ValueError(
+                "the explicit sizing record disagrees with the dataset "
+                "sidecar's — the dataset's baked costs and the manifest "
+                "would describe different g states"
+            )
+    resolved = sizing_record if sizing_record is not None else recorded
+    if resolved is None:
+        resolved = composed_sizing_record()
+    try:
+        parameters_and_rules_from_record(resolved)
+    except ValueError as error:
+        raise ValueError(f"cannot resolve a sizing record: {error}") from error
+    return canonical(resolved)
+
+
+def train_phase_a_candidate_v9(
+    rows: Sequence[PhaseARowV9],
     output_dir: str | Path,
     config: V8TrainingConfig = V8TrainingConfig(),
     init_seeds: Sequence[int] = (101, 202, 303),
     dataset_path: str | Path | None = None,
-) -> V8TrainingSummary:
+    sizing_record: Mapping[str, object] | None = None,
+) -> dict[str, object]:
     """Train every init seed, select by total validation loss, export one.
 
     Selection caveat (V8_DESIGN §6, deliberately NOT baked in as anything
@@ -1080,6 +1067,8 @@ def train_phase_a_candidate(
     model_version = config.model_version
     if not model_version:
         raise ValueError("config.model_version is required for export")
+    sidecar = _dataset_sidecar(dataset_path)
+    resolved_sizing = resolve_sizing_record(sizing_record, sidecar)
     output_path = Path(output_dir).expanduser().resolve()
     weights_path = output_path / f"{model_version}.weights.json"
     manifest_path = output_path / f"{model_version}.manifest.json"
@@ -1090,7 +1079,7 @@ def train_phase_a_candidate(
     results = []
     for init_seed in init_seeds:
         seed_config = replace(config, init_seed=init_seed)
-        result = fit_phase_a(rows, seed_config)
+        result = fit_phase_a_v9(rows, seed_config)
         results.append(result)
         validation = result["validation_losses"]
         assert isinstance(validation, Mapping)
@@ -1109,18 +1098,19 @@ def train_phase_a_candidate(
 
     weights = best["weights"]
     assert isinstance(weights, Mapping)
-    validate_v8_weight_shapes(weights)
-    architecture = default_v8_architecture()
+    validate_v9_weight_shapes(weights)
+    architecture = default_v9_architecture()
     architecture["dropout"] = float(config.dropout)
-    validate_v8_architecture(architecture)
+    validate_v9_architecture(architecture)
 
     output_path.mkdir(parents=True, exist_ok=True)
     weights_document = _round9(
         {
             "format": MODEL_FORMAT,
-            "format_version": MODEL_FORMAT_VERSION_V8,
+            "format_version": MODEL_FORMAT_VERSION_V9,
             "model_version": model_version,
             "feature_normalization": {
+                **schema4.normalization_stamp(),
                 "means": list(best["means"]),  # type: ignore[arg-type]
                 "stds": list(best["stds"]),  # type: ignore[arg-type]
             },
@@ -1136,17 +1126,10 @@ def train_phase_a_candidate(
     weights_sha256 = hashlib.sha256(encoded).hexdigest()
 
     sidecar_generator: Mapping[str, object] | None = None
-    if dataset_path is not None:
-        sidecar_path = Path(dataset_path).parent / (
-            Path(dataset_path).name.removesuffix(".jsonl.gz") + ".summary.json"
-        )
-        if sidecar_path.is_file():
-            try:
-                sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
-                if isinstance(sidecar, Mapping):
-                    sidecar_generator = sidecar.get("generator")
-            except (OSError, ValueError):
-                sidecar_generator = None
+    if sidecar is not None:
+        generator_block = sidecar.get("generator")
+        if isinstance(generator_block, Mapping):
+            sidecar_generator = generator_block
 
     per_street_rows: dict[str, int] = {}
     for row in rows:
@@ -1154,16 +1137,17 @@ def train_phase_a_candidate(
 
     manifest = {
         "format": MODEL_FORMAT,
-        "format_version": MODEL_FORMAT_VERSION_V8,
+        "format_version": MODEL_FORMAT_VERSION_V9,
         "model_version": model_version,
         "state": "candidate",
         "parent_version": None,
         "created_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "feature_schema_version": schema3.SCHEMA_VERSION,
-        "input_size": schema3.INPUT_SIZE_V8,
-        "feature_names": list(schema3.FEATURE_NAMES_V8),
-        "action_labels": list(BRANCH_LABELS_V8),
+        "feature_schema_version": schema4.SCHEMA_VERSION_V9,
+        "input_size": schema4.INPUT_SIZE_V9,
+        "feature_names": list(schema4.FEATURE_NAMES_V9),
+        "action_labels": list(BRANCH_LABELS_V9),
         "architecture": architecture,
+        "sizing": resolved_sizing,
         "weights_file": weights_path.name,
         "weights_sha256": weights_sha256,
         "training_window": {
@@ -1173,7 +1157,12 @@ def train_phase_a_candidate(
             ),
             "row_count": len(rows),
             "table_count": len({row.table_id for row in rows}),
-            "label_coverage": _mask_counts(rows),
+            # The learning contract's own provenance key; same quantity as
+            # ``table_count``. Emitted even though a Phase-A artifact is
+            # never promotable, so the refusal comes from ``deployable``
+            # below and not from an incidental missing field.
+            "hand_count": len({row.table_id for row in rows}),
+            "label_coverage": _mask_counts_v9(rows),
             "per_street_rows": dict(sorted(per_street_rows.items())),
         },
         "engine_parameters": {
@@ -1183,18 +1172,24 @@ def train_phase_a_candidate(
             "bluff_settings": DEFAULT_BLUFF_SETTINGS.to_mapping(),
         },
         "serve": {
+            # Machine-readable refusal. Phase-A trains the component heads
+            # only; the composed-value serve path expects a Phase-B
+            # artifact. The note below has said so since the fork, but a
+            # note cannot stop a promotion and the promotion contract
+            # reads THIS.
+            "deployable": False,
             # By construction the OOD guard watches only the context block
-            # (V8_DESIGN §3): the raw card one-hots never enter it.
-            "ood_guard_indices": list(schema3.CONTEXT_INDICES),
+            # (V8_DESIGN §3, unchanged): raw card one-hots never enter it.
+            "ood_guard_indices": list(schema4.CONTEXT_INDICES_V9),
             "temperature": None,
             "note": (
                 "Phase-A component heads only; the composed-value serve "
-                "path (V8_DESIGN §4) is a separate work item and this "
-                "artifact must not be deployed"
+                "path (learned_policy_v9) expects a Phase-B artifact and "
+                "this one must not be deployed"
             ),
         },
         "training": {
-            "objective": TRAINING_OBJECTIVE_V8_PHASE_A,
+            "objective": TRAINING_OBJECTIVE_V9_PHASE_A,
             "phase": "A",
             "optimizer": "adamw",
             "learning_rate": config.learning_rate,
@@ -1233,20 +1228,18 @@ def train_phase_a_candidate(
                 "never a selector (V8_DESIGN §6) — the seat-swapped duel "
                 "remains the selector at evaluation time"
             ),
-            "branch_targets": {
-                "aggress_small": list(_BRANCH_SMALL),
-                "aggress_large": list(_BRANCH_LARGE),
-            },
-            "heads_trained": list(SUPERVISED_HEADS),
+            "heads_trained": list(SUPERVISED_HEADS_V9),
             "residual_head": (
                 "zero-initialized output, excluded from every Phase-A loss "
                 "(zero gradient); exported untrained for Phase B"
             ),
             "targets": {
                 "fold_through": (
-                    "masked BCE per aggress branch on the observed everyone-"
-                    "folded outcome; a row supervises only the branch its "
-                    "realized size matched"
+                    "masked BCE per wager lane (active, aggressive) on the "
+                    "observed everyone-folded outcome; active supervises "
+                    "only at to_call == 0 (its bet execution) and "
+                    "aggressive only on priced rows — the loader rejects "
+                    "violations"
                 ),
                 "range": (
                     "masked cross-entropy over 8 strength-percentile octiles "
@@ -1255,9 +1248,11 @@ def train_phase_a_candidate(
                 ),
                 "equity_called": (
                     "masked MSE on hero's exact/MC pot share against the "
-                    "actual continuing holdings; slots (aggress_small, "
-                    "aggress_large, check_call); non-aggress rows (folds "
-                    "included) supervise the check_call slot"
+                    "actual continuing holdings; slots (passive, active, "
+                    "aggressive) routed by name — the taken wager lane for "
+                    "sized wagers, passive for checked-through free spots, "
+                    "active for every priced row without hero aggression "
+                    "(folds share that conditional)"
                 ),
                 "residual": "untrained in Phase A",
             },
@@ -1276,26 +1271,26 @@ def train_phase_a_candidate(
         },
         "promotion": None,
     }
-    validate_v8_manifest(manifest)
+    validate_v9_manifest(manifest)
     weights_path.write_bytes(encoded + b"\n")
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
-    return V8TrainingSummary(
-        rows=len(rows),
-        train_rows=int(best["train_rows"]),  # type: ignore[arg-type]
-        validation_rows=int(best["validation_rows"]),  # type: ignore[arg-type]
-        selected_init_seed=int(best["init_seed"]),  # type: ignore[arg-type]
-        train_losses=_rounded_losses(best["train_losses"]),  # type: ignore[arg-type]
-        validation_losses=_rounded_losses(best["validation_losses"]),  # type: ignore[arg-type]
-        seed_runs=tuple(_seed_run_record(result) for result in results),
-        calibration=best["calibration"],  # type: ignore[arg-type]
-        weights_sha256=weights_sha256,
-        weights_path=weights_path,
-        manifest_path=manifest_path,
-        wall_time_seconds=time.monotonic() - started,
-    )
+    return {
+        "rows": len(rows),
+        "train_rows": int(best["train_rows"]),  # type: ignore[arg-type]
+        "validation_rows": int(best["validation_rows"]),  # type: ignore[arg-type]
+        "selected_init_seed": int(best["init_seed"]),  # type: ignore[arg-type]
+        "train_losses": _rounded_losses(best["train_losses"]),  # type: ignore[arg-type]
+        "validation_losses": _rounded_losses(best["validation_losses"]),  # type: ignore[arg-type]
+        "seed_runs": tuple(_seed_run_record(result) for result in results),
+        "calibration": best["calibration"],
+        "weights_sha256": weights_sha256,
+        "weights_path": weights_path,
+        "manifest_path": manifest_path,
+        "wall_time_seconds": time.monotonic() - started,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1308,12 +1303,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset",
-        default=str(Path("artifacts") / "phase_a" / "phase-a-dataset.jsonl.gz"),
+        required=True,
+        help=(
+            "Phase-A dataset (.jsonl.gz). Required: there is no safe "
+            "default. It used to default to the Arena-built "
+            "phase-a-dataset-v9.jsonl.gz, which the 2026-09-03 PHH switch "
+            "retired, so a bare invocation trained on quarantined data and "
+            "said nothing."
+        ),
+    )
+    parser.add_argument(
+        "--allow-retired-dataset",
+        action="store_true",
+        help=(
+            "train on a corpus the project has retired (no live "
+            "generator.source). Deliberate ablation only; record the arm."
+        ),
     )
     parser.add_argument("--output-dir", default="artifacts/candidates")
     parser.add_argument("--model-version", required=True)
     parser.add_argument(
         "--init-seeds", type=int, nargs="+", default=[101, 202, 303]
+    )
+    parser.add_argument(
+        "--sizing-record",
+        default=None,
+        help=(
+            "path to a composed sizing record JSON; must agree with the "
+            "dataset sidecar's record when one exists (default: sidecar, "
+            "then the module default with every dial off)"
+        ),
     )
     parser.add_argument("--epochs", type=int, default=defaults.epochs)
     parser.add_argument(
@@ -1351,22 +1370,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         device=args.device,
         model_version=args.model_version,
     )
-    rows = load_phase_a_dataset(args.dataset)
-    print(f"dataset: {args.dataset} ({len(rows)} rows)")
-    summary = train_phase_a_candidate(
+    sizing_record = None
+    if args.sizing_record is not None:
+        sizing_record = json.loads(
+            Path(args.sizing_record).read_text(encoding="utf-8")
+        )
+    source = require_live_dataset(
+        args.dataset, allow_retired=args.allow_retired_dataset
+    )
+    print(f"dataset provenance: {describe(args.dataset)}")
+    rows = load_phase_a_dataset_v9(args.dataset)
+    print(f"dataset: {args.dataset} ({len(rows)} rows, source {source})")
+    summary = train_phase_a_candidate_v9(
         rows,
         args.output_dir,
         config,
         init_seeds=tuple(args.init_seeds),
         dataset_path=args.dataset,
+        sizing_record=sizing_record,
     )
-    print(f"selected init seed: {summary.selected_init_seed}")
-    print(f"train losses: {summary.train_losses}")
-    print(f"validation losses: {summary.validation_losses}")
-    print(f"manifest: {summary.manifest_path}")
-    print(f"weights: {summary.weights_path}")
-    print(f"weights_sha256: {summary.weights_sha256}")
-    print(f"wall_time_seconds: {summary.wall_time_seconds:.1f}")
+    print(f"selected init seed: {summary['selected_init_seed']}")
+    print(f"train losses: {summary['train_losses']}")
+    print(f"validation losses: {summary['validation_losses']}")
+    print(f"manifest: {summary['manifest_path']}")
+    print(f"weights: {summary['weights_path']}")
+    print(f"weights_sha256: {summary['weights_sha256']}")
+    print(f"wall_time_seconds: {summary['wall_time_seconds']:.1f}")
     return 0
 
 
@@ -1375,31 +1404,16 @@ if __name__ == "__main__":
 
 
 __all__ = [
-    "BRANCH_LABELS_V8",
-    "CARD_ENCODER_WIDTH",
-    "CONTEXT_ENCODER_WIDTH",
-    "CONTEXT_STD_FLOOR",
-    "EQUITY_SLOTS",
-    "FOLD_THROUGH_BRANCHES",
-    "HEAD_TOWER_WIDTH",
-    "MODEL_FAMILY_V8",
-    "MODEL_FORMAT_VERSION_V8",
-    "PhaseARow",
-    "SUPERVISED_HEADS",
-    "TRAINING_OBJECTIVE_V8_PHASE_A",
-    "TRUNK_WIDTHS",
-    "V8TrainingConfig",
-    "V8TrainingSummary",
-    "V8_HEAD_SIZES",
-    "check_v8_config",
-    "context_normalization",
-    "default_v8_architecture",
-    "fit_phase_a",
-    "load_phase_a_dataset",
-    "split_rows",
-    "table_split_value",
-    "train_phase_a_candidate",
-    "validate_v8_architecture",
-    "validate_v8_manifest",
-    "validate_v8_weight_shapes",
+    "PhaseARowV9",
+    "SUPERVISED_HEADS_V9",
+    "TRAINING_OBJECTIVE_V9_PHASE_A",
+    "build_network_v9",
+    "context_normalization_v9",
+    "export_network_weights",
+    "fit_phase_a_v9",
+    "load_phase_a_dataset_v9",
+    "resolve_sizing_record",
+    "train_phase_a_candidate_v9",
+    "validate_v9_manifest",
+    "validate_v9_weight_shapes",
 ]

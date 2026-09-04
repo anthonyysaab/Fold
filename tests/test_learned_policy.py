@@ -25,7 +25,7 @@ from engine.learned_policy import (
     load_policy,
 )
 from engine.learning_contract import LEARNING_INPUT_SIZE
-from engine.offline_trainer import TrainingConfig, train_candidate
+from training.offline_trainer import TrainingConfig, train_candidate
 from engine.training_telemetry import TrainingExample
 from tools.promote_candidate import main as promote_main
 
@@ -391,7 +391,7 @@ class LearnedPolicyTests(unittest.TestCase):
 
         from engine import schema4
         from engine.branch_contract_v9 import BRANCH_LABELS_V9, MODEL_FORMAT_VERSION_V9
-        from engine.v8_trainer import default_v9_architecture
+        from training.v8_trainer import default_v9_architecture
 
         weights = directory / "weights.json"
         weights.write_text('{"_": 1}\n', encoding="utf-8")
@@ -818,7 +818,7 @@ class ApprovedFormatDispatchTests(unittest.TestCase):
             BRANCH_LABELS_V9,
             MODEL_FORMAT_VERSION_V9,
         )
-        from engine.v8_trainer import default_v9_architecture
+        from training.v8_trainer import default_v9_architecture
 
         undeclared = {
             "format": "fold-multihead-policy",

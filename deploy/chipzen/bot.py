@@ -30,23 +30,11 @@ _policy = None
 _init_error = ""
 
 
-def _inert_weights() -> dict:
-    from engine.policy_features import FEATURE_NAMES, LABELS
-
-    inputs = len(FEATURE_NAMES)
-    return {
-        "input_size": inputs,
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": list(LABELS),
-        "w1": [[0.0] * inputs],
-        "b1": [0.0],
-        "w2": [[0.0] for _ in LABELS],
-        "b2": [0.0 for _ in LABELS],
-    }
-
-
 def _ensure_policy() -> None:
+    # The `_inert_weights()` zero network that used to be built here is gone
+    # with P2 (2026-09-04): the policy carries no network at all now, so there
+    # is nothing to satisfy. It existed only because the constructor demanded
+    # weights while this image never shipped `artifacts/` for it to read.
     global _policy, _init_error
     if _policy is not None or _init_error:
         return
@@ -55,7 +43,7 @@ def _ensure_policy() -> None:
         from engine.poker_policy import AggressivePokerPolicy
 
         prewarm()
-        _policy = AggressivePokerPolicy(weights=_inert_weights(), equity_trials=200)
+        _policy = AggressivePokerPolicy(equity_trials=200)
     except Exception as exc:
         _init_error = repr(exc)
 

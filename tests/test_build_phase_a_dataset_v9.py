@@ -23,7 +23,7 @@ from collections import Counter
 from pathlib import Path
 
 from engine import schema4
-from engine.v9_trainer import load_phase_a_dataset_v9, resolve_sizing_record
+from training.v9_trainer import load_phase_a_dataset_v9, resolve_sizing_record
 from tools.build_phase_a_dataset_v9 import (
     build_dataset_v9,
     replay_rows_v9,
@@ -360,7 +360,7 @@ class BuildPathV9Tests(unittest.TestCase):
             self.assertEqual(first_bytes, second.read_bytes())
 
     def test_v8_loader_refuses_the_organic_v9_dataset(self) -> None:
-        from engine.v8_trainer import load_phase_a_dataset
+        from training.v8_trainer import load_phase_a_dataset
 
         with tempfile.TemporaryDirectory() as raw:
             directory = Path(raw)

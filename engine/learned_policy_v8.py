@@ -100,9 +100,9 @@ from engine.learned_policy import (
     _vector,
 )
 from engine.learning_contract import MODEL_FORMAT
-from engine.offline_trainer import _dot, _layer_norm, _sigmoid
+from engine.forward_kernel import _dot, _layer_norm, _sigmoid
 from engine.opponent_model import AggressionTracker
-from engine.v8_trainer import (
+from engine.architecture_v8 import (
     BRANCH_LABELS_V8,
     EQUITY_SLOTS,
     FOLD_THROUGH_BRANCHES,

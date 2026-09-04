@@ -7,7 +7,7 @@ showdown equity), determinism discipline, and per-decision seeding are
 IMPORTED from it verbatim. What changes is the v9 data contract, pinned
 in `.handoff/notes/V9_RESTRUCTURE_PLAN.md` ("L3/L4 DATA CONTRACTS" +
 "L3 LANDED") and enforced by the landed trainer loader
-(``engine.v9_trainer.load_phase_a_dataset_v9``):
+(``training.v9_trainer.load_phase_a_dataset_v9``):
 
 - **Renamed keys are the version guard**: labels/masks are
   ``fold_through_active`` / ``fold_through_aggressive``; every row
@@ -799,7 +799,7 @@ class PhaseARowSink:
         )
 
         # The proof, not a formality: the trainer's loader is the contract.
-        from engine.v9_trainer import load_phase_a_dataset_v9
+        from training.v9_trainer import load_phase_a_dataset_v9
 
         loaded = load_phase_a_dataset_v9(self._output)
         if len(loaded) != row_count:

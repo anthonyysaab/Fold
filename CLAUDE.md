@@ -44,9 +44,9 @@ irreversible. On a machine move copy it first.
 |---|---|
 | repo | `C:\Users\user\Fold-ver-4 (multiway)` — the ` (multiway)` is part of the name; quote it |
 | tests / lint / live | `C:\Users\user\AppData\Local\Programs\Python\Python311\python.exe` (3.11.9, **no torch** — correct). Plus `pokerkit==0.7.4` (`requirements-tools.txt`), imported by `tools/phh_*` only. |
-| training | `C:\Users\user\Fold-ver-4 (multiway)\neural network training\.venv\Scripts\python.exe` (3.11.9, torch 2.13.0+cu130, CUDA available). Restored 2026-09-03 at this path, NOT the `C:\Users\user\poker-nn-training\` of earlier revisions. It is a **separate git repository** (`NN-Poker-training`) with its own `.venv`, living inside this working tree and gitignored. **Owner ruled 2026-09-03 that it stays nested** (`DECISIONS.md` §6); never commit it into Fold. Quote the path — it has spaces. |
+| training | `C:\Users\user\Fold-ver-4 (multiway)\training\.venv\Scripts\python.exe` (3.11.9, torch 2.13.0+cu130, CUDA available). **No spaces in the path since 2026-09-04.** The nested `NN-Poker-training` repository was dissolved that day (`DECISIONS.md` §6): `.git` retired (all of it is on GitHub at `0e78f97`), trainer source archived to `archive/nn-poker-training-2026-09-04/`, directory renamed from `neural network training\`. `training/` now holds the gitignored `.venv` **and Fold's own training package** — `training/v9_trainer.py` et al, tracked, edited in place, run as `python -m training.<name>`. `.gitignore` excludes only `training/.venv/`. The interpreter path has ONE definition: `tools/interpreters.py` — do not hard-code it a fourth time. |
 | tools | `python -m tools.<name>` from the repo root |
-| suite | 1,145 passed / 29 skipped / 370 subtests (2026-09-03, after the PHH build run). The 29 skips are 21 torch-availability and 8 that read the quarantined Arena archive. The torch half was RUN on the CUDA interpreter on 2026-09-03, not assumed: 104 passed / 2 skipped over the seven torch files, and those last 2 were a stale hardcoded venv path (now repo-relative), so nothing in that set skips silently. No pokerkit skips here — `pokerkit` 0.7.4 is installed, so the PHH tests really run. |
+| suite | 1,155 passed / 0 failed / 29 skipped / 388 subtests (2026-09-04, after P2 and the training split; was 1,151/370 earlier that day). The 29 skips are 21 torch-availability and 8 that read the quarantined Arena archive — unchanged, so nothing went silently dormant. The two torch-parity tests that had skipped forever on a dead hardcoded path now RUN. No pokerkit skips — `pokerkit` 0.7.4 is installed. §7.3 tripwire re-run on the split tree: bit-identical to `p3-gate-2026-08-16`'s incumbent arm on all three channels, 0 chip-conservation violations. |
 | ruff | 7 pre-existing errors (`tests/test_build_phase_b_corpus.py`, `tests/test_phase_a_dataset.py`, `tests/test_v8_trainer_phase_b.py`, `tools/build_phase_a_dataset.py`, `tools/measure_field_separation.py`, `tools/p3_gate.py`). Not a regression. |
 | Arena, read-only | `python -m tools.api /api/arena/agent/me` — from PowerShell; Git Bash mangles the path |
 | agent | **0Fold**, `@fold_ver_3`, `cmsnsh9er1ato12wxq5knep9d`. Quote and description stay exactly `Hello`. |
@@ -55,9 +55,28 @@ irreversible. On a machine move copy it first.
 
 ## 4. STATE — one line, then verify
 
-2026-09-03: **nothing runs; pointer `candidate-v9-0003b`; bankroll 0 on
-Playground S17 (busted 2026-09-02 — the third bust); seat released; the
-dataset switched to PHH/Pluribus, the retrain is queued for 2026-09-04.**
+2026-09-04: **a live session IS running** — `live_session.py`, **PID 16536**
+(started 17:13:33 local; the PID 22800 named in the previous revision is dead),
+on **Playground S18** (`cmtlk9djt0mtz7njb1lf85704`, Active). API at 18:30 local:
+score 1342, 41 submissions, rank 62, best rank 31, streak 3 — a new season, not
+an S17 rejoin. **Pointer rolled back to `candidate-v7-0001c`** on owner
+instruction. S17 ended at 0 (busted 2026-09-02, the third bust). The PHH retrain
+ran end to end on 2026-09-04 and produced **no promotable candidate** — both
+Phase-B arms lost the duel resolved (−44.73 / −63.25 BB/100).
+
+Landed 2026-09-04 in the working tree, unplayed and unpromoted: **P2 closed**
+(the 125-input load path is gone from `poker_policy`; `equity_trials < 1` now
+refused at construction), the **nested training repo dissolved**, and **training
+split out of `engine/`** into `training/`. Suite and tripwire green; nothing
+committed. `PENDING_EDITS.md` Q1–Q6 are the ride-along defects that fell out.
+
+> **A live seat makes this section a money statement.** The context injected at
+> the start of a session can be a STALE COPY of this file — that happened on
+> 2026-09-04, and an agent edited `engine/` for an hour believing nothing was
+> running. Read this file from disk AND run `PROCEDURES.md` §1 (`Get-Process
+> python` — BY PROCESS, never by filename) before any edit to `engine/`,
+> `run_agent.py` or `live_session.py`, not merely before claiming state.
+
 The board and the bust table: `.handoff/STATUS.md`. Never restate this from
 memory; run PROCEDURES §1.
 

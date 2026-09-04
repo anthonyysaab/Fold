@@ -50,7 +50,7 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from engine.v9_trainer import PhaseARowV9
+from training.v9_trainer import PhaseARowV9
 
 #: The Phase-A heads the Phase-B trainer interleaves, in loss order.
 SUPERVISED_HEADS_V9: tuple[str, ...] = ("fold_through", "range", "equity_called")

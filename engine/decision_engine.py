@@ -565,8 +565,28 @@ class DecisionEngine:
         equity_cache: SharedEquityCache | None = None,
         rule_layer: RuleLayerParams | None = None,
     ) -> None:
-        if equity_trials < 0:
-            raise ValueError("equity_trials cannot be negative")
+        # A floor of 1, not 0. At zero `_equity` returns None (below), the
+        # dispatch skips `_equity_family` and calls `_family` directly, and
+        # since P2 retired the fixed network the heuristic policies have no
+        # `_family` -- so zero used to route every decision through a network
+        # that chose nothing, and would now raise NotImplementedError in the
+        # middle of a hand instead. Six tool CLIs take `--equity-trials` as a
+        # bare int with no floor, so this constructor is the single chokepoint
+        # that closes it; duplicating the check into each CLI is the kind of
+        # scattering CLAUDE.md section 6 rule 9 warns against.
+        #
+        # RESIDUAL, deliberately left open: this guards construction, not
+        # post-construction mutation. `tests/test_v9_engine_coupling.py` and
+        # `tests/test_learned_policy_v9.py` both set `.equity_trials = 0` on a
+        # live instance to reach `_family` on purpose. Making this a validating
+        # property would break those for no live benefit -- nothing in
+        # `run_agent.py` or `live_session.py` mutates the attribute.
+        if equity_trials < 1:
+            raise ValueError(
+                "equity_trials must be at least 1; at 0 the engine skips the "
+                "equity read and dispatches to _family, which the heuristic "
+                "policies no longer have (P2)"
+            )
         self.equity_trials = equity_trials
         # The composed rule-layer dials (engine/rules). Every default is
         # OFF and every consulting site below guards on the dial, so a

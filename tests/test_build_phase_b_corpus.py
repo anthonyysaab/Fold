@@ -22,7 +22,6 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from engine.policy_features import FEATURE_NAMES
 from engine.poker_policy import AggressivePokerPolicy
 from engine.schema3 import INPUT_SIZE_V8
 from engine.strength_aware_opponent import (
@@ -53,21 +52,6 @@ from tools.build_phase_b_corpus import (
     validate_phase_b_rows,
     write_phase_b_corpus,
 )
-
-
-def _weights_favoring_fold() -> dict:
-    """The v7-era stub network the simulator tests drive the heuristic with."""
-
-    return {
-        "input_size": len(FEATURE_NAMES),
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": ["fold", "check_call", "aggress"],
-        "w1": [[0.0] * len(FEATURE_NAMES)],
-        "b1": [0.0],
-        "w2": [[0.0], [0.0], [0.0]],
-        "b2": [5.0, 0.0, 0.0],
-    }
 
 
 class _CapturingHarvest(PhaseBHarvestSimulator):
@@ -116,7 +100,7 @@ class _SettlementRecordingReplay(PhaseBReplaySimulator):
 
 def _hero_recorder() -> HeroRecorder:
     return HeroRecorder(
-        AggressivePokerPolicy(weights=_weights_favoring_fold(), equity_trials=20)
+        AggressivePokerPolicy(equity_trials=20)
     )
 
 

@@ -29,17 +29,18 @@ import time
 from pathlib import Path
 from typing import Any
 
-# The training interpreter moved into this repo on 2026-09-03 (owner
-# decision, .handoff/DECISIONS.md section 6); the old absolute path is
-# gone from the machine.
-CUDA_PYTHON = str(
-    Path(__file__).resolve().parents[1]
-    / "neural network training"
-    / ".venv"
-    / "Scripts"
-    / "python.exe"
-)
-STDLIB_PYTHON = r"C:\Users\user\AppData\Local\Programs\Python\Python311\python.exe"
+from tools.interpreters import CUDA_PYTHON as _CUDA_PYTHON_PATH
+from tools.interpreters import STDLIB_PYTHON as _STDLIB_PYTHON_PATH
+from tools.interpreters import require_cuda_python
+
+# Both interpreters have exactly one definition, in tools/interpreters.py. The
+# CUDA one moved into this tree on 2026-09-03 and was renamed into training/ on
+# 2026-09-04 (owner decisions, .handoff/DECISIONS.md section 6); hard-coding it
+# here a third time is what that module exists to stop. main() calls
+# require_cuda_python() so an absent interpreter fails at start-up rather than
+# inside the first train() subprocess, after work has begun.
+CUDA_PYTHON = str(_CUDA_PYTHON_PATH)
+STDLIB_PYTHON = str(_STDLIB_PYTHON_PATH)
 # Both trees were moved under archive/data/ by the 2026-09-02 janitor pass
 # (see archive/README.md); the experiment itself is closed and its result,
 # artifacts/evaluations/dead-head-retrain-2026-08-27.json, is tracked.
@@ -222,6 +223,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.decide_only and out.exists():
         rows = json.loads(out.read_text(encoding="utf-8"))["runs"]
     else:
+        # Every path below shells out to the CUDA interpreter -- --dry-run
+        # included, since it only forwards the flag to self_play_cycle. Fail
+        # here, before the first subprocess, rather than as a FileNotFoundError
+        # from inside train() after work has begun. --decide-only above reads a
+        # finished run and needs no interpreter, so it stays reachable on a
+        # machine without torch.
+        require_cuda_python()
         total = len(args.arms) * len(args.seeds)
         index = 0
         for seed in args.seeds:

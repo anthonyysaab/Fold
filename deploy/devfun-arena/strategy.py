@@ -8,11 +8,11 @@ resulting payload onto the sandbox's ``{action, amount, reasoning_text}``
 return shape.
 
 Robust by construction: the policy is built inside a guard so a module-level
-failure can never fault the agent, the required proposal-network weights are
-an inert contract-matching zero network built programmatically (the sandbox
-blocks filesystem reads, and the deterministic v5 equity rules drive every
-decision anyway because no ``table_sizes`` are declared), and every return
-path emits a legal action read from the live table.
+failure can never fault the agent, the policy itself reads nothing from disk
+(P2 retired the proposal network on 2026-09-04, so the sandbox's filesystem
+block no longer constrains it and the deterministic v5 equity rules drive
+every decision), and every return path emits a legal action read from the live
+table.
 """
 
 from __future__ import annotations
@@ -40,25 +40,13 @@ try:
     from engine.decision_engine import safest_passive_action
     from engine.hand_strength import prewarm
     from engine.poker_policy import AggressivePokerPolicy
-    from engine.policy_features import FEATURE_NAMES, LABELS
 
-    def _inert_weights() -> dict:
-        """A valid zero network; never consulted without ``table_sizes``."""
-        inputs = len(FEATURE_NAMES)
-        return {
-            "input_size": inputs,
-            "hidden_size": 1,
-            "feature_names": list(FEATURE_NAMES),
-            "labels": list(LABELS),
-            "w1": [[0.0] * inputs],
-            "b1": [0.0],
-            "w2": [[0.0] for _ in LABELS],
-            "b2": [0.0 for _ in LABELS],
-        }
-
+    # The `_inert_weights()` zero network built here until P2 (2026-09-04) is
+    # gone: the policy holds no network, so the sandbox's filesystem block has
+    # nothing left to work around.
     prewarm()
     _safest_passive = safest_passive_action
-    _policy = AggressivePokerPolicy(weights=_inert_weights(), equity_trials=200)
+    _policy = AggressivePokerPolicy(equity_trials=200)
 except Exception as exc:  # keep the agent importable no matter what
     _init_error = repr(exc)
 

@@ -25,20 +25,6 @@ from engine.game_state import (
     contested_stack_chips,
     effective_stack_chips,
 )
-from engine.policy_features import FEATURE_NAMES
-
-
-def _weights_favoring_fold() -> dict:
-    return {
-        "input_size": len(FEATURE_NAMES),
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": ["fold", "check_call", "aggress"],
-        "w1": [[0.0] * len(FEATURE_NAMES)],
-        "b1": [0.0],
-        "w2": [[0.0], [0.0], [0.0]],
-        "b2": [5.0, 0.0, 0.0],
-    }
 
 
 def _table(
@@ -181,7 +167,6 @@ def _stacked_table(
 
 def _policy(gates: SafetyGates | None = None) -> AggressivePokerPolicy:
     return AggressivePokerPolicy(
-        weights=_weights_favoring_fold(),
         equity_trials=1,
         safety_gates=gates,
         hyper_aggression_chance=0.0,
@@ -751,7 +736,6 @@ class GateDenominatorDialTests(unittest.TestCase):
         self.assertTrue(self._calls(purse, table, 0.69))
 
 
-
 class ContestedStackTests(unittest.TestCase):
     """Fix A: counting an opponent's committed chips in the denominator.
 
@@ -953,8 +937,6 @@ class ContestedStackTests(unittest.TestCase):
         self.assertEqual(on._gate_stack(table, effective=False), 9_143)
 
 
-
-
 class UncallableOverhangTests(unittest.TestCase):
     """Pricing a call on chips hero cannot win.
 
@@ -1100,8 +1082,6 @@ class UncallableOverhangTests(unittest.TestCase):
         self.assertEqual(on._pot_odds(table, allowed), 0.0)
 
 
-
-
 class UnpricedRangeConditioningTests(unittest.TestCase):
     """Whether observed aggression survives hero acting first.
 
@@ -1245,7 +1225,6 @@ class UnpricedRangeConditioningTests(unittest.TestCase):
         self.assertGreaterEqual(
             _policy(self._on())._call_top_fraction(table, allowed), 0.20
         )
-
 
 
 if __name__ == "__main__":

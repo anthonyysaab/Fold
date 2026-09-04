@@ -28,7 +28,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from engine.v9_trainer import load_phase_a_dataset_v9
+from training.v9_trainer import load_phase_a_dataset_v9
 from tools.build_phase_a_dataset_phh import build_phase_a_dataset_phh
 
 try:

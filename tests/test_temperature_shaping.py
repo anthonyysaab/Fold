@@ -12,20 +12,6 @@ from engine.decision_engine import (
     TemperatureShaping,
 )
 from engine.poker_policy import AggressivePokerPolicy
-from engine.policy_features import FEATURE_NAMES
-
-
-def _weights_favoring_fold() -> dict:
-    return {
-        "input_size": len(FEATURE_NAMES),
-        "hidden_size": 1,
-        "feature_names": list(FEATURE_NAMES),
-        "labels": ["fold", "check_call", "aggress"],
-        "w1": [[0.0] * len(FEATURE_NAMES)],
-        "b1": [0.0],
-        "w2": [[0.0], [0.0], [0.0]],
-        "b2": [5.0, 0.0, 0.0],
-    }
 
 
 def _table(
@@ -84,7 +70,6 @@ def _table(
 
 def _policy(shaping: TemperatureShaping | None = None) -> AggressivePokerPolicy:
     return AggressivePokerPolicy(
-        weights=_weights_favoring_fold(),
         equity_trials=1,
         temperature_shaping=shaping,
         hyper_aggression_chance=0.0,

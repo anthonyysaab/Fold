@@ -13,7 +13,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from engine.decision_engine import SharedEquityCache
-from engine.offline_trainer import TRAINING_OBJECTIVE, TrainingConfig
+from training.offline_trainer import TRAINING_OBJECTIVE, TrainingConfig
 from engine.training_telemetry import (
     save_training_corpus,
     TrainingExample,

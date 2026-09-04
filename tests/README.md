@@ -24,7 +24,7 @@ sweep adversarially and run the tripwire (`.handoff/PROCEDURES.md` §7.3).
 
 | area | files | covers |
 |---|---|---|
-| live path, money | `test_live_session`, `test_runner_safety`, `test_play_entrypoints`, `test_runtime_layout` | free-Playground guard, hard stops, release paths; deadline and reconnect handling; launchers serve what is deployed; stdlib-only import |
+| live path, money | `test_live_session`, `test_runner_safety`, `test_play_entrypoints`, `test_runtime_layout` | free-Playground guard, hard stops, release paths; deadline and reconnect handling; launchers serve what is deployed; stdlib-only import, and no disk read to build a policy |
 | gates and shaping | `test_safety_gates`, `test_temperature_shaping`, `test_hyper_aggression`, `test_policy_fixes`, `test_v9_engine_coupling` | `SafetyGates` ranges and round-trips, discriminating cases for the three dark repairs; bounded temperature; the dice roll; thresholds; L5 hardened catch-alls and the gated shove lane |
 | advisors and reads | `test_bluff`, `test_bluff_wiring`, `test_opponent_model`, `test_game_state`, `test_lead_position`, `test_risk_temperature` | bluff advisor and its passive-spot wiring; aggression tracking and the perma-shove remedy; snapshot validation; the two root gauges |
 | equity and metric | `test_hand_strength`, `test_hand_potential`, `test_strength_metric`, `test_treys_evaluator` | MC estimator boundaries; Ppot/Npot; the canonical metric; evaluator vs a brute-force oracle |

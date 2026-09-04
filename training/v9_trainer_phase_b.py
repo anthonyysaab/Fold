@@ -1,6 +1,6 @@
 """Phase-B composed-value trainer for the v9 network (L3, second pass).
 
-Fork of :mod:`engine.v8_trainer_phase_b` for the v9 branch contract,
+Fork of :mod:`training.v8_trainer_phase_b` for the v9 branch contract,
 left as a sibling module so the v8 trainer stays byte-identical for the
 frozen format-3 line. The joint objective is unchanged — composed-value
 MSE (normalized by the estimated target variance) plus the interleaved
@@ -46,7 +46,7 @@ any of this code existed:
   with the residual correction on wager executions only (the v8
   discipline, kept).
 - **Supervised-loss normalization (2026-09-02, Phase 1 of the next-layer
-  plan)**: :class:`~engine.supervised_loss_normalization_v9.SupervisedLossConfigV9`
+  plan)**: :class:`~training.supervised_loss_normalization_v9.SupervisedLossConfigV9`
   scales each Phase-A head's loss by ``weight / baseline`` before the
   supervised sum, where the baseline is the constant (bias-only)
   predictor's masked loss on the Phase-A TRAINING split — the treatment
@@ -66,7 +66,7 @@ promotion ``null``, ``artifacts/approved.json`` never read or written.
 
 Usage (CUDA venv, repo root)::
 
-    python -m engine.v9_trainer_phase_b \
+    python -m training.v9_trainer_phase_b \
         --model-version candidate-v9-0002a --init-seeds 401
 """
 
@@ -99,19 +99,19 @@ from engine.branch_contract_v9 import (
     MODEL_FORMAT_VERSION_V9,
     branch_action,
 )
-from engine.dataset_provenance import describe, require_live_dataset
+from training.dataset_provenance import describe, require_live_dataset
 from engine.decision_engine import (
     DEFAULT_SAFETY_GATES,
     DEFAULT_TEMPERATURE_SHAPING,
 )
 from engine.learned_policy_v8 import _clip01
 from engine.learning_contract import MODEL_FORMAT
-from engine.offline_trainer import (
+from training.offline_trainer import (
     _assert_finite_weights,
     _round9,
-    _sigmoid,
     validate_training_device,
 )
+from engine.forward_kernel import _sigmoid
 from engine.opponent_model import DEFAULT_TRACKER_SETTINGS
 from engine.rules.composition import (
     RuleLayerParams,
@@ -119,19 +119,15 @@ from engine.rules.composition import (
     compose_aggressive_target,
     parameters_and_rules_from_record,
 )
-from engine.supervised_loss_normalization_v9 import (
+from training.supervised_loss_normalization_v9 import (
     SupervisedLossConfigV9,
     check_supervised_loss_config,
     constant_predictor_baselines,
     supervised_head_scales,
 )
-from engine.v8_trainer import (
-    V8TrainingConfig,
-    default_v9_architecture,
-    split_rows,
-    validate_v9_architecture,
-)
-from engine.v8_trainer_phase_b import (
+from training.v8_trainer import V8TrainingConfig, default_v9_architecture, split_rows
+from engine.architecture_v8 import validate_v9_architecture
+from training.v8_trainer_phase_b import (
     RESIDUAL_CAP_POT_FRACTION_DEFAULT,
     PhaseBTrainingConfig,
     _finite,
@@ -139,7 +135,7 @@ from engine.v8_trainer_phase_b import (
     split_decisions,
     value_target_variance,
 )
-from engine.v9_trainer import (
+from training.v9_trainer import (
     PhaseARowV9,
     build_network_v9,
     context_normalization_v9,
@@ -1120,6 +1116,29 @@ def fit_phase_b_v9(
 
     # ----- Residual audit (the WAGER_COLUMN_SLICE reuse site) --------------
     def residual_share() -> dict[str, object]:
+        """Residual magnitude against composed value, plus its saturation.
+
+        ``share_of_abs_composed_value`` alone cannot answer promotion gate (d)
+        ("a bounded residual share", ``DECISIONS.md`` §4). When the residual
+        head is clamped at ±cap on every wager execution, the numerator is
+        exactly ``cap x sum(pot_unit)`` -- a corpus constant that carries no
+        model information, and the share then varies only through its
+        denominator. That is not hypothetical: ``candidate-v9-0004b`` and
+        ``-0004c`` both reported ``sum_abs_capped_residual`` **25.056789** over
+        the same 5,769 wager executions while their ``sum_abs_composed_value``
+        differed (318.831177 vs 303.325409), and ``0002a/b/c`` were all
+        8.318638 (``PENDING_EDITS`` row 33). Nothing detected it.
+
+        So the raw (pre-clamp) magnitude and the saturated fraction are
+        reported beside the share. Read them first: at
+        ``saturated_fraction`` 1.0 the share is arithmetic about the cap and
+        gate (d) has no evidence on that arm.
+
+        No threshold is asserted here. Where the bar belongs is an owner
+        decision, and an authored constant with no estimation artifact behind
+        it is exactly what ``CLAUDE.md`` §6.5 forbids.
+        """
+
         with torch.no_grad():
             indexes = torch.arange(pb_validation_data["mask"].shape[0], device=device)
             outputs = model(
@@ -1129,11 +1148,9 @@ def fit_phase_b_v9(
             values = composed_values(outputs, pb_validation_data, indexes)
             pot_unit = pb_validation_data["pot_unit"][indexes]
             cap = cap_fraction * pot_unit
-            residual = torch.clamp(
-                outputs["residual"][:, WAGER_COLUMN_SLICE],
-                min=-cap.unsqueeze(1),
-                max=cap.unsqueeze(1),
-            )
+            capped = cap.unsqueeze(1)
+            raw_residual = outputs["residual"][:, WAGER_COLUMN_SLICE]
+            residual = torch.clamp(raw_residual, min=-capped, max=capped)
             # Residual reaches wager EXECUTIONS only: mask the active
             # column down to free-spot rows (priced active is a call).
             wager_mask = pb_validation_data["mask"][indexes][
@@ -1143,13 +1160,26 @@ def fit_phase_b_v9(
                 indexes
             ]
             abs_residual = (residual.abs() * wager_mask).sum()
+            abs_raw_residual = (raw_residual.abs() * wager_mask).sum()
             abs_value = (
                 values[:, WAGER_COLUMN_SLICE].abs() * wager_mask
             ).sum()
             branches = wager_mask.sum()
+            saturated = (
+                (raw_residual.abs() >= capped).to(raw_residual.dtype)
+                * wager_mask
+            ).sum()
+            capacity = (capped * wager_mask).sum()
+        executions = int(branches)
         return {
-            "wager_executions": int(branches),
+            "wager_executions": executions,
             "sum_abs_capped_residual": round(float(abs_residual), 6),
+            "sum_abs_raw_residual": round(float(abs_raw_residual), 6),
+            "sum_cap_over_wager_executions": round(float(capacity), 6),
+            "saturated_wager_executions": int(saturated),
+            "saturated_fraction": (
+                round(float(saturated) / executions, 6) if executions else None
+            ),
             "sum_abs_composed_value": round(float(abs_value), 6),
             "share_of_abs_composed_value": (
                 round(float(abs_residual) / float(abs_value), 6)
@@ -1366,7 +1396,8 @@ def train_phase_b_candidate_v9(
             f"range {validation['range']:.6f}, "
             f"equity_called {validation['equity_called']:.6f}), "
             f"best epoch {result['trace']['best_epoch']}, "  # type: ignore[index]
-            f"residual share {result['residual_share']['share_of_abs_composed_value']}, "  # type: ignore[index]
+            f"residual share {result['residual_share']['share_of_abs_composed_value']} "  # type: ignore[index]
+            f"(saturated {result['residual_share']['saturated_fraction']}), "  # type: ignore[index]
             f"parity max diff {result['parity_check']['max_abs_value_diff']}",  # type: ignore[index]
             flush=True,
         )
@@ -1626,6 +1657,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             "Phase-A dataset (.jsonl.gz). Required: there is no safe "
             "default. It used to default to the Arena-built corpus the "
             "2026-09-03 PHH switch retired."
+        ),
+    )
+    parser.add_argument(
+        "--allow-retired-dataset",
+        action="store_true",
+        help=(
+            "train on a corpus the project has retired (no live "
+            "generator.source). Deliberate ablation only; record the arm."
         ),
     )
     parser.add_argument("--output-dir", default="artifacts/candidates")
